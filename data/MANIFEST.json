@@ -1,0 +1,97 @@
+{
+ "generated_utc": "2026-09-28T02:40:45+00:00",
+ "command": "npm run measure (scripts/measure.ts) once per run, then python3 scripts/aggregate-measurements.py <run dirs>",
+ "n_runs": 10,
+ "host": {
+  "system": "Darwin",
+  "release": "27.0.0",
+  "machine": "arm64",
+  "python": "3.14.6",
+  "cpu": "Apple M5",
+  "mem_gb": 32.0,
+  "os_product_version": "27.0",
+  "os_build_version": "26A428",
+  "node": "v20.20.2"
+ },
+ "inputs": {
+  "published/benchmarks-sweep-runs.csv": "8e4661beba8caf73ae9667b54db275be7833191c9265d552ed320a003b7a7b54",
+  "published/benchmarks-datasets-runs.csv": "6c13cf0fb58ab990cc88dbf88c985c146384c09989fdcab313b8e491abb751a3"
+ },
+ "published_sha256": {
+  "benchmarks-sweep-median.csv": "c6be78ea651ddb895df8b9deb2d844f980136b3d68f12319b8eac935cb918272",
+  "benchmarks-sweep-runs.csv": "8e4661beba8caf73ae9667b54db275be7833191c9265d552ed320a003b7a7b54",
+  "benchmarks-datasets-median.csv": "be28016196e3216db90bcaf9f5f92ef4530d4bcfcab7c15d1335e8265645a8ff",
+  "benchmarks-datasets-runs.csv": "6c13cf0fb58ab990cc88dbf88c985c146384c09989fdcab313b8e491abb751a3"
+ },
+ "exponent_estimator_note": "sweep_exponent_loglog = median of the per-run log-log least-squares fits; sweep_exponent_median_table_ols = one log-log least-squares fit through the across-run median curve, which is the estimator behind the documented 0.96 / 1.31 / 1.00 figures.",
+ "sweep_exponent_median_table_ols": {
+  "parse": {
+   "slope": 0.964,
+   "r2": 0.9959
+  },
+  "layout": {
+   "slope": 1.313,
+   "r2": 0.9633
+  },
+  "svg": {
+   "slope": 1.0,
+   "r2": 0.9917
+  }
+ },
+ "sweep_exponent_loglog": {
+  "parse": {
+   "median": 0.949,
+   "min": 0.826,
+   "max": 1.058,
+   "r2_median": 0.9926
+  },
+  "layout": {
+   "median": 1.296,
+   "min": 1.165,
+   "max": 1.392,
+   "r2_median": 0.9604
+  },
+  "svg": {
+   "median": 0.998,
+   "min": 0.886,
+   "max": 1.08,
+   "r2_median": 0.9875
+  }
+ },
+ "sweep_top_size_ms": {
+  "parse": {
+   "median": 141.8,
+   "min": 115.9,
+   "max": 298.3
+  },
+  "layout": {
+   "median": 529.7,
+   "min": 428.5,
+   "max": 1091.7
+  },
+  "svg": {
+   "median": 518.4,
+   "min": 474.4,
+   "max": 957.5
+  }
+ },
+ "sweep_nodes": [
+  58,
+  114,
+  293,
+  582,
+  1180,
+  2335,
+  4741,
+  11666,
+  23685
+ ],
+ "datasets_total_med_ms": {
+  "showcase.recphyloxml": 1.17,
+  "nested-gene-symbiont": 0.56,
+  "nested-symbiont-host": 0.28,
+  "compare-tool-a": 0.6,
+  "compare-tool-b": 0.42,
+  "9999.nhx": 2.24
+ }
+}

@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Minimal strictly-schema-conformant document that pins how the parser reads
+  the conformant dialect of recGeneTreeXML.xsd / recSpeciesTreeXML.xsd:
+    * every <phylogeny> carries the schema-required rooted="true" attribute;
+    * terminal events carry NO attributes at all (the XSD makes
+      speciesLocation optional for every event and defines NO
+      speciesLocation attribute on BifurcationOutRec), both in the
+      self-closing form (<loss/>) and the paired-tag form
+      (<bifurcationOut></bifurcationOut>);
+    * branch lengths are written as <branch_length> CHILD ELEMENTS, the
+      form the XSD documents as equivalent to the branch_length attribute.
+  Attribute-less events and element-form branch lengths must both survive
+  parsing; this fixture pins that.
+-->
+<recPhylo>
+  <spTree>
+    <phylogeny rooted="true">
+      <clade>
+        <name>R</name>
+        <clade>
+          <name>A</name>
+          <branch_length>1.2</branch_length>
+        </clade>
+        <clade>
+          <name>B</name>
+          <branch_length>0.8</branch_length>
+        </clade>
+      </clade>
+    </phylogeny>
+  </spTree>
+  <recGeneTree>
+    <phylogeny rooted="true">
+      <name>conformant-minimal</name>
+      <clade>
+        <name>root</name>
+        <branch_length>0.42</branch_length>
+        <eventsRec><speciation/></eventsRec>
+        <clade>
+          <name>dup</name>
+          <eventsRec><duplication/></eventsRec>
+          <clade>
+            <eventsRec><leaf geneName="x1"/></eventsRec>
+          </clade>
+          <clade>
+            <eventsRec><loss/></eventsRec>
+          </clade>
+        </clade>
+        <clade>
+          <name>bco</name>
+          <eventsRec><bifurcationOut></bifurcationOut></eventsRec>
+          <clade>
+            <name>bo</name>
+            <eventsRec><branchingOut/></eventsRec>
+            <clade>
+              <eventsRec><leaf geneName="x2" speciesLocation="A"/></eventsRec>
+            </clade>
+            <clade>
+              <eventsRec>
+                <transferBack/>
+                <leaf geneName="x3" speciesLocation="B"/>
+              </eventsRec>
+            </clade>
+          </clade>
+          <clade>
+            <eventsRec><leaf geneName="x4" speciesLocation="B"/></eventsRec>
+          </clade>
+        </clade>
+      </clade>
+    </phylogeny>
+  </recGeneTree>
+</recPhylo>

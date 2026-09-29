@@ -1,0 +1,179 @@
+name: CI
+
+# Pull-request and main-branch validation for the web layer, the Tauri Rust
+# shell, and the repository's own self-consistency. Release packaging lives in
+# `.github/workflows/release.yml`.
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+  workflow_dispatch:
+
+# Least privilege: this workflow only ever reads the repository. Uploads go to
+# the artifact store, which does not need a write token.
+permissions:
+  contents: read
+
+# A newer push to the same branch/ref supersedes an in-flight run.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: "20"
+  # NOTE: `runs-on` cannot read the env context, so the Linux image
+  # (ubuntu-22.04 — the Tauri v2 / WebKitGTK 4.1 reference platform) is written
+  # out literally in each job below.
+
+jobs:
+  web:
+    name: Lint, typecheck & test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        # A real OS matrix: the macOS-only `titleBarStyle: "Overlay"` window
+        # config, the Windows path separators used by the export/file-name
+        # helpers, and Linux are all compiled and tested. Native bundle builds
+        # for the same three platforms happen in release.yml.
+        os: [ubuntu-22.04, macos-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install dependencies (from the lockfile)
+        run: npm ci
+
+      - name: Repository self-consistency (imports, tests, docs links tracked)
+        run: npm run check:tracked
+
+      - name: Lint (zero errors and zero warnings)
+        run: npm run lint
+
+      - name: Typecheck (tsc -b, strict)
+        run: npm run typecheck
+
+      - name: Unit tests with coverage
+        # `npm run coverage` prints a text summary and writes html + lcov under
+        # coverage/ (see vite.config.ts -> test.coverage).
+        if: matrix.os == 'ubuntu-22.04'
+        run: npm run coverage
+
+      - name: Unit tests
+        if: matrix.os != 'ubuntu-22.04'
+        run: npm test
+
+      - name: Upload coverage report
+        if: matrix.os == 'ubuntu-22.04' && always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-${{ github.sha }}
+          path: coverage
+          retention-days: 7
+          if-no-files-found: ignore
+
+      - name: Production build (tsc -b && vite build)
+        run: npm run build
+
+      - name: Benchmark reproduction script runs end to end
+        # This drives the real parser -> layout -> renderer path behind the
+        # benchmark tables under data/. ~1 min, Linux only.
+        if: matrix.os == 'ubuntu-22.04'
+        run: |
+          npm run measure
+
+      - name: Serve the built app (npm run preview smoke test)
+        # Guards the documented "browser build" route: the production bundle
+        # must be servable over http:// (opening dist/index.html through file://
+        # is blocked by module-script CORS, which is why the docs say preview).
+        if: matrix.os != 'windows-latest'
+        run: |
+          npm run preview -- --port 4173 --strictPort &
+          server=$!
+          trap 'kill $server 2>/dev/null || true' EXIT
+          for i in $(seq 1 30); do
+            if curl -fsS http://localhost:4173/ >/dev/null 2>&1; then
+              echo "preview server responded"; exit 0
+            fi
+            sleep 1
+          done
+          echo "preview server did not answer on :4173" >&2
+          exit 1
+
+  tracked-only-build:
+    name: Build from tracked files only
+    runs-on: ubuntu-22.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install dependencies (from the lockfile)
+        run: npm ci
+
+      - name: Export the commit's tracked files into a clean directory
+        run: |
+          mkdir -p "$RUNNER_TEMP/tracked-only"
+          git ls-files -z | tar -cf - --null -T - | tar -C "$RUNNER_TEMP/tracked-only" -xf -
+          test -f "$RUNNER_TEMP/tracked-only/package.json"
+          test -f "$RUNNER_TEMP/tracked-only/tsconfig.json"
+
+      - name: Build inside the export (dependencies come from node_modules only)
+        run: |
+          ln -s "$GITHUB_WORKSPACE/node_modules" "$RUNNER_TEMP/tracked-only/node_modules"
+          cd "$RUNNER_TEMP/tracked-only"
+          npm run build
+          npm run typecheck
+          npm test
+
+  rust:
+    name: Rust shell (check, test, fmt, clippy)
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 35
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-22.04, macos-latest]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Tauri system dependencies (Linux)
+        if: matrix.os == 'ubuntu-22.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libgtk-3-dev libayatana-appindicator3-dev librsvg2-dev
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - name: cargo fmt --check
+        working-directory: src-tauri
+        run: cargo fmt --all -- --check
+
+      - name: cargo check
+        working-directory: src-tauri
+        run: cargo check --all-targets
+
+      - name: cargo test (lib + bins; doctests need rustdoc, so --all-targets)
+        working-directory: src-tauri
+        run: cargo test --all-targets
+
+      - name: cargo clippy (warnings are errors)
+        working-directory: src-tauri
+        run: cargo clippy --all-targets -- -D warnings

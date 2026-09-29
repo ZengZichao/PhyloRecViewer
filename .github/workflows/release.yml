@@ -1,0 +1,167 @@
+name: Release
+
+# Produces the native desktop bundles that the README and the user manual
+# advertise: a macOS .dmg, a Windows NSIS .exe installer, and Linux .deb /
+# .AppImage packages.
+#
+#  * Push a version tag  ->  builds all three platforms, creates a DRAFT GitHub
+#    Release, attaches the installers, and prints the release URL. Review the
+#    assets, then edit the release and press "Publish" (see CONTRIBUTING.md).
+#    The built-in GITHUB_TOKEN (contents: write) is sufficient; no repository
+#    secrets are required.
+#  * Manual run          ->  builds the same bundles and uploads them as
+#    workflow artifacts (no release, no tag). This is what to run to validate a
+#    pull request that touches packaging, Tauri config, or CI.
+#
+# Code signing / an auto-updater are deliberately NOT configured: enabling them
+# requires platform credentials (Apple Developer certificate + notarization
+# profile, Windows code-signing certificate, updater signing key). If they are
+# ever turned on, the corresponding secrets must be added here as well.
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      tauri_args:
+        description: "Extra arguments passed to `tauri build` on every platform (advanced, e.g. --debug)"
+        required: false
+        default: ""
+        type: string
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  NODE_VERSION: "20"
+  # WebKitGTK 4.1 system libraries, the same set the CI job installs.
+  LINUX_APT_PACKAGES: >-
+    libwebkit2gtk-4.1-dev libgtk-3-dev libayatana-appindicator3-dev librsvg2-dev
+    patchelf
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # Manual dispatch: installers as workflow artifacts, nothing published.
+  # Builds the same three platforms as the release path; the release path
+  # additionally emits a *universal* macOS .dmg (Apple Silicon + Intel).
+  # ---------------------------------------------------------------------------
+  artifacts:
+    if: github.event_name == 'workflow_dispatch'
+    name: Build installers -> artifacts (${{ matrix.platform }})
+    runs-on: ${{ matrix.platform }}
+    timeout-minutes: 60
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: [ubuntu-22.04, macos-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Linux system dependencies
+        if: startsWith(matrix.platform, 'ubuntu')
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ${{ env.LINUX_APT_PACKAGES }}
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Rust cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - name: Install npm dependencies (from the lockfile)
+        run: npm ci
+
+      - name: Build bundles (no release)
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          projectPath: src-tauri
+          args: ${{ inputs.tauri_args }}
+
+      - name: Upload the bundles
+        uses: actions/upload-artifact@v4
+        with:
+          name: bundles-${{ matrix.platform }}
+          path: |
+            src-tauri/target/release/bundle/**
+            src-tauri/target/*/release/bundle/**
+          if-no-files-found: warn
+          retention-days: 14
+
+  # ---------------------------------------------------------------------------
+  # Tag push: same builds, published as a draft release for human review.
+  # ---------------------------------------------------------------------------
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    name: Draft release (${{ matrix.platform }})
+    runs-on: ${{ matrix.platform }}
+    timeout-minutes: 60
+    permissions:
+      contents: write
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: [ubuntu-22.04, macos-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Linux system dependencies
+        if: startsWith(matrix.platform, 'ubuntu')
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ${{ env.LINUX_APT_PACKAGES }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      # macOS: add the Intel target so one job emits a universal .dmg that
+      # covers Apple Silicon and Intel Macs (no separate Intel runner needed).
+      - name: Add Rust targets for a universal macOS bundle
+        if: startsWith(matrix.platform, 'macos')
+        run: rustup target add aarch64-apple-darwin x86_64-apple-darwin
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - name: Install npm dependencies (from the lockfile)
+        run: npm ci
+
+      - name: Build bundles and attach them to a draft release
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          projectPath: src-tauri
+          tagName: ${{ github.ref_name }}
+          releaseName: "PhyloRecViewer ${{ github.ref_name }}"
+          releaseBody: |
+            See the assets below for macOS / Windows / Linux installers.
+
+            Installers are unsigned: on macOS right-click → Open the first time
+            (Gatekeeper), and on Linux install the `.deb` with
+            `sudo apt install ./PhyloRecViewer_*.deb` or make the `.AppImage`
+            executable.
+          releaseDraft: true
+          # Tags carrying a suffix (for example an -rc.1 pre-release) are marked
+          # as pre-releases automatically.
+          prerelease: ${{ contains(github.ref_name, '-') }}
+          args: ${{ startsWith(matrix.platform, 'macos') && '--target universal-apple-darwin' || '' }}

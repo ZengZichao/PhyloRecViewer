@@ -1,0 +1,23 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+title: PhyloRecViewer
+abstract: "Offline, interactive recPhyloXML / NHX phylogenetic-reconciliation
+  viewer: gene trees embedded in species tube-maps, three-level nesting,
+  event-level comparison, and vector export that reproduces the on-screen view."
+type: software
+authors:
+  - given-names: Zichao
+    family-names: Zeng
+    email: zengzichao@sjtu.edu.cn
+    orcid: "https://orcid.org/0000-0001-6553-970X"
+repository-code: "https://github.com/ZengZichao/PhyloRecViewer"
+license: MIT
+version: "0.1.0"
+date-released: "2026-09-29"
+keywords:
+  - phylogenetics
+  - gene tree reconciliation
+  - recPhyloXML
+  - NHX
+  - horizontal gene transfer
+  - visualization

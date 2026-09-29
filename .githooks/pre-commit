@@ -1,0 +1,14 @@
+#!/bin/sh
+# PhyloRecViewer pre-commit guard (opt-in):  npm run hooks:install
+#
+# Blocks the "tracked file imports an untracked file" class of mistake, which
+# passes every local check and breaks a fresh clone (see
+# scripts/check-tracked-files.mjs). CI runs the same check authoritatively, plus
+# a build from a tracked-files-only export of the commit, so this hook is a
+# convenience — it is not the gate, and `git commit --no-verify` bypasses it.
+#
+# Uninstall with:  git config --unset core.hooksPath
+
+set -e
+cd "$(git rev-parse --show-toplevel)"
+exec npm run --silent check:tracked

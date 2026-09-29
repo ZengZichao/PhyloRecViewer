@@ -1,0 +1,27 @@
+<recPhylo>
+  <spTree>
+    <phylogeny rooted="true">
+      <clade>
+        <name>Hroot</name>
+        <clade><name>H1</name></clade>
+        <clade><name>H2</name></clade>
+      </clade>
+    </phylogeny>
+  </spTree>
+  <recGeneTree>
+    <phylogeny rooted="true">
+      <clade>
+        <name>Sroot</name>
+        <eventsRec><speciation speciesLocation="Hroot"/></eventsRec>
+        <clade>
+          <name>S_A</name>
+          <eventsRec><leaf speciesLocation="H1" geneName="S_A"/></eventsRec>
+        </clade>
+        <clade>
+          <name>S_B</name>
+          <eventsRec><leaf speciesLocation="H2" geneName="S_B"/></eventsRec>
+        </clade>
+      </clade>
+    </phylogeny>
+  </recGeneTree>
+</recPhylo>

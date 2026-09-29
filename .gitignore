@@ -1,0 +1,53 @@
+# dependencies
+node_modules/
+
+# build output
+dist/
+dist-ssr/
+dist-tauri/
+PhyloRecViewer.app/
+
+# tauri
+src-tauri/target/
+src-tauri/gen/
+
+# toolchain caches
+.cargo/
+.brew-cache/
+*.tsbuildinfo
+
+# test and benchmark output
+coverage/
+_build/
+
+# logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# editor / OS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+*.local
+
+# environment / secrets
+.env
+.env.*
+
+# temporary files
+*.tmp
+*.tmp-*
+*.bak
+*~
+
+# local agent/tooling state
+.mimosa/

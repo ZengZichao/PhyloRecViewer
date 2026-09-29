@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <rect width="1024" height="1024" rx="224" fill="#18181b"/>
+  <!-- Species tree: thick, semi-transparent tubes -->
+  <g fill="none" stroke="#ffffff" stroke-opacity="0.22" stroke-width="120" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M512 260 L512 400 M512 400 L330 560 L330 760 M512 400 L694 560 L694 760"/>
+  </g>
+  <!-- Gene lineage: thin, solid white paths -->
+  <g fill="none" stroke="#ffffff" stroke-width="22" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M512 280 L512 400 L330 560 L330 760"/>
+    <path d="M512 400 L694 560 L694 760"/>
+  </g>
+  <!-- Transfer arc: dashed -->
+  <path d="M350 480 Q512 590 674 480" fill="none" stroke="#a1a1aa" stroke-width="16" stroke-dasharray="8 22" stroke-linecap="round"/>
+  <!-- Speciation node -->
+  <circle cx="512" cy="400" r="18" fill="#ffffff"/>
+  <!-- Duplication node -->
+  <rect x="321" y="551" width="18" height="18" rx="3" fill="#ffffff" fill-opacity="0.6"/>
+</svg>
