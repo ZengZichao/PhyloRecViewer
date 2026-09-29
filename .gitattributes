@@ -1,0 +1,17 @@
+# Normalize line endings: text files are stored and checked out with LF on
+# every platform, so Windows checkouts cannot rewrite tracked files and the
+# release workflow hashes stay reproducible.
+* text=auto eol=lf
+
+# Windows scripts keep CRLF
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# Sources that must never be mangled
+*.png binary
+*.jpg binary
+*.gif binary
+*.icns binary
+*.ico binary
+*.woff binary
+*.woff2 binary

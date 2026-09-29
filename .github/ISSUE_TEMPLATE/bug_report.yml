@@ -1,0 +1,103 @@
+name: "🐛 Bug report"
+description: "Report something that crashes, draws wrongly, or loses data"
+labels: ["bug", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: >
+        Thanks for taking the time to file a detailed report. The most useful
+        bug reports include **the file that triggers the problem**: PhyloRecViewer
+        is a viewer for reconciliation data, so a minimal recPhyloXML / NHX
+        snippet usually makes a rendering or parsing bug reproducible in minutes.
+        If your data is under embargo, please send a tree you have modified
+        (renamed taxa are enough) rather than nothing at all.
+  - type: textarea
+    id: description
+    attributes:
+      label: What happened
+      description: A clear, concise description of the bug.
+      placeholder: |
+        Loading a recPhyloXML file with <bifurcationOut/> (no attributes) shows
+        no transfer arcs, and the Data checks tab reports "transferBackNoDonor".
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Exact clicks / keystrokes, starting from launch.
+      placeholder: |
+        1. Open PhyloRecViewer 0.1.0 (macOS .dmg)
+        2. File → Open file… → pick `reduced.recphyloxml`
+        3. Look at the canvas / the Data checks tab
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behaviour
+      description: What you expected to see, and why (referencing the recPhyloXML spec is helpful).
+    validations:
+      required: true
+  - type: textarea
+    id: data
+    attributes:
+      label: Input file / snippet
+      description: >
+        Drag & drop the file here (or a minimal excerpt). Please say whether the
+        file was produced by Ancestors, ALE, Cogent, Ry, a custom script, …
+      render: xml
+    validations:
+      required: false
+  - type: dropdown
+    id: app-version
+    attributes:
+      label: App version
+      options:
+        - "0.1.0"
+        - newer (say which in the description)
+        - built from source (commit hash in description)
+    validations:
+      required: true
+  - type: dropdown
+    id: build
+    attributes:
+      label: Which build
+      options:
+        - "Desktop (macOS .dmg)"
+        - "Desktop (Windows installer)"
+        - "Desktop (Linux .deb / .AppImage)"
+        - "Web build (npm run dev / npm run preview)"
+    validations:
+      required: true
+  - type: input
+    id: os
+    attributes:
+      label: Operating system and version
+      placeholder: "macOS 15.3 (Apple Silicon) / Windows 11 24H2 / Ubuntu 22.04"
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Console / developer-tools output
+      description: >
+        From a dev build (`npm run tauri dev`) or the web build
+        (`npm run dev` / `npm run preview`) you can open the web inspector and
+        paste anything red. Release bundles ship with devtools disabled — in that
+        case say so, and describe the on-screen error text instead (the app
+        shows a recoverable error panel with the parse message).
+      render: shell
+    validations:
+      required: false
+  - type: checkboxes
+    id: search
+    attributes:
+      label: Before submitting
+      options:
+        - label: I checked the troubleshooting section of the user manual
+          required: true
+        - label: I searched existing issues (including closed ones)
+          required: true
+        - label: I can reproduce this with a bundled sample or my own file
+          required: false

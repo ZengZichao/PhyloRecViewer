@@ -1,0 +1,35 @@
+<recPhylo>
+  <spTree>
+    <phylogeny rooted="true">
+      <clade>
+        <name>Sroot</name>
+        <clade><name>S_A</name></clade>
+        <clade><name>S_B</name></clade>
+      </clade>
+    </phylogeny>
+  </spTree>
+  <recGeneTree>
+    <phylogeny rooted="true">
+      <clade>
+        <name>g0</name>
+        <eventsRec><speciation speciesLocation="Sroot"/></eventsRec>
+        <clade>
+          <name>gA</name>
+          <eventsRec><duplication speciesLocation="S_A"/></eventsRec>
+          <clade>
+            <name>geneA1</name>
+            <eventsRec><leaf speciesLocation="S_A" geneName="geneA1"/></eventsRec>
+          </clade>
+          <clade>
+            <name>geneA2</name>
+            <eventsRec><leaf speciesLocation="S_A" geneName="geneA2"/></eventsRec>
+          </clade>
+        </clade>
+        <clade>
+          <name>geneB</name>
+          <eventsRec><leaf speciesLocation="S_B" geneName="geneB"/></eventsRec>
+        </clade>
+      </clade>
+    </phylogeny>
+  </recGeneTree>
+</recPhylo>

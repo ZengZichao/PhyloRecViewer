@@ -1,0 +1,39 @@
+<recPhylo>
+  <spTree>
+    <phylogeny rooted="true">
+      <clade>
+        <name>root</name>
+        <clade>
+          <name>Mammalia</name>
+          <clade><name>Human</name></clade>
+          <clade><name>Mouse</name></clade>
+        </clade>
+        <clade>
+          <name>Sauropsida</name>
+          <clade><name>Chicken</name></clade>
+          <clade><name>Lizard</name></clade>
+        </clade>
+      </clade>
+    </phylogeny>
+  </spTree>
+  <recGeneTree>
+    <phylogeny rooted="true">
+      <clade>
+        <name>g0</name>
+        <eventsRec><speciation speciesLocation="root"/></eventsRec>
+        <clade>
+          <name>g1</name>
+          <eventsRec><speciation speciesLocation="Mammalia"/></eventsRec>
+          <clade><name>gHu</name><eventsRec><leaf speciesLocation="Human" geneName="HsaGene"/></eventsRec></clade>
+          <clade><name>gMo</name><eventsRec><leaf speciesLocation="Mouse" geneName="MmuGene"/></eventsRec></clade>
+        </clade>
+        <clade>
+          <name>g2</name>
+          <eventsRec><speciation speciesLocation="Sauropsida"/></eventsRec>
+          <clade><name>gCh</name><eventsRec><leaf speciesLocation="Chicken" geneName="GgaGene"/></eventsRec></clade>
+          <clade><name>gLi</name><eventsRec><leaf speciesLocation="Lizard" geneName="AcaGene"/></eventsRec></clade>
+        </clade>
+      </clade>
+    </phylogeny>
+  </recGeneTree>
+</recPhylo>

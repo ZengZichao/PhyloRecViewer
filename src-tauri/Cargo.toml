@@ -1,0 +1,30 @@
+[package]
+name = "phylorecviewer"
+version = "0.1.0"
+description = "Beautiful, offline, interactive recPhyloXML reconciliation viewer"
+authors = ["Zichao Zeng <zengzichao@sjtu.edu.cn>"]
+edition = "2021"
+rust-version = "1.77"
+license = "MIT"
+
+[lib]
+name = "phylorecviewer_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+# Dialogs are driven from Rust (see src/lib.rs): the webview never names a path,
+# and no `fs:*` permission is granted, so the fs plugin is not a dependency.
+tauri-plugin-dialog = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+# Desktop-bundle size / link-time optimization for release packaging.
+[profile.release]
+lto = true
+codegen-units = 1
+strip = true
+
