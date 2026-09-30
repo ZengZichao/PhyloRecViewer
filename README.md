@@ -2,6 +2,8 @@
 
 **English** | [中文](./README.zh-CN.md)
 
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.23053318.svg)](https://doi.org/10.5281/zenodo.23053318)
+
 Beautiful, offline, interactive **recPhyloXML / NHX** phylogenetic-reconciliation viewer. Built with Tauri v2 (Rust + React 18 / TypeScript strict) with a deterministic, pure-style SVG renderer.
 
 ## Features
@@ -119,9 +121,9 @@ src/
 
 ## Citation
 
-If you use PhyloRecViewer in your research, please cite:
+If you use PhyloRecViewer in your research, please cite the archived release:
 
-> Zeng Z. PhyloRecViewer: an interactive, cross-platform viewer for gene–species reconciliations.
+> Zeng, Z. (2026). *PhyloRecViewer* (v0.1.0) [Computer software]. Zenodo. https://doi.org/10.5281/zenodo.23053318
 
 The machine-readable form is [CITATION.cff](./CITATION.cff).
 

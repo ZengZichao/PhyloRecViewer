@@ -2,6 +2,8 @@
 
 [English](./README.md) | **中文**
 
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.23053318.svg)](https://doi.org/10.5281/zenodo.23053318)
+
 美观、离线、交互式的 **recPhyloXML / NHX** 系统发育调和可视化工具。基于 Tauri v2（Rust + React 18 / TypeScript 严格模式）构建，采用纯函数式 SVG 渲染器。
 
 ## 功能特性
@@ -114,9 +116,9 @@ src/
 
 ## 引用
 
-如果您在研究中使用 PhyloRecViewer，请引用：
+如果您在研究中使用 PhyloRecViewer，请引用已归档的发布版本：
 
-> Zeng Z. PhyloRecViewer: an interactive, cross-platform viewer for gene–species reconciliations.
+> Zeng, Z. (2026). *PhyloRecViewer* (v0.1.0) [Computer software]. Zenodo. https://doi.org/10.5281/zenodo.23053318
 
 机器可读版本见 [CITATION.cff](./CITATION.cff)。
 
