@@ -18,13 +18,23 @@ updates:
     labels:
       - "dependencies"
       - "javascript"
+    # Collect the weekly patch/minor bumps into a single PR rather than many
+    # independent ones. Major bumps stay as individual PRs so one incompatible
+    # major cannot poison the whole batch — typescript-eslint 8 caps its peer
+    # at typescript <6.1.0, which is exactly what sank the grouped-bump PRs of
+    # 2026-09-29.
     groups:
-      # Collect the weekly bumps into a single PR rather than many independent
-      # ones — this project has one npm lockfile, and the PR is validated as a
-      # whole by CI.
-      all-npm-bumps:
-        patterns:
-          - "*"
+      npm-minor-and-patch:
+        update-types:
+          - "version-update:semver-minor"
+          - "version-update:semver-patch"
+    # typescript-eslint 8.x declares peer typescript >=4.8.4 <6.1.0, so a
+    # typescript@7 bump can never install (npm ERESOLVE). Silence majors until
+    # typescript-eslint ships TS 7 support, then delete this block.
+    ignore:
+      - dependency-name: "typescript"
+        update-types:
+          - "version-update:semver-major"
 
   - package-ecosystem: "cargo"
     directory: "/src-tauri"

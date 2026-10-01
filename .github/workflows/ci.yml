@@ -22,7 +22,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  NODE_VERSION: "20"
+  # Node 22: current LTS line. Node 20 left maintenance in April 2026.
+  NODE_VERSION: "22"
   # NOTE: `runs-on` cannot read the env context, so the Linux image
   # (ubuntu-22.04 — the Tauri v2 / WebKitGTK 4.1 reference platform) is written
   # out literally in each job below.
@@ -41,9 +42,9 @@ jobs:
         # for the same three platforms happen in release.yml.
         os: [ubuntu-22.04, macos-latest, windows-latest]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
@@ -72,7 +73,7 @@ jobs:
 
       - name: Upload coverage report
         if: matrix.os == 'ubuntu-22.04' && always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: coverage-${{ github.sha }}
           path: coverage
@@ -112,9 +113,9 @@ jobs:
     runs-on: ubuntu-22.04
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
@@ -146,7 +147,7 @@ jobs:
       matrix:
         os: [ubuntu-22.04, macos-latest]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Install Tauri system dependencies (Linux)
         if: matrix.os == 'ubuntu-22.04'
