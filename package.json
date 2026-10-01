@@ -39,7 +39,7 @@
     "@tauri-apps/plugin-dialog": "^2.2.0",
     "d3-selection": "^3.0.0",
     "d3-zoom": "^3.0.0",
-    "fast-xml-parser": "^4.5.0",
+    "fast-xml-parser": "^5.7.0",
     "jspdf": "^4.2.1",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
