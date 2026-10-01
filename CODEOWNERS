@@ -1,0 +1,5 @@
+# Default code owners. With `require_code_owner_reviews` disabled in branch
+# protection this only documents ownership and auto-requests review; flip the
+# switch in Settings -> Branches -> main if owner review should become
+# mandatory.
+*       @ZengZichao
