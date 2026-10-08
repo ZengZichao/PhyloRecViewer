@@ -11,17 +11,32 @@ The aggregates therefore carry, for every point, the median across runs plus
 the observed min and max, and each scaling exponent is a median with its
 across-run range rather than a single number.
 
-    node_modules/.../vite-node ... scripts/measure.ts      # once per run
-    python3 scripts/aggregate-measurements.py RUNDIR...
-    python3 scripts/aggregate-measurements.py --from-runs   # fold the published tables
+    npm run measure                          # once per run:
+                                             # tsx --tsconfig tsconfig.scripts.json scripts/measure.ts
+    python3 scripts/aggregate-measurements.py RUNDIR...   # fold scratch run dirs
+    python3 scripts/aggregate-measurements.py --from-runs # fold the published tables
+
+WHAT GETS WRITTEN WHERE — read this before running the fold:
+
+data/ is the frozen artefact the article cites. A replay of the fold recomputes
+`generated_utc` and the whole `host` block from the machine it runs on, so a fold
+that wrote into data/ by default would silently overwrite the host record the
+manuscript quotes (macOS 27.0 build 26A428, Python 3.14.6). Nothing is written to
+data/ unless the operator asks for it explicitly:
+
+    --check        recompute into a temporary directory and compare with data/;
+                   write NOTHING. Use this to reproduce the fold.
+    (default)     write the aggregates and MANIFEST to _build/aggregates/.
+    --out DIR     write there instead.
+    --in-place    legacy behaviour: overwrite data/. Only for producing a NEW
+                   frozen set, i.e. when a re-measurement is the point.
+    --dry-run     compute and report, write nothing.
 
 Reads <run>/benchmarks.csv and <run>/benchmarks-datasets.csv from every
-positional directory and writes the frozen aggregates plus a manifest into
-data/. The manifest carries the SHA-256 of every input, so a reader can check
-which runs produced which numbers.
-
-`--from-runs` folds the committed `*-runs.csv` tables instead of scratch run
-directories, so the published aggregates can be re-derived from published data.
+positional directory (or, with `--from-runs`, the committed `*-runs.csv` tables
+under data/) and writes the aggregates plus a manifest to the output directory.
+The manifest carries the SHA-256 of every input, keyed by the path a reader finds
+in this repository, so a reader can check which runs produced which numbers.
 """
 import csv
 import datetime as dt
@@ -31,13 +46,28 @@ import math
 import pathlib
 import platform
 import re
+import shutil
 import statistics
 import subprocess
 import sys
+import tempfile
 
 STAGE_COLS = ["parse", "layout", "svg"]
 ROOT = pathlib.Path(__file__).resolve().parent.parent
-OUT = ROOT / "data"
+DATA = ROOT / "data"                          # the frozen tables: read from here
+REPLAY = ROOT / "_build" / "aggregates"       # default destination of a replay
+FROZEN_TABLES = [
+    "benchmarks-sweep-median.csv",
+    "benchmarks-sweep-runs.csv",
+    "benchmarks-datasets-median.csv",
+    "benchmarks-datasets-runs.csv",
+]
+# Fields that describe where a fold was *replayed*, not what was *measured*; they
+# legitimately differ on another machine, so --check reports them separately.
+REPLAY_ONLY_MANIFEST_FIELDS = (
+    "generated_utc", "host", "source_commit", "source_ref", "source_commit_note",
+)
+
 
 TIMING_PROTOCOL = (
     "10 independent runs of `npm run measure` "
@@ -88,7 +118,6 @@ def timing_repeat_counts() -> tuple[int | None, int | None]:
     n_repeats = int(repeats.group(1)) if repeats else None
     warm_up = 1 if (loop and skipped) else None
     return n_repeats, warm_up
-
 
 
 def src_col(stage: str, which: str) -> str:
@@ -163,7 +192,7 @@ def runs_from_published(fname: str, run_col: str = "run"):
     be re-derived from published data at all. Each committed run becomes a
     synthetic directory whose name is the run label; only the label is read
     back, never the path."""
-    path = OUT / fname
+    path = DATA / fname
     if not path.exists():
         sys.exit(f"{path} not found - pass run directories instead of --from-runs")
     groups: dict[str, list] = {}
@@ -178,7 +207,7 @@ def runs_from_published(fname: str, run_col: str = "run"):
         return [int(t) if t.isdigit() else t for t in re.split(r"(\d+)", name)]
 
     return [
-        (OUT / "runs" / name / "measurements.csv", rows)
+        (DATA / "runs" / name / "measurements.csv", rows)
         for name, rows in sorted(groups.items(), key=lambda kv: natural(kv[0]))
     ]
 
@@ -232,7 +261,10 @@ def aggregate_numeric(runs, key_field, stages):
     return out
 
 
-def write_csv(path, header, rows):
+def write_csv(path, header, rows, emit=True):
+    if not emit:
+        print("would write", path)
+        return
     with path.open("w", newline="", encoding="utf-8") as fh:
         w = csv.writer(fh)
         w.writerow(header)
@@ -240,15 +272,16 @@ def write_csv(path, header, rows):
     print("wrote", path)
 
 
-def main(argv):
-    from_published = "--from-runs" in argv
-    directories = [a for a in argv if not a.startswith("--")]
-    if not from_published and len(directories) < 3:
-        sys.exit(
-            "need at least 3 run directories for a dispersion estimate, or pass "
-            "--from-runs to fold the committed *-runs.csv tables instead"
-        )
-    OUT.mkdir(parents=True, exist_ok=True)
+def fold(directories, from_published, dest, emit=True):
+    """Fold the runs into the aggregates and the manifest.
+
+    `dest` receives every file; `data/` is only ever read here. With `emit=False`
+    nothing is written and the manifest's hashes describe the committed tables, so
+    a dry run can report what it *would* claim without touching a frozen artefact.
+    """
+    if emit:
+        dest.mkdir(parents=True, exist_ok=True)
+    beside = dest if emit else DATA   # tables the manifest travels next to
 
     # ---- synthetic sweep -------------------------------------------------
     sweep_runs = (
@@ -275,16 +308,17 @@ def main(argv):
                                 for q in ("med", "q1", "q3")])
     agg = aggregate_numeric(sweep_runs, "nodes", STAGE_COLS)
     write_csv(
-        OUT / "benchmarks-sweep-median.csv",
+        dest / "benchmarks-sweep-median.csv",
         ["nodes"] + [f"{s}_{q}_ms" for s in STAGE_COLS for q in ("med", "min", "max")]
         + ["n_runs"],
         [[n] + [round(agg[str(n)][s][q], 2) for s in STAGE_COLS for q in ("med", "min", "max")]
-         + [agg[str(n)]["svg"]["n"]] for n in nodes])
+         + [agg[str(n)]["svg"]["n"]] for n in nodes],
+        emit=emit)
     write_csv(
-        OUT / "benchmarks-sweep-runs.csv",
+        dest / "benchmarks-sweep-runs.csv",
         ["run", "nodes"] + [f"{s}_{'med_ms' if q == 'med' else q}"
                             for s in STAGE_COLS for q in ("med", "q1", "q3")],
-        long_rows)
+        long_rows, emit=emit)
 
     # ---- bundled datasets -------------------------------------------------
     ds_runs = (
@@ -303,29 +337,24 @@ def main(argv):
             seen.add(k)
             ordered.append(k)
     write_csv(
-        OUT / "benchmarks-datasets-median.csv",
+        dest / "benchmarks-datasets-median.csv",
         ["dataset", "nodes"] + [f"{s}_{q}_ms" for s in STAGE_COLS for q in ("med", "min", "max")]
         + ["total_med_ms", "n_runs"],
         [[k, ds[k]["nodes"]]
          + [round(ds[k][s][q], 2) for s in STAGE_COLS for q in ("med", "min", "max")]
          + [round(sum(ds[k][s]["med"] for s in STAGE_COLS), 2), ds[k]["svg"]["n"]]
-         for k in ordered])
+         for k in ordered], emit=emit)
     write_csv(
-        OUT / "benchmarks-datasets-runs.csv",
+        dest / "benchmarks-datasets-runs.csv",
         ["run", "dataset", "nodes"] + [f"{s}_{'med_ms' if q == 'med' else q}"
                                        for s in STAGE_COLS for q in ("med", "q1", "q3")],
         [[p.parent.name, r["dataset"], r["nodes"]]
          + [r[f"{s}_{'med_ms' if q == 'med' else q}"]
             for s in STAGE_COLS for q in ("med", "q1", "q3")]
-         for p, rows in ds_runs for r in rows])
+         for p, rows in ds_runs for r in rows], emit=emit)
 
     # ---- manifest ---------------------------------------------------------
     top = nodes[-1]
-    by_node_last = {}
-    for p, rows in sweep_runs:
-        for r in rows:
-            if int(r["nodes"]) == top:
-                by_node_last.setdefault("x", []).append(r)
     n_repeats, warm_up = timing_repeat_counts()
     source_commit, source_ref = git_revision()
     manifest = {
@@ -333,8 +362,8 @@ def main(argv):
         "command": "npm run measure (scripts/measure.ts) once per run, then "
                    "python3 scripts/aggregate-measurements.py <run dirs>",
         "n_runs": len(sweep_runs),
-        # The three fields below are the provenance a reader would otherwise have
-        # to recover by reading scripts/measure.ts: how many runs were folded, how
+        # The fields below are the provenance a reader would otherwise have to
+        # recover by reading scripts/measure.ts: how many runs were folded, how
         # many timed repeats each run contains, whether one warm-up was discarded,
         # and which revision the tables are distributed with.
         "n_repeats": n_repeats,
@@ -352,25 +381,19 @@ def main(argv):
         "protocol": TIMING_PROTOCOL,
         "host": host_details(),
         "inputs": (
-            {_manifest_key(OUT / "benchmarks-sweep-runs.csv"):
-                 sha256(OUT / "benchmarks-sweep-runs.csv"),
-             _manifest_key(OUT / "benchmarks-datasets-runs.csv"):
-                 sha256(OUT / "benchmarks-datasets-runs.csv")}
+            {_manifest_key(DATA / "benchmarks-sweep-runs.csv"):
+                 sha256(DATA / "benchmarks-sweep-runs.csv"),
+             _manifest_key(DATA / "benchmarks-datasets-runs.csv"):
+                 sha256(DATA / "benchmarks-datasets-runs.csv")}
             if from_published
             else {_label(p): sha256(p) for p, _r in sweep_runs + ds_runs}
         ),
-        # The four tables under data/ that the reported numbers are read from,
-        # hashed so a reader can tell whether the copy they hold is the copy
-        # that was folded.
+        # The four tables the reported numbers are read from, hashed so a reader
+        # can tell whether the copy they hold is the copy that was folded.
         "published_sha256": {
-            p.name: sha256(p)
-            for p in (
-                OUT / "benchmarks-sweep-median.csv",
-                OUT / "benchmarks-sweep-runs.csv",
-                OUT / "benchmarks-datasets-median.csv",
-                OUT / "benchmarks-datasets-runs.csv",
-            )
-            if p.exists()
+            name: sha256(beside / name)
+            for name in FROZEN_TABLES
+            if (beside / name).exists()
         },
         # Two estimators, both recorded: the per-run fits give the across-run
         # spread, the median-table fit gives one number for the median curve.
@@ -403,9 +426,12 @@ def main(argv):
         "datasets_total_med_ms": {k: round(sum(ds[k][s]["med"] for s in STAGE_COLS), 2)
                                   for k in ordered},
     }
-    (OUT / "MANIFEST.json").write_text(json.dumps(manifest, indent=1) + "\n",
-                                       encoding="utf-8")
-    print("wrote", OUT / "MANIFEST.json")
+    manifest_text = json.dumps(manifest, indent=1) + "\n"
+    if emit:
+        (dest / "MANIFEST.json").write_text(manifest_text, encoding="utf-8")
+        print("wrote", dest / "MANIFEST.json")
+    else:
+        print("would write", dest / "MANIFEST.json")
     print("\nexponent: per-run median [min-max] | median-table OLS (R2):")
     for s in STAGE_COLS:
         print(
@@ -413,7 +439,145 @@ def main(argv):
             f"[{min(per_run_exp[s]):.3f},{max(per_run_exp[s]):.3f}] | "
             f"{published_median_ols[s][0]:.3f} (R2 {published_median_ols[s][1]:.4f})"
         )
+    return manifest
+
+
+def check(folded, replay_dir) -> int:
+    """Compare a freshly folded result against the frozen `data/` tables.
+
+    Three separate questions, because they fail for different reasons:
+      1. do the four tables reproduce byte-for-byte from the published run tables?
+      2. do the hashes the committed MANIFEST declares resolve, and match?
+      3. do the derived quantities (exponents, top-size medians, node ladder) agree?
+    Provenance fields are never treated as a failure: they record the machine the
+    fold ran on, which on a reader's machine is not the measurement host.
+    """
+    failures = []
+    # 1. byte-for-byte tables
+    for name in FROZEN_TABLES:
+        tmp, committed = replay_dir / name, DATA / name
+        if not tmp.exists() or not committed.exists():
+            failures.append(f"cannot compare {name}: present in only one place")
+        elif tmp.read_bytes() != committed.read_bytes():
+            failures.append(f"{_manifest_key(committed)} does NOT reproduce byte-for-byte")
+        else:
+            print(f"  table reproduces byte-for-byte: {_manifest_key(committed)}")
+    # 2. the committed manifest's own claims
+    committed_path = DATA / "MANIFEST.json"
+    if not committed_path.exists():
+        print("  MISMATCH: data/MANIFEST.json is missing", file=sys.stderr)
+        return 1
+    committed = json.loads(committed_path.read_text(encoding="utf-8"))
+    declared = list(committed.get("inputs", {}).items()) + [
+        (_manifest_key(DATA / n), h) for n, h in committed.get("published_sha256", {}).items()
+    ]
+    for key, digest in declared:
+        path = ROOT / key
+        if not path.exists():
+            failures.append(f"committed MANIFEST names {key}, which does not exist")
+        elif sha256(path) != digest:
+            failures.append(f"{key}: declared sha256 does not match the file")
+        else:
+            print(f"  declared sha256 matches: {key}")
+    # 3. derived quantities, excluding the replay-specific provenance fields
+    for field, value in folded.items():
+        if field in REPLAY_ONLY_MANIFEST_FIELDS:
+            continue
+        if field not in committed:
+            failures.append(f"committed MANIFEST has no `{field}` field")
+        elif committed[field] != value:
+            failures.append(f"MANIFEST `{field}` differs: committed {committed[field]!r} "
+                            f"vs replayed {value!r}")
+    if not failures:
+        print(f"  every MANIFEST field except provenance "
+              f"({', '.join(REPLAY_ONLY_MANIFEST_FIELDS)}) reproduces exactly")
+    for f in failures:
+        print("  MISMATCH:", f, file=sys.stderr)
+    return 1 if failures else 0
+
+
+USAGE = (
+    "usage: python3 scripts/aggregate-measurements.py "
+    "[--from-runs | RUNDIR RUNDIR RUNDIR...] [--out DIR | --in-place] "
+    "[--check | --dry-run]\n"
+    "  --check     replay the fold into a temporary directory and compare it with "
+    "data/; writes nothing (this is the reproduction command).\n"
+    "  (default)   write the fold to _build/aggregates/; data/ is never overwritten.\n"
+    "  --out DIR   write the fold to DIR instead.\n"
+    "  --in-place  write the fold into data/, replacing the frozen tables "
+    "(only when a re-measurement is intended).\n"
+    "  --dry-run   compute and report, write nothing.\n"
+)
+
+
+def main(argv):
+    flags = {a for a in argv if a.startswith("--")}
+    unknown = flags - {"--from-runs", "--out", "--in-place", "--dry-run", "--check",
+                       "--help", "-h"}
+    if unknown:
+        sys.exit(f"unknown option(s): {', '.join(sorted(unknown))}\n\n" + USAGE)
+    if "--help" in flags or "-h" in argv:
+        print(__doc__.rstrip())
+        print()
+        print(USAGE)
+        return
+
+    from_published = "--from-runs" in flags
+    in_place = "--in-place" in flags
+    dry_run = "--dry-run" in flags
+    verify = "--check" in flags
+    directories = [a for a in argv if not a.startswith("--")]
+    dest = None
+    if "--out" in flags:
+        i = argv.index("--out")
+        if i + 1 >= len(argv) or argv[i + 1].startswith("--"):
+            sys.exit("--out needs a directory\n\n" + USAGE)
+        dest = pathlib.Path(argv[i + 1]).resolve()
+        directories = [d for d in directories if d != argv[i + 1]]
+    if in_place and dest is not None:
+        sys.exit("--in-place and --out are mutually exclusive\n\n" + USAGE)
+    if in_place:
+        dest = DATA
+    elif dest is None:
+        dest = REPLAY
+    if not from_published and len(directories) < 3 and not verify:
+        sys.exit(
+            "need at least 3 run directories for a dispersion estimate, or pass "
+            "--from-runs to fold the committed *-runs.csv tables instead\n\n" + USAGE
+        )
+    if not from_published and verify:
+        sys.exit("--check replays the published fold; add --from-runs\n\n" + USAGE)
+
+    if verify:
+        replay = pathlib.Path(tempfile.mkdtemp(prefix="phylorec-aggregate-check-"))
+        print("replaying the fold into a temporary directory and comparing with "
+              "data/ — nothing under data/ is written:")
+        try:
+            folded = fold(directories, from_published, replay, emit=True)
+            code = check(folded, replay)
+        finally:
+            shutil.rmtree(replay, ignore_errors=True)
+        print("CHECK PASSED — the frozen tables reproduce and the committed "
+              "manifest resolves against them" if code == 0
+              else "CHECK FAILED — see the mismatches above")
+        sys.exit(code)
+
+    if dry_run:
+        print("dry run: the fold is computed, no file is written\n")
+        fold(directories, from_published, dest, emit=False)
+        return
+
+    if dest == DATA:
+        print("WARNING: --in-place replaces the frozen tables AND the host record "
+              "under data/. The article quotes the host block as written on "
+              "2026-09-28; use --check to reproduce the fold without touching it.\n")
+    else:
+        print(f"folding into {dest} — data/ is left untouched "
+              f"(--in-place opts into replacing it)\n")
+    fold(directories, from_published, dest, emit=True)
 
 
 if __name__ == "__main__":
     main(sys.argv[1:])
+
+

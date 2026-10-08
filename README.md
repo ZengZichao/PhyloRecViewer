@@ -62,25 +62,32 @@ npm run coverage      # vitest with a coverage report
 npm run check:tracked # every imported file is committed (see CONTRIBUTING.md)
 ```
 
-The benchmark tables under `data/` are reproducible from this tree. Each
-`npm run measure` writes to `_build/`, so a repeat has to be archived before the
-next one overwrites it:
+`data/` holds the frozen measurements: medians, per-run values, input hashes, and
+the timing protocol (`n_runs`, `n_repeats`, `warm_up`, `protocol`) with the source
+revision they are distributed under. The fold behind them is reproducible from
+this tree, at three safety levels — pick the first one unless you mean to replace
+the frozen tables:
 
 ```bash
+# 1. reproduce the published fold and compare it with data/. Writes NOTHING.
+python3 scripts/aggregate-measurements.py --check --from-runs
+
+# 2. re-derive it into a scratch directory (default _build/aggregates/, or --out DIR)
+python3 scripts/aggregate-measurements.py --from-runs
+
+# 3. re-measure from scratch and replace data/ — the only mode that writes data/
 for i in 1 2 3 4 5 6 7 8 9 10; do
-  npm run measure
+  npm run measure            # writes _build/, so archive each run before the next
   mkdir -p "run$i" && cp _build/benchmarks.csv _build/benchmarks-datasets.csv "run$i/"
 done
-npm run measure:aggregate run1 run2 run3 run4 run5 run6 run7 run8 run9 run10
+npm run measure:aggregate -- run1 run2 run3 run4 run5 run6 run7 run8 run9 run10 --in-place
 ```
 
-The same fold can be replayed from the committed data alone:
-
-```bash
-python3 scripts/aggregate-measurements.py --from-runs
-```
-
-`data/` holds the frozen measurements (medians, per-run values, input hashes).
+`--in-place` is explicit on purpose. A replay recomputes `generated_utc` and the
+whole `host` block from the machine it runs on, so the plain `--from-runs` command
+used to overwrite the host record the article quotes (Apple M5, 32 GB, macOS 27.0
+build 26A428, Python 3.14.6) with that of whoever ran it. `--dry-run` and
+`--help` describe the remaining options; `--check` exits non-zero on any mismatch.
 
 ## Usage
 

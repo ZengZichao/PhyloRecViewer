@@ -79,7 +79,7 @@ src-tauri/
 └── src/           # Rust shell (file association, dialogs, atomic save)
 scripts/
 ├── measure.ts                  # parse / layout / render benchmarks -> _build/*.csv
-├── aggregate-measurements.py   # folds repeated runs -> data/*.csv + MANIFEST.json
+├── aggregate-measurements.py   # folds runs -> _build/aggregates/; data/ only with --in-place
 └── check-tracked-files.mjs     # repo self-consistency guard (npm run check:tracked)
 .github/workflows/
 ├── ci.yml         # lint / typecheck / test / build on Ubuntu + macOS + Windows
@@ -164,8 +164,15 @@ parser → layout → renderer path, so they are runnable from a clean clone:
 
 ```bash
 npm run measure            # -> _build/benchmarks-datasets.csv, benchmarks.csv
-npm run measure:aggregate  # fold repeated runs -> data/*.csv + data/MANIFEST.json
+npm run measure:aggregate  # fold repeated runs -> _build/aggregates/ by default
+python3 scripts/aggregate-measurements.py --check --from-runs   # verify data/, write nothing
 ```
+
+The aggregator never writes into `data/` on its own: a replay re-derives
+`generated_utc` and the whole `host` block from the machine it runs on, and those
+fields are quoted as measurement provenance. Writing the frozen tables is an
+explicit `--in-place` (or `--out DIR` for a scratch copy), and the read-only
+verification path is `--check --from-runs`. See the README for the full protocol.
 
 `npm run measure` goes through `tsx --tsconfig tsconfig.scripts.json`. That extra
 config exists because the root `tsconfig.json` is solution-style (`files: []`, no

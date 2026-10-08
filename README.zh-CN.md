@@ -60,23 +60,29 @@ npm run coverage      # vitest 并输出覆盖率报告
 npm run check:tracked # 确认被引用的文件都已纳入版本控制（见 CONTRIBUTING.md）
 ```
 
-`data/` 中的基准数值可在同一份代码树上复现：
+`data/` 保存冻结的测量数据：中位数、每次运行的原始值、输入哈希，以及它们所依据的计时
+协议（`n_runs`、`n_repeats`、`warm_up`、`protocol`）与随附的源码版本。折叠过程可在同一
+份代码树上复现，分三档安全级别——除非确实要替换冻结表，否则请用第一档：
 
 ```bash
+# 1. 复现已发布的折叠并与 data/ 比对。一个字节也不写。
+python3 scripts/aggregate-measurements.py --check --from-runs
+
+# 2. 重算到临时目录（默认 _build/aggregates/，也可 --out DIR）
+python3 scripts/aggregate-measurements.py --from-runs
+
+# 3. 重新测量并替换 data/ —— 唯一会写 data/ 的模式
 for i in 1 2 3 4 5 6 7 8 9 10; do
-  npm run measure   # 每次写入 _build/，须先归档再跑下一次
+  npm run measure            # 每次写入 _build/，须先归档再跑下一次
   mkdir -p "run$i" && cp _build/benchmarks.csv _build/benchmarks-datasets.csv "run$i/"
 done
-npm run measure:aggregate run1 run2 run3 run4 run5 run6 run7 run8 run9 run10
+npm run measure:aggregate -- run1 run2 run3 run4 run5 run6 run7 run8 run9 run10 --in-place
 ```
 
-同一套结果也可以只用仓库里已提交的数据表重算：
-
-```bash
-python3 scripts/aggregate-measurements.py --from-runs
-```
-
-`data/` 保存冻结的测量数据（中位数、每次运行的原始值、输入哈希）。
+`--in-place` 必须显式写出。任何一次重算都会按当前机器重写 `generated_utc` 与整个 `host`
+块，所以在加这个开关之前，`--from-runs` 会把稿件引用的那条 host 记录（Apple M5、32 GB、
+macOS 27.0 build 26A428、Python 3.14.6）悄悄换成执行者机器的指纹。其余选项见 `--dry-run`
+与 `--help`；`--check` 一旦发现不一致就以非零码退出。
 
 ## 使用方法
 

@@ -75,7 +75,7 @@ src-tauri/
 └── src/           # Rust 桌面壳（文件关联、对话框、原子保存）
 scripts/
 ├── measure.ts                  # 解析 / 布局 / 渲染基准 -> _build/*.csv
-├── aggregate-measurements.py   # 折叠重复运行 -> data/*.csv + MANIFEST.json
+├── aggregate-measurements.py   # 折叠重复运行 -> _build/aggregates/；仅 --in-place 才写 data/
 └── check-tracked-files.mjs     # 仓库自洽性守卫（npm run check:tracked）
 .github/workflows/
 ├── ci.yml         # lint / typecheck / test / build，覆盖 Ubuntu + macOS + Windows
@@ -156,8 +156,13 @@ git add -- src/model/newthing.ts src/samples/new-sample.recphyloxml
 
 ```bash
 npm run measure            # -> _build/benchmarks-datasets.csv, benchmarks.csv
-npm run measure:aggregate  # 折叠重复运行 -> data/*.csv + data/MANIFEST.json
+npm run measure:aggregate  # 折叠重复运行 -> 默认写入 _build/aggregates/
+python3 scripts/aggregate-measurements.py --check --from-runs   # 校验 data/，什么都不写
 ```
+
+聚合脚本不会自行写入 `data/`：任何一次重算都会按当前机器重新生成 `generated_utc` 与整个
+`host` 块，而这两个字段正是稿件引用的测量出处。要写冻结表必须显式 `--in-place`（或用
+`--out DIR` 写到别处），只读校验路径是 `--check --from-runs`。完整协议见 README。
 
 `npm run measure` 经由 `tsx --tsconfig tsconfig.scripts.json` 运行。这个额外的配置之所以
 存在，是因为根 `tsconfig.json` 是 solution 风格（`files: []`，没有 `compilerOptions`）：
