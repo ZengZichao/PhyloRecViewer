@@ -49,6 +49,22 @@ def _label(p: pathlib.Path) -> str:
     return f"{p.parent.name}/{p.name}"
 
 
+def _manifest_key(p: pathlib.Path) -> str:
+    """The key a reader uses to find `p`: its path inside this repository.
+
+    These keys used to be hard-coded as `published/<name>`. No `published/`
+    directory exists in the tree or in the archived snapshot — the four frozen
+    tables have always lived under `data/` — so the manifest could not resolve
+    its own input hashes and a reader following them hit a 404. Deriving the key
+    from the real path makes the manifest self-referential again, and keeps the
+    documented `--from-runs` replay identical to what is committed.
+    """
+    try:
+        return p.relative_to(ROOT).as_posix()
+    except ValueError:
+        return _label(p)
+
+
 def sha256(p: pathlib.Path) -> str:
     return hashlib.sha256(p.read_bytes()).hexdigest()
 
@@ -266,8 +282,10 @@ def main(argv):
         "n_runs": len(sweep_runs),
         "host": host_details(),
         "inputs": (
-            {"published/benchmarks-sweep-runs.csv": sha256(OUT / "benchmarks-sweep-runs.csv"),
-             "published/benchmarks-datasets-runs.csv": sha256(OUT / "benchmarks-datasets-runs.csv")}
+            {_manifest_key(OUT / "benchmarks-sweep-runs.csv"):
+                 sha256(OUT / "benchmarks-sweep-runs.csv"),
+             _manifest_key(OUT / "benchmarks-datasets-runs.csv"):
+                 sha256(OUT / "benchmarks-datasets-runs.csv")}
             if from_published
             else {_label(p): sha256(p) for p, _r in sweep_runs + ds_runs}
         ),

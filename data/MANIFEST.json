@@ -14,8 +14,8 @@
   "node": "v20.20.2"
  },
  "inputs": {
-  "published/benchmarks-sweep-runs.csv": "8e4661beba8caf73ae9667b54db275be7833191c9265d552ed320a003b7a7b54",
-  "published/benchmarks-datasets-runs.csv": "6c13cf0fb58ab990cc88dbf88c985c146384c09989fdcab313b8e491abb751a3"
+  "data/benchmarks-sweep-runs.csv": "8e4661beba8caf73ae9667b54db275be7833191c9265d552ed320a003b7a7b54",
+  "data/benchmarks-datasets-runs.csv": "6c13cf0fb58ab990cc88dbf88c985c146384c09989fdcab313b8e491abb751a3"
  },
  "published_sha256": {
   "benchmarks-sweep-median.csv": "c6be78ea651ddb895df8b9deb2d844f980136b3d68f12319b8eac935cb918272",
