@@ -281,7 +281,7 @@ A floating button cluster sits at the **top-left** of the canvas (undo/redo and 
 | **`F`** or the `⤢` button | Fit to view |
 | **Zoom readout** | Live percentage in the floating toolbar |
 
-Zoom range is **3% – 1000%**. The zoom level drives a level-of-detail (LOD) switch: when zoomed far out, labels and event glyphs hide automatically for legibility and performance. For very large inputs a brief "Rendering…" indicator appears in the lower-left of the canvas.
+Zoom range is **3% – 1000%**. The zoom level drives a level-of-detail (LOD) switch: below **0.42×** the pure event glyphs (duplication squares, loss crosses, transfer and speciation markers) are dropped, while species labels, gene labels and the gene-edge halos are still drawn; below **0.16×** all labels and the halos go too. Collapsed wedges and leaf tips are drawn at every zoom level, so the tree structure always reads. For very large inputs a brief "Rendering…" indicator appears in the lower-left of the canvas.
 
 ### 5.3 Fit to view
 
@@ -745,7 +745,7 @@ These are hard limits in the code, not configuration suggestions; hitting one pr
 | PNG canvas | 16,384 px per edge **and** ≈6.7×10⁷ px total | export | scale is reduced and the effective DPI is reported |
 | Statistics tables | top 25 rows | right panel | the per-species and transfer-matrix tables list the 25 largest entries; CSV export is not truncated |
 | Viewport culling | above 1,500 gene nodes | canvas | gene elements outside the viewport are not drawn; species tubes, labels and transfer arcs always are |
-| Level of detail | zoom < 0.42× and < 0.16× | canvas | independent of document size: labels drop first, then pure event glyphs |
+| Level of detail | zoom < 0.42× and < 0.16× | canvas | independent of document size: pure event glyphs are dropped below 0.42×; all labels and gene-edge halos drop below 0.16× |
 
 ---
 
