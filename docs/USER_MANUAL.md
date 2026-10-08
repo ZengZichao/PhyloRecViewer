@@ -2,7 +2,7 @@
 
 **English** | [中文](./USER_MANUAL.zh-CN.md)
 
-> **Applicable version**: v0.1.0
+> **Applicable version**: v0.1.1
 > **Purpose**: An offline, interactive desktop viewer for recPhyloXML / NHX gene–species reconciliations
 > **Platforms**: macOS / Windows / Linux desktop (Tauri 2), plus a browser build (Web Build)
 > **Application identifier**: `org.recphyloxml.viz`

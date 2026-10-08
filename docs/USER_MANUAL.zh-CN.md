@@ -2,7 +2,7 @@
 
 **中文** | [English](./USER_MANUAL.md)
 
-> **适用版本**：v0.1.0
+> **适用版本**：v0.1.1
 > **软件定位**：一款离线、交互式的 recPhyloXML / NHX 基因－物种调和（reconciliation）可视化桌面软件
 > **运行环境**：macOS / Windows / Linux 桌面端（基于 Tauri 2）；同时提供浏览器版（Web Build）
 > **应用标识**：`org.recphyloxml.viz`
