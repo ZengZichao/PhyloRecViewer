@@ -82,6 +82,13 @@ UI_LANE_LABEL = "Overlapping copies (lanes)"
 
 FONT = ", ".join(st.FONT_FAMILY)
 
+# U+2265 GREATER-THAN OR EQUAL TO, the one non-ASCII sign these figures quote
+# off the interface ("networkEdgeWidth(1|3|>=6)").  It is never SET as a glyph:
+# Fig.ge6() draws it as line work, because the CID-keyed subset CairoSVG writes
+# for it carries no cmap table for the glyph-coverage gate to check.  Every
+# string below may contain it; ttext() routes those through relation_text().
+GE_CHAR = "\u2265"
+
 # ------------------------------------------------------------ type ladder ---
 # Every rung is derived from a point floor, never hand-tuned below it.
 F_PL = u(st.PANEL_LETTER)   # panel letter
@@ -102,6 +109,17 @@ SQ_DUP = 18.0   # duplication square side
 W_EDGE = 2.4    # gene-tree edge
 W_TUBE = 1.3    # tube outline
 PRINT_FACTOR = st.PRINT_FACTOR   # interface px -> figure units at 166 mm
+
+# ------------------------------------------------------------ label leading --
+# A line of type reserves its FONT BOX: Helvetica Neue at the 23-unit (7.52 pt)
+# body rung measures 0.952 em of ascent plus 0.213 em of descent = 26.8 units.
+# Two lines set on a tighter pitch share a strip of that box, which is exactly
+# what "no two drawn labels overprint" means on the carrier (check_figures.py
+# intersects the boxes PyMuPDF reports for the spans), so every stacked pair in
+# these figures is laid out on this pitch and never tighter: 30 units is 1.30
+# leading at the body rung, against the 0.87 leading that produced ISSUE-020.
+STACK_LEAD = 30.0      # baseline pitch of a two-line label (title + subtitle)
+SUB_DY = 16.0          # panel title -> panel subtitle baseline gap
 
 
 # ------------------------------------------------------------ lane packing ---
@@ -245,7 +263,7 @@ class Fig:
         self.b.append('<circle %s/>' % a)
 
     def text(self, x, y, s, size=F_LB, fill=INK, anchor="start", weight="normal",
-             style="normal", spacing=None):
+             style="normal", spacing=None, record=True):
         size = max(F_XS, size)  # never below the shared 7 pt floor
         a = ('x="%s" y="%s" font-size="%s" fill="%s" text-anchor="%s"' %
              (r(x), r(y), r(size), fill, anchor))
@@ -256,12 +274,73 @@ class Fig:
         if spacing:
             a += ' letter-spacing="%s"' % r(spacing)
         self.b.append('<text %s>%s</text>' % (a, esc(s)))
-        self.texts.append(dict(x=x, y=y, s=str(s), size=size, fill=fill,
-                               anchor=anchor, weight=weight, style=style))
+        if record:
+            self.texts.append(dict(x=x, y=y, s=str(s), size=size, fill=fill,
+                                   anchor=anchor, weight=weight, style=style))
+
+    def ge6(self, x, base, size, fill=INK2):
+        """draw the relation 'at least' as two strokes over a bar.
+
+        U+2265 is a real glyph of Helvetica Neue, but CairoSVG sets it in a
+        CID-keyed Identity-H subset that ships no cmap table at all (measured on
+        the delivered 图1/图4 PDFs: the RFUNIP+HelveticaNeue program has Glyph
+        outlines and a /ToUnicode CMap, and no cmap), so the glyph-coverage gate
+        over the carrier can never certify the sign, and a press that honours
+        the subset has no unicode cross-check of its own either.  Drawing the
+        relation as line work retires the dependency: the mark is geometry in
+        every carrier, and it is the same remedy the audit accepted for the
+        U+2192 arrow (ISSUE-025), which was drawn rather than set.
+
+        The proportions and the advance are the font's own, measured off the
+        delivered glyph (chevron -0.526..-0.084 em over the baseline, bar on it,
+        ink spanning 0.083..0.915 of a 0.60 em advance), so the text laid out
+        beside it does not move.  Returns the advance.
+        """
+        w = text_w(GE_CHAR, size)
+        x0, x1 = x + 0.083 * w, x + 0.915 * w
+        self.path("M %s,%s L %s,%s L %s,%s" % (
+                      r(x0), r(base - 0.526 * size),
+                      r(x1), r(base - 0.305 * size),
+                      r(x0), r(base - 0.084 * size)),
+                  stroke=fill, w=0.075 * size, cap="round", join="round")
+        self.line(x0, base - 0.010 * size, x1, base - 0.010 * size,
+                  stroke=fill, w=0.067 * size, cap="butt")
+        return w
+
+    def relation_text(self, x, base, s, size=F_LB, fill=INK, anchor="start",
+                      weight="normal", style="normal"):
+        """lay `s` out on one baseline, drawing every GE_CHAR as geometry.
+
+        The runs between the signs are ordinary <text>, positioned by the
+        advances the font really gives them, so the whole string occupies the
+        same box, anchored the same way, as a single <text> would.  One draw
+        record is kept for the whole string: the alt-text skeleton and the
+        figure-side overlap report must see the label the reader reads, not the
+        pieces it was set from.
+        """
+        size = max(F_XS, size)
+        w = text_w(s, size)
+        cur = (x - w / 2.0 if anchor == "middle" else
+               x - w if anchor == "end" else x)
+        parts = s.split(GE_CHAR)
+        for i, part in enumerate(parts):
+            if part:
+                self.text(cur, base, part, size=size, fill=fill, anchor="start",
+                          weight=weight, style=style, record=False)
+                cur += text_w(part, size)
+            if i < len(parts) - 1:
+                cur += self.ge6(cur, base, size, fill)
+        self.texts.append(dict(x=cur - w, y=base, s=s, size=size, fill=fill,
+                               anchor="start", weight=weight, style=style))
 
     def ttext(self, x, cy, s, **kw):
         """text positioned by the vertical centre of its cap-height"""
-        self.text(x, cy + kw.get("size", F_LB) * 0.355, s, **kw)
+        size = kw.get("size", F_LB)
+        base = cy + size * 0.355
+        if GE_CHAR in str(s):
+            self.relation_text(x, base, str(s), **kw)
+        else:
+            self.text(x, base, s, **kw)
 
     def lab(self, x, cy, s, size=F_SM, fill=INK, anchor="start", weight="normal",
             style="normal", halo="#FFFFFF"):
@@ -320,7 +399,7 @@ class Fig:
         self.text(x, y + F_PL * 0.34, "(%s)" % letter, size=F_PL, weight="bold")
         self.text(x + 40, y + F_PT * 0.34, title, size=F_PT, weight="bold")
         if subtitle:
-            self.text(x + 40, y + F_PT + 20, subtitle, size=F_PS, fill=MUT)
+            self.text(x + 40, y + F_PT + SUB_DY, subtitle, size=F_PS, fill=MUT)
         self.heads.append(dict(letter=letter, title=title, subtitle=subtitle,
                                x=x, y=y))
 
@@ -675,15 +754,20 @@ def tube_map(f, with_lanes=True):
             f.lab(P[n][0] - 14, P[n][1], n, size=F_LB, anchor="end")
     if with_lanes:
         cx = TUBE_X + TUBE_W + 62.0
-        f.ttext(cx, 96, LANE_HEADING[0], size=F_SM, fill=MUT, anchor="middle")
-        f.ttext(cx, 116, LANE_HEADING[1], size=F_SM, fill=MUT, anchor="middle")
+        # the two heading lines and the two footer lines are set on STACK_LEAD:
+        # at the old 20-unit pitch the descenders of line 1 landed on the
+        # ascenders of line 2 (ISSUE-020's overprint class)
+        f.ttext(cx, 88, LANE_HEADING[0], size=F_SM, fill=MUT, anchor="middle")
+        f.ttext(cx, 88 + STACK_LEAD, LANE_HEADING[1], size=F_SM, fill=MUT,
+                anchor="middle")
         for name in SPECIES_ORDER:
             f.circle(cx, TUBE_CY[name], 27, fill=f.heat_ramp[int(counts[name])],
                      stroke=TUBE_S, sw=1.3)
             f.ttext(cx, TUBE_CY[name], str(counts[name]), size=F_LB,
                     weight="bold", anchor="middle")
-        f.ttext(cx, 452, "incoming edges", size=F_SM, fill=MUT, anchor="middle")
-        f.ttext(cx, 472, "overlapping at once", size=F_SM, fill=MUT, anchor="middle")
+        f.ttext(cx, 457, "incoming edges", size=F_SM, fill=MUT, anchor="middle")
+        f.ttext(cx, 457 + STACK_LEAD, "overlapping at once", size=F_SM, fill=MUT,
+                anchor="middle")
     f.lane_counts = dict(counts)
     f.lane_of = dict(lanes)
     return P, counts, lanes
@@ -884,14 +968,20 @@ def legend_block(f, y0, rows, rule=True, gap=22.0):
 
 
 # ============================================================== alt text ====
-def overlap_report(f, name, tol_pt=0.5):
-    """list pairs of drawn text whose bounding boxes overlap (F-04-10 check).
+def overlap_report(f, name, tol_pt=0.5, strict=True):
+    """list pairs of drawn text whose boxes overlap (the F-04-10 gate).
 
-    A conservative ink box is built from the recorded baseline, anchor and size
-    (ascender 0.75 em above, descender 0.25 em below), the width from the real
-    font metrics.  This is the figure-side mirror of the PDF-span overlap assert
-    in check_figures.py: it names any two labels that collide so the layout can
-    be fixed before the carriers are exported.
+    The box is the one the carrier will report: the font box PyMuPDF returns for
+    the span (Helvetica Neue reserves 0.952 em above the baseline and 0.213 em
+    below it, 1.165 em in all), the width being the sum of the real advances.
+    This is the figure-side mirror of check_figures.py's overlap assert and uses
+    the same rectangle, so a pair the carrier would fail is named here before
+    any carrier exists -- an earlier version measured only the cap band and
+    therefore saw none of the stacked labels it was written to catch.
+
+    A haloed label (lab()) is ONE label: the under-stroke and the fill share a
+    box by construction, and only the first is recorded, so no dedupe is needed
+    on this side.
     """
     boxes = []
     for t in f.texts:
@@ -907,7 +997,7 @@ def overlap_report(f, name, tol_pt=0.5):
             x0 = x - w
         else:
             x0 = x
-        asc, desc = 0.75 * size, 0.25 * size
+        asc, desc = 0.952 * size, 0.213 * size
         boxes.append((x0, y - asc, x0 + w, y + desc, s))
     tol_pt_u = tol_pt / PT_PER_UNIT
     hits = []
@@ -916,12 +1006,16 @@ def overlap_report(f, name, tol_pt=0.5):
             a, b = boxes[i], boxes[j]
             ox = min(a[2], b[2]) - max(a[0], b[0])
             oy = min(a[3], b[3]) - max(a[1], b[1])
-            if ox > tol_pt_u and oy > tol_pt_u:
+            if ox > tol_pt_u and oy > tol_pt_u and ox * oy * PT_PER_UNIT ** 2 > 1.0:
                 hits.append((a[4], b[4], ox * PT_PER_UNIT, oy * PT_PER_UNIT))
     if hits:
-        print("  !! %s text overlaps (%d pair(s)):" % (name, len(hits)))
-        for s1, s2, ox, oy in hits:
+        print("  !! %s text overlaps (%d pair(s), >1 pt^2 of font box):"
+              % (name, len(hits)))
+        for s1, s2, ox, oy in sorted(hits, reverse=True):
             print("       %r x %r  overlap %.2f x %.2f pt" % (s1, s2, ox, oy))
+        if strict:
+            raise SystemExit("%s: %d drawn-text pair(s) share a box; fix the "
+                             "layout before exporting carriers" % (name, len(hits)))
     else:
         print("     [ok ] %s: no two drawn-text boxes overlap" % name)
     return hits
@@ -1015,7 +1109,7 @@ def alt_skeleton(f):
 
 
 def emit_alt(f):
-    """print the skeleton and keep it for the combined /tmp report."""
+    """print the skeleton and keep it for the combined `figures/_build/` report."""
     txt = alt_skeleton(f)
     print(txt)
     try:
@@ -1029,9 +1123,6 @@ def emit_alt(f):
     return txt
 
 
-# Per-figure alt-text skeletons are a generated report, so they go under
-# `figures/_build/` — inside the repository, not in /tmp.  PR_ALT_DIR still
-# relocates them for a scratch run.
 ALT_DIR = os.environ.get("PR_ALT_DIR") or os.path.join(SCRIPT_DIR, "_build", "alt_text")
 ALT_BLOCKS = []
 
@@ -1087,7 +1178,11 @@ def fig1():
 
     # ---------------------------------------------------------- (a) tube map
     ax = ML
-    f.header(ax, 46, "a", "Tube-map embedding",
+    # The top-row headers sit 8 units higher than they used to: panel (a)'s
+    # subtitle and the 'g0' label above the family root shared 2.8 pt of font
+    # box (ISSUE-020's overprint class), and the subtitle cannot move up on its
+    # own without meeting the panel title it belongs to.
+    f.header(ax, 38, "a", "Tube-map embedding",
              "one gene family in its species tree")
     # the lane column, the tube shading and the copy offsets are all the output
     # of the interval partitioning below - nothing in this panel is typed in
@@ -1100,7 +1195,7 @@ def fig1():
 
     # ------------------------------------------------------- (b) three levels
     bx = 620
-    f.header(bx, 46, "b", "Three-level nesting")
+    f.header(bx, 38, "b", "Three-level nesting")
     up = [138, 198, 258]
     lo = [356, 416, 476]
     f.ttext(bx, 98, "gene tree -> symbiont tree", size=F_LB, weight="bold", fill=INK2)
@@ -1145,10 +1240,10 @@ def fig1():
     right = compare_pair(f, ML, 680, pitch=38.0, badge_w=278.0)
     f.line(right + 34, 592, right + 34, 920, stroke=HAIR, w=1.1)
     ncx, ncy = 1148, 812
-    f.ttext(ncx, 596, "Transfer network", size=F_LB, weight="bold", anchor="middle")
+    f.ttext(ncx, 594, "Transfer network", size=F_LB, weight="bold", anchor="middle")
     # the caption cross-references this thumbnail as "Fig. 4(b)", so the on-screen
     # subtitle now carries the same figure number rather than a figure-less phrase
-    f.ttext(ncx, 618, "thumbnail · full view in Fig. 4(b)",
+    f.ttext(ncx, 594 + STACK_LEAD, "thumbnail · full view in Fig. 4(b)",
             size=F_SM, fill=MUT, anchor="middle")
     transfer_network(f, ncx, ncy, 116, scale=0.86, marker="arrVs",
                      label_size=F_SM)
@@ -1178,16 +1273,20 @@ def fig3():
     f.marker("arrG", FAINT, 10, 8)
     TXA, TXB, TW, TH = 190, 900, 440, 54
     rows = [136, 222, 308]
-    f.header(ML, 46, "a", "Gene tree -> symbiont tree",
+    f.header(ML, 38, "a", "Gene tree -> symbiont tree",
              "five-node family · gA duplicates, both copies kept in S_A")
-    f.header(800, 46, "b", "Symbiont tree -> host tree",
+    f.header(800, 38, "b", "Symbiont tree -> host tree",
              "each symbiont species is itself a gene node one level up")
     # ------------------------------------------------------------- (a) level 1
     for cy, n in zip(rows, ("Sroot", "S_A", "S_B")):
         f.tube(TXA, cy, TW, TH)
         f.ttext(TXA - 12, cy, n, size=F_LB, anchor="end", style="italic")
     g0, gA = (235, 136), (320, 222)
-    a1, a2, b1 = (560, 208), (560, 236), (560, 308)
+    # the two duplicate copies sit STACK_LEAD+2 apart, not 28: their labels are
+    # set on the labels' own pitch (F_SM + 2 = 25 units), which reserves a
+    # 29.1-unit box, so at a 28-unit pitch the two labels shared a strip of box
+    # (9.85 pt^2 measured on the delivered span rectangles)
+    a1, a2, b1 = (560, 206), (560, 238), (560, 308)
     for q, w in ((g0, gA), (gA, a1), (gA, a2), (g0, b1)):
         f.line(q[0], q[1], w[0], w[1])
     f.spec(*g0, rad=7.5)
@@ -1198,9 +1297,9 @@ def fig3():
     f.lab(320, 204, "gA", size=F_SM + 2, anchor="middle")
     for (x, y), n in ((a1, "geneA1"), (a2, "geneA2"), (b1, "geneB")):
         f.lab(x - 12, y, n, size=F_SM + 2, anchor="end")
-    f.line(594, 208, 594, 236, stroke=MUT, w=1.3)
-    f.line(589, 208, 599, 208, stroke=MUT, w=1.3)
-    f.line(589, 236, 599, 236, stroke=MUT, w=1.3)
+    f.line(594, 206, 594, 238, stroke=MUT, w=1.3)
+    f.line(589, 206, 599, 206, stroke=MUT, w=1.3)
+    f.line(589, 238, 599, 238, stroke=MUT, w=1.3)
     f.ttext(612, 222, "×2", size=F_SM, fill=MUT, anchor="middle")
     # ------------------------------------------------------------- (b) level 2
     for cy, n in zip(rows, ("Hroot", "H1", "H2")):
@@ -1234,12 +1333,12 @@ def fig4():
     f = Fig(700.0, "图4")
     f.marker("arrG", FAINT, 9, 7)
     f.marker("arrV", VIOLET, 13, 10)
-    f.header(ML, 46, "a", "Event-level comparison",
+    f.header(ML, 38, "a", "Event-level comparison",
              "the same seven-node family reconciled twice; g1 and g2 flip "
              "their event call")
     right = compare_pair(f, ML, 190, pitch=48.0, badge_w=300.0)
     f.line(right + 36, 108, right + 36, 500, stroke=HAIR, w=1.1)
-    f.header(880, 46, "b", "Transfer network",
+    f.header(880, 38, "b", "Transfer network",
              "edge width and node radius count transfers")
     # the view is centered on its own half of the page: 8 discs whose radius
     # encodes the species' transfer volume, 12 arcs of which one is a
@@ -1258,18 +1357,35 @@ def fig4():
 
 # ==================================================================== Fig 5 ==
 def box(f, x, y, w, h, title, sub, color, ts=20.0, ss=18.0):
+    """a titled card; a two-line card respects the font-box leading floor.
+
+    A title and its subtitle are laid out STACK_LEAD apart, not 24 units apart:
+    23-unit type reserves 26.8 units of box (0.952 em of ascent plus 0.213 em of
+    descent, the rectangle the PDF reports for the span), so at a 24-unit pitch
+    every card in Fig. 5 shared a strip of box with its own subtitle -- the
+    overprint class check_figures.py now measures.  The pair is centred on the
+    card's own ink (cap top of the title to descender bottom of the subtitle),
+    not on the mid-point of the baselines.
+    """
     f.rect(x, y, w, h, fill="#FFFFFF", stroke=color, sw=1.5, rx=10)
-    f.ttext(x + w / 2.0, y + h / 2.0 - (10 if sub else 0), title, size=ts,
-            weight="bold", anchor="middle")
     if sub:
-        f.ttext(x + w / 2.0, y + h / 2.0 + 14, sub, size=ss, fill=MUT,
+        f.ttext(x + w / 2.0, y + h / 2.0 - (STACK_LEAD / 2.0 + 2.3), title,
+                size=ts, weight="bold", anchor="middle")
+        f.ttext(x + w / 2.0, y + h / 2.0 + (STACK_LEAD / 2.0 - 2.3), sub, size=ss,
+                fill=MUT, anchor="middle")
+    else:
+        f.ttext(x + w / 2.0, y + h / 2.0, title, size=ts, weight="bold",
                 anchor="middle")
 
 
 def lane(f, x, w, label, color, tint, y0=100.0, y1=580.0):
     f.rect(x, y0, w, y1 - y0, fill=tint, stroke=None, rx=12)
     f.rect(x, y0, w, 4.5, fill=color, stroke=None, rx=2)
-    f.ttext(x + 2, y0 - 16, label, size=F_SM, weight="bold", fill=color)
+    # 22 units above the lane, not 16: the first card in a lane now carries a
+    # two-line title, and the lane heading has to keep a whole font box clear of
+    # the card title's box (the gap the carrier measures is wider than the
+    # ascender+descender sum the source model uses, so it is not cut fine)
+    f.ttext(x + 2, y0 - 22, label, size=F_SM, weight="bold", fill=color)
 
 
 def fig5():
@@ -1310,17 +1426,17 @@ def fig5():
     f.line(296, 328, 304, 328, stroke=C_INPUT, w=2.2, marker="url(#arrB)")
     # parser chip sits on the flow arrow between the input and model lanes
     box(f, 312, 268, 150, 120, "Parser module", None, C_INPUT, ts=18.0)
-    f.ttext(387, 350, "detectFormat()", size=F_SM, fill=MUT, anchor="middle")
+    f.ttext(387, 358, "detectFormat()", size=F_SM, fill=MUT, anchor="middle")
     f.line(462, 328, 490, 328, stroke=C_MODEL, w=2.2, marker="url(#arrM)")
     # ------------------------------------------------------- normalized model
     f.rect(496, 246, 168, 164, fill="#FFFFFF", stroke=C_MODEL, sw=1.5, rx=10)
-    f.ttext(580, 269, "Reconciliation", size=F_LB, weight="bold", anchor="middle")
-    f.ttext(580, 295, "one SpeciesTree", size=F_SM, fill=MUT, anchor="middle")
+    f.ttext(580, 262, "Reconciliation", size=F_LB, weight="bold", anchor="middle")
+    f.ttext(580, 292, "one SpeciesTree", size=F_SM, fill=MUT, anchor="middle")
     f.ttext(580, 322, "+ GeneTree[ ]", size=F_SM, fill=MUT, anchor="middle")
     f.rect(508, 332, 144, 62, fill="#FFFFFF", stroke=C_MODEL, sw=1.2, rx=8)
-    f.ttext(580, 354, "warnings[ ]", size=F_SM, weight="bold", anchor="middle",
+    f.ttext(580, 353, "warnings[ ]", size=F_SM, weight="bold", anchor="middle",
             fill=INK2)
-    f.ttext(580, 376, "structured", size=F_SM, fill=MUT, anchor="middle")
+    f.ttext(580, 383, "structured", size=F_SM, fill=MUT, anchor="middle")
     f.path("M 664,270 H 688 V 128 H 706", stroke=C_MODEL, w=2.4,
            marker="url(#arrO)")
     # ------------------------------------------------------- computation lane
@@ -1365,9 +1481,9 @@ def fig5():
                stroke=C_OUT, w=2.0, marker="url(#arrGn)")
     # ------------------------------------------------------- cross-cutting bars
     f.rect(698, 612, 400, 60, fill=T_STORE, stroke=C_STORE, sw=1.4, rx=10)
-    f.ttext(898, 634, "State store · Zustand", size=F_SM, weight="bold",
+    f.ttext(898, 625, "State store · Zustand", size=F_SM, weight="bold",
             anchor="middle")
-    f.ttext(898, 656, "undo / redo · depth 100", size=F_SM, fill=MUT,
+    f.ttext(898, 655, "undo / redo · depth 100", size=F_SM, fill=MUT,
             anchor="middle")
     f.line(780, 612, 780, 584, stroke=C_STORE, w=1.6, dash="6 4.5",
            marker="url(#arrP)")
@@ -1388,7 +1504,6 @@ def fig5():
         f.line(x, 700, x, 584, stroke=C_TAURI, w=1.6, dash="6 4.5",
                marker="url(#arrS)")
         f.ttext(x + 12, 646, lab, size=F_SM, fill=MUT)
-    overlap_report(f, "图5")
     f.save("PhyloRecViewer-手稿正文-图5.svg")
     return f
 
@@ -1546,7 +1661,12 @@ def fig6():
 
 if __name__ == "__main__":
     for draw in (fig1, fig3, fig4, fig5, fig6):
-        emit_alt(draw())
+        f = draw()
+        # the same rectangle check_figures.py measures on the delivered PDF, run
+        # here on the source so a colliding layout stops this script, not the
+        # shipment
+        overlap_report(f, f.name)
+        emit_alt(f)
     combined = "\n\n".join(ALT_BLOCKS)
     try:
         os.makedirs(ALT_DIR, exist_ok=True)

@@ -26,6 +26,22 @@
 #   and TIFF are written next to their scripts by st.save(), which uses the same
 #   lossless TIFF master as this script does.)
 #
+# Carrier inventory, stated here because the audit asked whether Fig. 2 is
+# missing an SVG (ISSUE-150).  It is not: a figure has an SVG carrier only when
+# an SVG is what the PDF and PNG are pictures OF, and for Fig. 2 nothing of the
+# kind is authored.  The delivered set for Fig. 2 is PDF + PNG + TIFF, written
+# by PhyloRecViewer-手稿正文-图2.py via phylorec_style.save(); its vector input,
+# figures/_build/figure2-app-print.svg, is the application's own scene render of
+# the reference case, which that script rasterizes and crops and which is
+# therefore a build intermediate, not a carrier of the composed figure.  Figs. 1
+# and 3-6 deliver SVG + PDF + PNG + TIFF from this script, and Supplementary
+# Fig. S1 delivers PDF + PNG + TIFF.  Supplementary Note S6 of the article says
+# the same thing ("Figs. 1, 3, 4, 5 and 6 are emitted as SVG ...; Fig. 2 is
+# produced in two stages"), and no text in the article, the supplement or the
+# letter offers a Fig. 2 SVG.  Emitting one would put a carrier on the delivery
+# list that the reproducibility note does not describe and that no downstream
+# step consumes.
+#
 # Everything is resolved relative to THIS script's directory, so the pipeline
 # runs from any working directory and never reads or writes outside the
 # repository.  PR_FIG_OUT relocates the carriers for a scratch run; PYTHON picks

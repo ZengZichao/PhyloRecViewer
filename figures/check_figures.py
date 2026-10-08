@@ -20,6 +20,9 @@ Asserts, per figure:
   trim      the closest text line box to any page edge clears the inner
             margin phylorec_style.PAGE_MARGIN_IN (6 pt) declares; the
             measured distance is printed for every figure either way;
+  overlap   no two drawn labels' font boxes — the rectangle the PDF reports
+            for the span — intersect by more than 1 pt^2, so a heading and its
+            subtitle at 1.0 leading are caught, not only a label drawn twice;
   placed    every raster placed inside the PDF resolves to >= 1,100 dpi at
             its placed size (pixels / placed inches), not merely at the
             resolution the sibling PNG claims for itself;
@@ -28,9 +31,11 @@ Asserts, per figure:
 
 Two known, documented exemptions, both stated in the article itself:
   - Fig. 2 panel (a)'s species names are rasterized by the application, so
-    no PDF text audit can measure them; their printed size (5.18 pt on a
-    5.66 pt pitch) follows from the canvas geometry and is quoted in the
-    figure legend, with the legible detail carried by the two x1.35 insets.
+    no PDF text audit can measure them; their printed size follows from the
+    canvas geometry and is quoted in the figure legend, while the legible
+    detail is carried by the two insets.  Their factor over (a) is printed on
+    the figure itself and recorded as measured in figure2-typography.json, so
+    no size is repeated (and so cannot go stale) here.
   - The SVG-carried figures (1, 3-6) set type on a whole-unit ladder, so
     their floor label measures 7.19 pt in the PDF, not exactly 7.00.
 
@@ -231,7 +236,7 @@ def pdf_fonts_and_colors(path):
 # live inside a rasterised panel, or at two text objects sharing the same ink.
 # ---------------------------------------------------------------------------
 GLYPH_FLOOR_PT = 7.0                 # floor every delivered label must clear
-MAX_TEXT_OVERLAP_PT2 = 1.0           # two drawn-text cap bands may not overlap more
+MAX_TEXT_OVERLAP_PT2 = 1.0           # two drawn-text font boxes may not overlap more
 INSET_RASTER_MAX_IN = 3.0            # a placed raster this narrow is an inset
 NAME_COLOURS = ((0, 114, 178), (63, 63, 70))   # family blue, tip-name grey
 
@@ -305,12 +310,32 @@ def glyph_coverage(path):
     return set(missing), dict(n_read=n_read, checked=checked, miss=missing)
 
 
-def text_overlaps(path):
-    """worst (overlap_pt2, a, b) over pairs of drawn-text cap bands (see docstring)."""
+def drawn_text_boxes(path):
+    """[(page, x0, y0, x1, y1, text)] for drawn text, duplicate draws collapsed.
+
+    The rectangle compared is the one the PDF itself reports for a span: the
+    font box (winAscent + winDescent = 1.165 em for the shipped HelveticaNeue
+    subset), i.e. the area that line of type reserves on the page.  Intersecting
+    reserved areas is what makes a CROSS-TEXT overprint visible: 'State store ·
+    Zustand' sitting 7.19 pt above 'undo / redo · depth 100' at 7.19 pt type
+    shares 119.8 pt^2 of box, and a gate that cannot see that pair is not
+    guarding leading at all.  The version this replaces shrank every box to a
+    0.15-0.80 cap band first, which cut the band off the descender half of the
+    line above, so no two lines of different text could ever be reported as
+    meeting and the only pairs it could find were labels drawn twice.
+
+    A haloed label (phylorec_style/SVG `Fig.lab()` emits the same <text> twice,
+    once stroked white and once filled, so the label survives crossing ink)
+    arrives as two byte-identical spans at one identical box.  That is ONE label
+    and not a collision, so exact duplicates are collapsed here; the count is
+    reported with the verdict so the dedupe is visible rather than silent.  Two
+    distinct labels that genuinely share a box carry different text, or sit at a
+    different box, and survive.
+    """
     import fitz
     doc = fitz.open(path)
-    boxes = []
-    for page in doc:
+    boxes, dropped, seen = [], 0, set()
+    for pno, page in enumerate(doc):
         for block in page.get_text("dict")["blocks"]:
             if block.get("type") != 0:
                 continue
@@ -319,19 +344,34 @@ def text_overlaps(path):
                     if not span["text"].strip():
                         continue
                     x0, y0, x1, y1 = span["bbox"]
-                    boxes.append((x0, y0 + 0.15 * (y1 - y0), x1,
-                                  y0 + 0.80 * (y1 - y0), span["text"][:34]))
+                    key = (pno, span["text"], round(x0, 2), round(y0, 2),
+                           round(x1, 2), round(y1, 2))
+                    if key in seen:
+                        dropped += 1
+                        continue
+                    seen.add(key)
+                    boxes.append((pno, x0, y0, x1, y1, span["text"][:34]))
     doc.close()
-    worst, wa, wb = 0.0, "", ""
+    return boxes, dropped
+
+
+def text_overlaps(path):
+    """(worst overlap_pt2, a, b, pairs over threshold, duplicate draws, labels)."""
+    boxes, dropped = drawn_text_boxes(path)
+    worst, wa, wb, hits = 0.0, "", "", 0
     for i in range(len(boxes)):
-        ax0, ay0, ax1, ay1, at = boxes[i]
+        ap, ax0, ay0, ax1, ay1, at = boxes[i]
         for j in range(i + 1, len(boxes)):
-            bx0, by0, bx1, by1, bt = boxes[j]
+            bp, bx0, by0, bx1, by1, bt = boxes[j]
+            if ap != bp:
+                continue
             ox = min(ax1, bx1) - max(ax0, bx0)
             oy = min(ay1, by1) - max(ay0, by0)
-            if ox > 0.5 and oy > 0.5 and ox * oy > worst:
-                worst, wa, wb = ox * oy, at, bt
-    return worst, wa, wb
+            if ox > 0.5 and oy > 0.5 and ox * oy > MAX_TEXT_OVERLAP_PT2:
+                hits += 1
+                if ox * oy > worst:
+                    worst, wa, wb = ox * oy, at, bt
+    return worst, wa, wb, hits, dropped, len(boxes)
 
 
 def _name_columns(arr):
@@ -394,7 +434,7 @@ def rasterised_label_floor(path):
 
 
 def tiff_carrier(path):
-    """(exists, dpi recorded, photometric) for the uncompressed TIFF master."""
+    """(exists, dpi recorded, photometric) for the TIFF master."""
     if not os.path.exists(path):
         return False, None, None
     from PIL import Image
@@ -522,12 +562,16 @@ for pdf in PDFS:
              f" ({len(programs)} program(s), "
              + "/".join(sorted({p.split('+', 1)[1] for p in programs})) + ")"))
 
-    # ---- (c) no two drawn-text cap bands overprint. ----
-    ov_area, oa, ob = text_overlaps(pdf)
+    # ---- (c) no two drawn-text boxes overprint.  The rectangle is the font box
+    #      the PDF reports, so a heading and its subtitle at 1.0 leading are seen
+    #      as the collision they are, not only a label drawn twice (F-04-10). ----
+    ov_area, oa, ob, ov_hits, ov_dup, n_lab = text_overlaps(pdf)
     check(ov_area <= MAX_TEXT_OVERLAP_PT2,
           f"overlap: worst two-text-box intersection {ov_area:.2f} pt^2 "
           f"{'(%r x %r)' % (oa, ob) if ov_area > 1e-6 else '(none)'} "
-          f"<= {MAX_TEXT_OVERLAP_PT2:.1f} pt^2")
+          f"<= {MAX_TEXT_OVERLAP_PT2:.1f} pt^2 "
+          f"[{n_lab} drawn label(s), {ov_hits} pair(s) over threshold, "
+          f"{ov_dup} coincident duplicate draw(s) collapsed as one label]")
 
     # ---- (b) rasterised labels: measure the inset species names off the
     #      embedded pixels and assert the floor (the F-04-1 intent-vs-carrier gap). ----

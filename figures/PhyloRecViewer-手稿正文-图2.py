@@ -79,9 +79,10 @@ dot, no loss cross and no species name (measured: 0 circles, 0 names in a 550 x
 554-unit window against a render carrying 13 circles and 63 names).  It also
 shipped outermost species names sliced by the frame: measured off the delivered
 carrier, its leftmost column carried 3.8 pt and its rightmost 2.6 pt of a 7.4 pt
-name, i.e. two truncated binomials per inset, because a 605.05-unit window spans
-10.084 pitches and cannot have both its frames in the ~8-unit gap between names
-at once.
+name, i.e. two truncated binomials per inset: a 605.05-unit window spans 10.084
+pitches, so its two frames sit at different phases of the name comb, and for no x
+that either inset's own claim allows do both of them land in the ~8-unit blank
+between names at once.
 
 Two rules drive the layout. Inset windows are MEASURED from a colour mask of
 this very SVG (dilated, so a glyph's arms count as content): the vertical foot
