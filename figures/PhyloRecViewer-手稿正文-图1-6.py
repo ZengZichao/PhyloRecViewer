@@ -3,8 +3,12 @@
 """Manuscript main figures 1, 3, 4, 5, 6 for PhyloRecViewer.
 
 One shared design system (canvas, type ladder, colour tokens, glyph grammar)
-emits vector SVGs sized for a 166 mm journal text block; PNG/PDF are rendered
-from these SVGs by export.sh.
+emits vector SVGs sized for a 166 mm journal text block; PNG/TIFF/PDF are
+rendered from these SVGs by export.sh.
+
+Everything is read and written inside the repository: the SVGs land next to this
+script (`figures/`, or PR_FIG_OUT), and the machine-generated alt text lands in
+`figures/_build/` rather than in /tmp or in the audit track's working directory.
 """
 import math
 import os

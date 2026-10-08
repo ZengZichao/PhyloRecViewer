@@ -1,0 +1,24 @@
+# Build outputs of the figure pipeline, deliberately not tracked.
+#
+# The repository tracks the code that generates the article's figures; the
+# figures themselves are produced by running it (see README.md, "Rebuilding
+# everything from a clean clone").  Commiting 24 MB of carriers that any reader
+# can regenerate byte-for-byte would only make the clone heavy, and it would
+# let a carrier drift away from its script without anything noticing.
+#
+# To ship a carrier into version control on purpose, force it:
+#     git add -f figures/PhyloRecViewer-手稿正文-图1.pdf
+#
+# Carriers written next to the scripts by `phylorec_style.save()` and `export.sh`
+# (and by PR_FIG_OUT).
+*.svg
+*.png
+*.pdf
+*.tif
+*.tiff
+
+# Generated inputs and generated reports.  The repository root's .gitignore
+# already covers any directory named `_build`; this restates it locally so the
+# rule is visible where the files are produced.
+_build/
+__pycache__/

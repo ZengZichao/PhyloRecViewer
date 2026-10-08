@@ -66,9 +66,11 @@ no sibling-directory assumption and no out-of-repo symlink.
 | frozen measurement CSVs | `../data/` (repository content) | `PR_DATA_DIR` |
 | interpreter used by `export.sh` | first `python3` on `PATH` that has Pillow + CairoSVG | `PYTHON` |
 
-`figures/_build/` and the carriers are **generated artefacts**; the repository
-tracks the code that produces them, not their bytes. `_build/` is covered by the
-repository's existing `.gitignore`.
+`figures/_build/` and the carriers (SVG/PNG/PDF/TIFF) are **generated
+artefacts**, and `figures/.gitignore` keeps them out of the index: the repository
+tracks the code that produces them, not their bytes, because a clone can rebuild
+the bytes with the four commands above. Force-add a carrier (`git add -f
+figures/…pdf`) if a revision ever needs one pinned in the history.
 
 ### The `_build/` inputs Fig. 2 reads
 
@@ -109,11 +111,39 @@ react-dom 18.3.1 · vite 5.4.21. The rendered pixels depend on matplotlib and
 librsvg; a different matplotlib minor version can change PDF font-subset bytes
 without changing the text, sizes, positions or page geometry.
 
+## Reproducibility record (2026-10-08)
+
+The pipeline was rebuilt from a clean export of this commit
+(`git archive HEAD | tar -x`) with nothing but the repository's own tree as
+input, and compared against the figure directory the submission was made from:
+
+| figure | page box | text spans | font sizes | span positions | placed rasters | PNG pixels | TIFF pixels |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Fig. 1 | same | same (85) | same | same | same | identical | identical |
+| Fig. 2 | same | same (32) | same | same | same | identical | identical |
+| Fig. 3 | same | same (37) | same | same | same | identical | identical |
+| Fig. 4 | same | same (40) | same | same | same | identical | identical |
+| Fig. 5 | same | same (57) | same | same | same | identical | identical |
+| Fig. 6 | same | same (90) | same | same | same | identical | identical |
+| Fig. S1 | same | same (59) | same | same | same | identical | identical |
+
+PDFs embed a creation timestamp, so their file hashes differ by design; the
+comparison is over extracted spans with their sizes and boxes, the page geometry
+and the placed-raster rectangles. The five SVG-carried figures additionally
+reproduce byte-for-byte (they are written as text by the script itself).
+
+In the same clean export, `figures/_build/figure2-app-print.svg` and
+`figure2-stats.json` regenerated identically to the files used for the submitted
+Fig. 2, and `check_figures.py` returned the same verdict there as in the working
+tree.
+
 ## Known state of the gate
 
-`check_figures.py` is deliberately strict and reports per figure. As of this
-revision it fails five assertions — a `≥` glyph missing from an embedded
-Helvetica Neue subset (Figs. 1 and 4) and three two-text-box overlaps (Figs. 1,
-3 and 6). These are content defects of the figures themselves and reproduce
-identically from the pre-existing figure directory: the repository copy changes
-no verdict. They are tracked as figure findings, not softened here.
+`check_figures.py` is deliberately strict and reports per figure: 124
+assertions pass and five fail — a `≥` glyph missing from an embedded Helvetica
+Neue subset (Figs. 1 and 4) and three two-text-box overlaps (Figs. 1, 3 and 6).
+These are content defects of the figures themselves and reproduce identically
+when the checker is run over the pre-existing figure directory or over a clean
+export of this commit: moving the pipeline into the repository changes no
+verdict and relaxes no assertion. They are tracked as figure findings, not
+softened here.
