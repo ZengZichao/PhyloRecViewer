@@ -2,7 +2,7 @@
 
 [English](./README.md) | **中文**
 
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.23053318.svg)](https://doi.org/10.5281/zenodo.23053318)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.23053317.svg)](https://doi.org/10.5281/zenodo.23053317)
 
 美观、离线、交互式的 **recPhyloXML / NHX** 系统发育调和可视化工具。基于 Tauri v2（Rust + React 18 / TypeScript 严格模式）构建，采用纯函数式 SVG 渲染器。
 
@@ -124,7 +124,11 @@ src/
 
 如果您在研究中使用 PhyloRecViewer，请引用已归档的发布版本：
 
-> Zeng, Z. (2026). *PhyloRecViewer* (v0.1.0) [Computer software]. Zenodo. https://doi.org/10.5281/zenodo.23053318
+> Zeng, Z., & Wang, Y. (2026). *PhyloRecViewer* (v0.1.1) [Computer software]. Zenodo. https://doi.org/10.5281/zenodo.23053317
+
+上面这个 DOI 是归档的**概念 DOI**：它始终解析到当前最新的已发布版本。每个已归档版本
+另有自己不可变的**版本 DOI**——v0.1.0 是 `10.5281/zenodo.23053318`——各版本对应的版本
+DOI 记录在 `CHANGELOG.md` 中。若您需要引用自己实际运行的那个快照，请引用版本 DOI。
 
 机器可读版本见 [CITATION.cff](./CITATION.cff)。
 

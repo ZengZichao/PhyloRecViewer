@@ -2,7 +2,7 @@
 
 **English** | [中文](./README.zh-CN.md)
 
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.23053318.svg)](https://doi.org/10.5281/zenodo.23053318)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.23053317.svg)](https://doi.org/10.5281/zenodo.23053317)
 
 Beautiful, offline, interactive **recPhyloXML / NHX** phylogenetic-reconciliation viewer. Built with Tauri v2 (Rust + React 18 / TypeScript strict) with a deterministic, pure-style SVG renderer.
 
@@ -130,7 +130,13 @@ src/
 
 If you use PhyloRecViewer in your research, please cite the archived release:
 
-> Zeng, Z. (2026). *PhyloRecViewer* (v0.1.0) [Computer software]. Zenodo. https://doi.org/10.5281/zenodo.23053318
+> Zeng, Z., & Wang, Y. (2026). *PhyloRecViewer* (v0.1.1) [Computer software]. Zenodo. https://doi.org/10.5281/zenodo.23053317
+
+That DOI is the archive's **concept** DOI: it resolves to whichever version of the
+deposit is current. Each archived version also has its own immutable **version**
+DOI — v0.1.0 is `10.5281/zenodo.23053318` — and the version DOI that belongs to
+each release is recorded in `CHANGELOG.md`. Cite the version DOI when a specific
+snapshot is what you ran.
 
 The machine-readable form is [CITATION.cff](./CITATION.cff).
 
