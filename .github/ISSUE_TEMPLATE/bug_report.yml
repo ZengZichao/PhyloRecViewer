@@ -27,7 +27,7 @@ body:
       label: Steps to reproduce
       description: Exact clicks / keystrokes, starting from launch.
       placeholder: |
-        1. Open PhyloRecViewer 0.1.0 (macOS .dmg)
+        1. Open PhyloRecViewer 0.1.1 (macOS .dmg)
         2. File → Open file… → pick `reduced.recphyloxml`
         3. Look at the canvas / the Data checks tab
     validations:
