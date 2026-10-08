@@ -127,10 +127,24 @@ input, and compared against the figure directory the submission was made from:
 | Fig. 6 | same | same (90) | same | same | same | identical | identical |
 | Fig. S1 | same | same (59) | same | same | same | identical | identical |
 
-PDFs embed a creation timestamp, so their file hashes differ by design; the
-comparison is over extracted spans with their sizes and boxes, the page geometry
-and the placed-raster rectangles. The five SVG-carried figures additionally
-reproduce byte-for-byte (they are written as text by the script itself).
+The PDF is the one carrier whose bytes are not reproducible, and the reason is **not**
+the creation timestamp: normalising `/CreationDate`, `/ModDate` and the document `/ID`
+still leaves the files differing, because CairoSVG writes the embedded font-subset
+program through a compressed stream that varies from run to run. Measured on 9 October
+2026, two rebuilds of unchanged source differ by 277 bytes of equal length inside one
+`FlateDecode` font stream, at identical file size.
+
+What *is* reproducible is the rendered content: extracted spans with their text, sizes
+and boxes, the page geometry and the placed-raster rectangles agree between rebuilds and
+against the delivered file (88 of 88 spans for Fig. 1).
+
+For the rasters, pixel identity and byte identity are different claims and only the
+first holds universally. Across clean rebuilds all seven PNGs and all seven TIFF masters
+reproduce with **zero differing pixels**, and the five figures that go through the SVG
+path (`Figs. 1, 3–6`) reproduce **byte-for-byte** as well. The two rasters written
+directly by matplotlib — `Fig. 2.tif` and `Fig. S1.png` — come out pixel-identical but
+not byte-identical, their non-pixel metadata differing between runs. The raster columns
+above therefore record byte identity where it holds and pixel identity where it does not.
 
 In the same clean export, `figures/_build/figure2-app-print.svg` and
 `figure2-stats.json` regenerated identically to the files used for the submitted
