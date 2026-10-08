@@ -2,6 +2,12 @@
  "generated_utc": "2026-09-28T02:40:45+00:00",
  "command": "npm run measure (scripts/measure.ts) once per run, then python3 scripts/aggregate-measurements.py <run dirs>",
  "n_runs": 10,
+ "n_repeats": 5,
+ "warm_up": 1,
+ "source_commit": "a65c8f3c46c22406bb0d64bd3a7098db9fba1c4d",
+ "source_ref": "v0.1.0",
+ "source_commit_note": "a65c8f3 (tag v0.1.0) is the repository's first commit, authored 2026-09-29T22:00:00+08:00, and the only revision under which these tables are distributed; it is recorded as the source revision for that reason. This fold itself ran on 2026-09-28T02:40:45+00:00, i.e. before that commit existed, so the field names the release the numbers ship with rather than a commit that was checked out while measuring. The measured inputs (src/samples/*.recphyloxml, src/parser/__fixtures__/9999.nhx.xml) predate the fold; the files on the measurement path (src/parser, src/layout, src/render, src/analysis, scripts/measure.ts) carry working-copy modification times of 2026-09-29. A reader who needs the milliseconds to match their own revision should re-measure with `npm run measure` rather than assume they are reproducible from commit a65c8f3. Replaying the fold rewrites source_commit with `git rev-parse HEAD` of the machine it runs on.",
+ "protocol": "10 independent runs of `npm run measure` (tsx --tsconfig tsconfig.scripts.json scripts/measure.ts) against one code revision. Inside each run, every bundled dataset and every synthetic sweep size is timed 5 times after 1 discarded warm-up: `bench(label, text, runs = 5)` loops `i = 0..runs` and samples only `i > 0` (scripts/measure.ts:65-91), so each table cell is the median [q1-q3] of those 5 samples. The 10 runs are then folded by this script, which writes the across-run median plus the observed min and max for every point, and a median with its across-run range for every log-log exponent. A timed unit is wall-clock performance.now() across parse -> layout -> renderToStaticMarkup(Scene, detail: 'full'), the same path the in-app SVG export uses. No process isolation, CPU pinning or thread pinning: the across-run spread is reported instead of hidden.",
  "host": {
   "system": "Darwin",
   "release": "27.0.0",

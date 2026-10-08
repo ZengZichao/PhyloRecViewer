@@ -30,6 +30,7 @@ import json
 import math
 import pathlib
 import platform
+import re
 import statistics
 import subprocess
 import sys
@@ -37,6 +38,57 @@ import sys
 STAGE_COLS = ["parse", "layout", "svg"]
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 OUT = ROOT / "data"
+
+TIMING_PROTOCOL = (
+    "10 independent runs of `npm run measure` "
+    "(tsx --tsconfig tsconfig.scripts.json scripts/measure.ts) against one code "
+    "revision. Inside each run, every bundled dataset and every synthetic sweep "
+    "size is timed 5 times after 1 discarded warm-up: `bench(label, text, runs = 5)` "
+    "loops `i = 0..runs` and samples only `i > 0` (scripts/measure.ts:65-91), so each "
+    "table cell is the median [q1-q3] of those 5 samples. The 10 runs are then folded "
+    "by this script, which writes the across-run median plus the observed min and max "
+    "for every point, and a median with its across-run range for every log-log "
+    "exponent. A timed unit is wall-clock performance.now() across parse -> layout -> "
+    "renderToStaticMarkup(Scene, detail: 'full'), the same path the in-app SVG export "
+    "uses. No process isolation, CPU pinning or thread pinning: the across-run spread "
+    "is reported instead of hidden."
+)
+
+
+def git_revision() -> tuple[str, str]:
+    """HEAD commit and (if HEAD is tagged) the tag naming it, for provenance."""
+    def run(argv):
+        try:
+            return subprocess.run(argv, capture_output=True, text=True,
+                                  timeout=10).stdout.strip()
+        except (OSError, subprocess.SubprocessError):
+            return ""
+
+    sha = run(("git", "rev-parse", "HEAD"))
+    ref = run(("git", "describe", "--tags", "--exact-match")) if sha else ""
+    return sha, ref
+
+
+def timing_repeat_counts() -> tuple[int | None, int | None]:
+    """Read the per-run repeat count and warm-up out of scripts/measure.ts.
+
+    These two numbers are what makes the reported medians interpretable (a cell is
+    a median of 5, not of 1), and they live in `bench()`'s signature and loop, not
+    in this script. Reading them keeps the manifest honest about the code it ships
+    with; if the source ever stops matching the expected shape the fields go null
+    rather than asserting a protocol that no longer holds."""
+    script = ROOT / "scripts" / "measure.ts"
+    try:
+        src = script.read_text(encoding="utf-8")
+    except OSError:
+        return None, None
+    repeats = re.search(r"function\s+bench\s*\([^)]*?\bruns\s*=\s*(\d+)", src)
+    loop = re.search(r"for\s*\(\s*let\s+i\s*=\s*0\s*;\s*i\s*<=\s*runs", src)
+    skipped = re.search(r"if\s*\(\s*i\s*>\s*0\s*\)", src)
+    n_repeats = int(repeats.group(1)) if repeats else None
+    warm_up = 1 if (loop and skipped) else None
+    return n_repeats, warm_up
+
 
 
 def src_col(stage: str, which: str) -> str:
@@ -123,8 +175,7 @@ def runs_from_published(fname: str, run_col: str = "run"):
     # `path.parent.name`, so the synthetic path needs a file inside the run dir.
     # Numeric suffixes sort naturally, keeping run1..run10 in file order.
     def natural(name: str):
-        import re as _re
-        return [int(t) if t.isdigit() else t for t in _re.split(r"(\d+)", name)]
+        return [int(t) if t.isdigit() else t for t in re.split(r"(\d+)", name)]
 
     return [
         (OUT / "runs" / name / "measurements.csv", rows)
@@ -275,11 +326,30 @@ def main(argv):
         for r in rows:
             if int(r["nodes"]) == top:
                 by_node_last.setdefault("x", []).append(r)
+    n_repeats, warm_up = timing_repeat_counts()
+    source_commit, source_ref = git_revision()
     manifest = {
         "generated_utc": dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds"),
         "command": "npm run measure (scripts/measure.ts) once per run, then "
                    "python3 scripts/aggregate-measurements.py <run dirs>",
         "n_runs": len(sweep_runs),
+        # The three fields below are the provenance a reader would otherwise have
+        # to recover by reading scripts/measure.ts: how many runs were folded, how
+        # many timed repeats each run contains, whether one warm-up was discarded,
+        # and which revision the tables are distributed with.
+        "n_repeats": n_repeats,
+        "warm_up": warm_up,
+        "source_commit": source_commit or None,
+        "source_ref": source_ref or None,
+        "source_commit_note": (
+            "source_commit is the revision `git rev-parse HEAD` reported where this "
+            "fold ran, and source_ref the tag naming it when there is one. Provenance "
+            "fields (generated_utc, host, source_commit, source_ref, "
+            "source_commit_note) describe WHERE a fold was replayed, not what was "
+            "measured, so they are expected to differ on any reader's machine; the "
+            "four tables and the two `inputs` hashes are the frozen part."
+        ),
+        "protocol": TIMING_PROTOCOL,
         "host": host_details(),
         "inputs": (
             {_manifest_key(OUT / "benchmarks-sweep-runs.csv"):
