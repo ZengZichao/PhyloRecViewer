@@ -103,7 +103,7 @@ src/
 
 如果您在研究中使用 PhyloRecViewer，请引用已归档的发布版本：
 
-> Zeng, Z., & Wang, Y. (2026). *PhyloRecViewer* (v0.1.0) [Computer software]. Zenodo. https://doi.org/10.5281/zenodo.23053317
+> Zeng, Z., & Wang, Y. (2026). *PhyloRecViewer* (v0.1.1) [Computer software]. Zenodo. https://doi.org/10.5281/zenodo.23053317
 
 上面这个 DOI 是归档的**概念 DOI**：它始终解析到当前最新的已发布版本。每个已归档版本
 另有自己不可变的**版本 DOI**——v0.1.0 是 `10.5281/zenodo.23053318`——各版本对应的版本

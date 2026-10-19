@@ -12,7 +12,7 @@
 #     which is the only date a reader of the repository needs.
 cff-version: 1.2.0
 message: >-
-  Please cite: Zeng, Z., & Wang, Y. (2026). PhyloRecViewer (v0.1.0)
+  Please cite: Zeng, Z., & Wang, Y. (2026). PhyloRecViewer (v0.1.1)
   [Computer software]. Zenodo. https://doi.org/10.5281/zenodo.23053317
 title: PhyloRecViewer
 abstract: "Offline, interactive recPhyloXML / NHX phylogenetic-reconciliation
@@ -37,7 +37,7 @@ repository-code: "https://github.com/ZengZichao/PhyloRecViewer"
 # and this concept DOI when "the latest release" is what you used.
 repository-artifact: "https://doi.org/10.5281/zenodo.23053317"
 license: MIT
-version: "0.1.0"
+version: "0.1.1"
 date-released: "2026-10-08"
 doi: "10.5281/zenodo.23053317"
 keywords:
@@ -58,6 +58,6 @@ preferred-citation:
       family-names: Wang
       orcid: "https://orcid.org/0000-0001-8715-1386"
   repository-code: "https://github.com/ZengZichao/PhyloRecViewer"
-  version: "0.1.0"
+  version: "0.1.1"
   date-released: "2026-10-08"
   license: MIT

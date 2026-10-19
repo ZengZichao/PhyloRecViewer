@@ -106,7 +106,7 @@ src/
 
 If you use PhyloRecViewer in your research, please cite the archived release:
 
-> Zeng, Z., & Wang, Y. (2026). *PhyloRecViewer* (v0.1.0) [Computer software]. Zenodo. https://doi.org/10.5281/zenodo.23053317
+> Zeng, Z., & Wang, Y. (2026). *PhyloRecViewer* (v0.1.1) [Computer software]. Zenodo. https://doi.org/10.5281/zenodo.23053317
 
 That DOI is the archive's **concept** DOI: it resolves to whichever version of the
 deposit is current. Each archived version also has its own immutable **version**
