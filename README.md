@@ -18,6 +18,15 @@ Beautiful, offline, interactive **recPhyloXML / NHX** phylogenetic-reconciliatio
 
 ## Installation
 
+### Web (no installation)
+
+The app also runs directly in the browser at
+**<https://zengzichao.github.io/PhyloRecViewer/>** — open or drag & drop a
+`.recphyloxml` / `.nhx` / `.nwk` file and everything (parsing, layout, render,
+export) happens locally in your browser; no file ever leaves your machine. The
+web build is redeployed by the `pages.yml` workflow on every push to `main`.
+Native-only features (OS file association, "Open with") are unavailable there.
+
 ### Pre-built binaries
 
 Download the latest release from [GitHub Releases](https://github.com/ZengZichao/PhyloRecViewer/releases).

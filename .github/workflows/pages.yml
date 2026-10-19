@@ -1,0 +1,64 @@
+name: Deploy to GitHub Pages
+
+# Publishes the browser build (dist/) to GitHub Pages after every push to main.
+# It is the same bundle CI already validates (`npm run build` in ci.yml); this
+# workflow only rebuilds it and uploads it. Desktop packaging lives in
+# `.github/workflows/release.yml`. Requires the repository's Pages source to be
+# "GitHub Actions" (Settings -> Pages).
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# Least privilege for the Pages deploy: write only to the Pages deployment,
+# provenance attested through the OIDC id-token.
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# One Pages deployment at a time; a newer push to main supersedes an in-flight
+# run instead of queueing a stale site behind it.
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: "22"
+
+jobs:
+  deploy:
+    name: Build & deploy web app
+    runs-on: ubuntu-22.04
+    timeout-minutes: 20
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install dependencies (from the lockfile)
+        run: npm ci
+
+      - name: Production build (tsc -b && vite build)
+        run: npm run build
+
+      - name: Disable Jekyll processing
+        # Pages would otherwise run Jekyll over the upload; the marker skips it
+        # (and future-proofs any asset paths starting with an underscore).
+        run: touch dist/.nojekyll
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

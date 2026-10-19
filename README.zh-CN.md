@@ -18,6 +18,14 @@
 
 ## 安装
 
+### 网页版（免安装）
+
+本工具也可以直接在浏览器里使用：**<https://zengzichao.github.io/PhyloRecViewer/>**
+——打开或拖入 `.recphyloxml` / `.nhx` / `.nwk` 文件即可，解析、布局、渲染、导出
+全部在浏览器本地完成，文件不会离开你的设备。网页版由 `pages.yml` 工作流在每次
+push 到 `main` 后自动重新部署。仅限桌面的能力（系统文件关联、"打开方式"）在
+网页版中不可用。
+
 ### 预编译二进制文件
 
 从 [GitHub Releases](https://github.com/ZengZichao/PhyloRecViewer/releases) 下载最新版本。
