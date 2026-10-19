@@ -1,0 +1,63 @@
+# Citation metadata for PhyloRecViewer (Citation CFF 1.2.0).
+#
+# The three dates that exist for this software, stated once so they no longer
+# have to be guessed from different places:
+#   * the source revision behind the first archive (commit a65c8f3, tag v0.1.0)
+#     was published as a GitHub release on 2026-09-29 (published_at
+#     2026-09-29T14:45:25Z);
+#   * the Zenodo record archiving that tag carries publication_date 2026-09-30,
+#     i.e. the day the *record* was deposited (version DOI 10.5281/zenodo.23053318)
+#     — the archive, not the commit, sets that date;
+#   * `date-released` below is the release date of the version THIS FILE SHIPS IN,
+#     which is the only date a reader of the repository needs.
+cff-version: 1.2.0
+message: >-
+  Please cite: Zeng, Z., & Wang, Y. (2026). PhyloRecViewer (v0.1.0)
+  [Computer software]. Zenodo. https://doi.org/10.5281/zenodo.23053317
+title: PhyloRecViewer
+abstract: "Offline, interactive recPhyloXML / NHX phylogenetic-reconciliation
+  viewer: gene trees embedded in species tube-maps, three-level nesting,
+  event-level comparison, and vector export that reproduces the on-screen view."
+type: software
+authors:
+  - given-names: Zichao
+    family-names: Zeng
+    email: zengzichao@sjtu.edu.cn
+    orcid: "https://orcid.org/0000-0001-6553-970X"
+  - given-names: Yinzhao
+    family-names: Wang
+    email: wyz@sjtu.edu.cn
+    orcid: "https://orcid.org/0000-0001-8715-1386"
+repository-code: "https://github.com/ZengZichao/PhyloRecViewer"
+# The concept DOI is version-agnostic: it resolves to the newest published version
+# of the archive (checked 2026-10-08: 302 from doi.org, landing HTTP 200 on
+# https://zenodo.org/records/23053318, which is v0.1.0 until a newer version is
+# published). Every archived version also has its own immutable version DOI,
+# recorded in CHANGELOG.md; cite the version DOI when a specific snapshot matters
+# and this concept DOI when "the latest release" is what you used.
+repository-artifact: "https://doi.org/10.5281/zenodo.23053317"
+license: MIT
+version: "0.1.0"
+date-released: "2026-10-08"
+doi: "10.5281/zenodo.23053317"
+keywords:
+  - phylogenetics
+  - gene tree reconciliation
+  - recPhyloXML
+  - NHX
+  - horizontal gene transfer
+  - visualization
+preferred-citation:
+  type: software
+  title: PhyloRecViewer
+  authors:
+    - given-names: Zichao
+      family-names: Zeng
+      orcid: "https://orcid.org/0000-0001-6553-970X"
+    - given-names: Yinzhao
+      family-names: Wang
+      orcid: "https://orcid.org/0000-0001-8715-1386"
+  repository-code: "https://github.com/ZengZichao/PhyloRecViewer"
+  version: "0.1.0"
+  date-released: "2026-10-08"
+  license: MIT

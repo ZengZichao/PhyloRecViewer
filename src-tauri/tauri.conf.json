@@ -1,0 +1,69 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "PhyloRecViewer",
+  "mainBinaryName": "PhyloRecViewer",
+  "version": "0.1.0",
+  "identifier": "org.recphyloxml.viz",
+  "build": {
+    "frontendDist": "../dist",
+    "devUrl": "http://localhost:5173",
+    "beforeDevCommand": "npm run dev",
+    "beforeBuildCommand": "npm run build"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "PhyloRecViewer",
+        "width": 1320,
+        "height": 860,
+        "minWidth": 900,
+        "minHeight": 600,
+        "titleBarStyle": "Overlay",
+        "hiddenTitle": true
+      }
+    ],
+    "security": {
+      "csp": "default-src 'self'; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; font-src 'self' data:; connect-src 'self' ipc: http://ipc.localhost; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'",
+      "devCsp": "default-src 'self'; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; font-src 'self' data:; connect-src 'self' ipc: http://ipc.localhost ws://localhost:5173 http://localhost:5173; script-src 'self' 'unsafe-inline' 'unsafe-eval'"
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "publisher": "Zichao Zeng",
+    "homepage": "https://github.com/ZengZichao/PhyloRecViewer",
+    "copyright": "Copyright (c) 2026 Zichao Zeng",
+    "license": "MIT",
+    "licenseFile": "../LICENSE",
+    "category": "Utility",
+    "shortDescription": "Offline, interactive recPhyloXML / NHX phylogenetic-reconciliation viewer",
+    "longDescription": "PhyloRecViewer draws recPhyloXML and NHX phylogenetic reconciliations (species tree plus reconciled gene trees with speciation, duplication, loss and transfer events) as a deterministic, publication-ready SVG. It runs fully offline and exports SVG, PNG, PDF, interactive HTML, CSV and NHX, with search, filtering, statistics, consistency checks, nested and side-by-side comparison views, and bilingual (English / 中文) interface.",
+    "fileAssociations": [
+      {
+        "ext": ["recphyloxml", "recphylo"],
+        "name": "recPhyloXML",
+        "description": "recPhyloXML reconciliation file",
+        "role": "Viewer"
+      },
+      {
+        "ext": ["nhx", "nwk", "newick"],
+        "name": "NHX / Newick",
+        "description": "NHX / Newick reconciled gene tree",
+        "role": "Viewer"
+      },
+      {
+        "ext": ["xml", "phyloxml"],
+        "name": "recPhyloXML / phyloXML (XML)",
+        "description": "reconciled gene tree in an .xml or .phyloxml container (generic .xml files may also open in other applications)",
+        "role": "Viewer"
+      }
+    ],
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ]
+  }
+}

@@ -1,0 +1,70 @@
+name: "✨ Feature request / enhancement"
+description: "Propose something new, or a change to existing behaviour"
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: >
+        PhyloRecViewer has a narrow job: show recPhyloXML / NHX reconciliations
+        faithfully, offline. Proposals that keep that promise — a layout option,
+        an annotation feature, an export target, a format-compliance fix — are
+        the easiest to accept. Proposals that add inference, statistics, or
+        network access usually belong in a different tool.
+  - type: textarea
+    id: problem
+    attributes:
+      label: The problem this solves
+      description: What are you trying to do with a reconciliation, and what stops you today?
+      placeholder: |
+        I want to print one figure per gene family from a merged 12-file analysis
+        without re-opening each tab and exporting by hand.
+    validations:
+      required: true
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed solution
+      description: Concrete behaviour — where the control lives, what it does, what the output looks like.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Workarounds you already tried (export + edit, scripting, another viewer…).
+    validations:
+      required: false
+  - type: textarea
+    id: format-impact
+    attributes:
+      label: Effect on the data formats
+      description: >
+        Does this touch parsing or NHX / recPhyloXML export? If so, is the result
+        still readable by the recPhyloXML tool chain (and vice versa)? Silently
+        lossy round-trips are the main thing maintainers will ask about.
+    validations:
+      required: false
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - parser / format compliance
+        - layout
+        - rendering (canvas, legend, labels)
+        - analysis panel (search, stats, transfer network, checks, compare)
+        - export (SVG / PNG / PDF / HTML / NHX)
+        - session / autosave / tabs
+        - desktop shell (Tauri, file association, dialogs)
+        - i18n / themes / accessibility
+        - documentation / benchmark scripts
+        - build / CI
+    validations:
+      required: true
+  - type: checkboxes
+    id: contribute
+    attributes:
+      label: Will you send a pull request?
+      options:
+        - label: I can implement this and open a PR (see CONTRIBUTING.md; tests + typecheck + lint must pass)
+          required: false

@@ -1,0 +1,14 @@
+# Issue chooser: blank issues stay enabled so that questions, dataset sharing and
+# benchmark-reproduction threads are not forced into a template. Set
+# blank_issues_enabled to false only if the two forms come to cover every report.
+blank_issues_enabled: true
+
+contact_links:
+  - name: Security vulnerability (please do not open a public issue)
+    url: https://github.com/ZengZichao/PhyloRecViewer/security/advisories/new
+    about: >
+      Private report — see SECURITY.md. Works only if the repository owner has
+      enabled "Private vulnerability reporting" in Settings → Code security.
+  - name: User manual / supported formats / shortcuts
+    url: https://github.com/ZengZichao/PhyloRecViewer/blob/main/docs/USER_MANUAL.md
+    about: "Chinese version: docs/USER_MANUAL.zh-CN.md"
