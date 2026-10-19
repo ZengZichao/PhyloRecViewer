@@ -863,6 +863,7 @@ def alt_skeleton():
 
 def merge_alt_md(md_path, section, body):
     """replace only this script's delimited block inside the shared report."""
+    md_path = st.confine_to_repo(md_path)
     begin, finish = f"<!-- BEGIN {section} -->", f"<!-- END {section} -->"
     block = "\n".join([begin, body, finish])
     old = ""

@@ -72,7 +72,8 @@ the frozen tables:
 # 1. reproduce the published fold and compare it with data/. Writes NOTHING.
 python3 scripts/aggregate-measurements.py --check --from-runs
 
-# 2. re-derive it into a scratch directory (default _build/aggregates/, or --out DIR)
+# 2. re-derive it into a scratch directory (default _build/aggregates/, or
+#    --out DIR for another directory inside the repository)
 python3 scripts/aggregate-measurements.py --from-runs
 
 # 3. re-measure from scratch and replace data/ — the only mode that writes data/

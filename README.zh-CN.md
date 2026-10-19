@@ -68,7 +68,7 @@ npm run check:tracked # 确认被引用的文件都已纳入版本控制（见 C
 # 1. 复现已发布的折叠并与 data/ 比对。一个字节也不写。
 python3 scripts/aggregate-measurements.py --check --from-runs
 
-# 2. 重算到临时目录（默认 _build/aggregates/，也可 --out DIR）
+# 2. 重算到临时目录（默认 _build/aggregates/，也可 --out DIR 指定仓库内其他目录）
 python3 scripts/aggregate-measurements.py --from-runs
 
 # 3. 重新测量并替换 data/ —— 唯一会写 data/ 的模式

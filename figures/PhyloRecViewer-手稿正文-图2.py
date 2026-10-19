@@ -1190,7 +1190,8 @@ for _letter, _c in sorted(_carrier.items()):
           f"{100 * _c['ratio']:.0f}% as wide as its neighbours "
           f"(>= {100 * INSET_COL_RATIO:.0f}% required)")
 # Recorded so the checker and the legend quote one measured source of truth.
-with open(os.path.join(BUILD, "figure2-typography.json"), "w") as fh:
+with open(st.confine_to_repo(os.path.join(BUILD, "figure2-typography.json")),
+          "w") as fh:
     json.dump({"canvas_units": [CW, CH], "panel_a_in": [MAIN_W, MAIN_H],
                "panel_a_ink_band_u": [INK_V0_U, INK_V1_U],
                "panel_a_blank_head_u": BLANK_HEAD_U, "panel_a_blank_foot_u": BLANK_FOOT_U,

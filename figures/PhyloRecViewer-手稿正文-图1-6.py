@@ -446,6 +446,7 @@ class Fig:
     def save(self, path):
         if not os.path.isabs(path):
             path = os.path.join(OUT_DIR, path)
+        path = st.confine_to_repo(path)
         out = self.b[:2] + ["<defs>" + "".join(self.defs) + "</defs>"] + self.b[2:]
         with open(path, "w", encoding="utf-8") as fh:
             fh.write("\n".join(out) + "\n</svg>\n")
@@ -1113,9 +1114,9 @@ def emit_alt(f):
     txt = alt_skeleton(f)
     print(txt)
     try:
-        os.makedirs(ALT_DIR, exist_ok=True)
-        with open(os.path.join(ALT_DIR, f.name + ".md"), "w",
-                  encoding="utf-8") as fh:
+        out_path = st.confine_to_repo(os.path.join(ALT_DIR, f.name + ".md"))
+        os.makedirs(os.path.dirname(out_path), exist_ok=True)
+        with open(out_path, "w", encoding="utf-8") as fh:
             fh.write(txt + "\n")
     except OSError as exc:                 # never fail a figure over a report
         print("  (alt-text report not written: %s)" % exc)
@@ -1140,6 +1141,7 @@ ALT_SECTION = "main-figures-1-3-4-5-6"
 
 def merge_alt_md(md_path, section, body):
     """splice this script's section into the shared alt-text report."""
+    md_path = st.confine_to_repo(md_path)
     begin, finish = "<!-- BEGIN %s -->" % section, "<!-- END %s -->" % section
     block = "\n".join([begin, body, finish])
     old = ""
@@ -1670,7 +1672,7 @@ if __name__ == "__main__":
     combined = "\n\n".join(ALT_BLOCKS)
     try:
         os.makedirs(ALT_DIR, exist_ok=True)
-        agg = os.path.join(ALT_DIR, "main-figures-alt-text.md")
+        agg = st.confine_to_repo(os.path.join(ALT_DIR, "main-figures-alt-text.md"))
         with open(agg, "w", encoding="utf-8") as fh:
             fh.write(combined + "\n")
         print("\nalt-text skeleton written to %s" % agg)

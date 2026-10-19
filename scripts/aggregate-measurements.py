@@ -27,7 +27,7 @@ data/ unless the operator asks for it explicitly:
     --check        recompute into a temporary directory and compare with data/;
                    write NOTHING. Use this to reproduce the fold.
     (default)     write the aggregates and MANIFEST to _build/aggregates/.
-    --out DIR     write there instead.
+    --out DIR     write there instead; DIR must stay inside the repository.
     --in-place    legacy behaviour: overwrite data/. Only for producing a NEW
                    frozen set, i.e. when a re-measurement is the point.
     --dry-run     compute and report, write nothing.
@@ -503,7 +503,8 @@ USAGE = (
     "  --check     replay the fold into a temporary directory and compare it with "
     "data/; writes nothing (this is the reproduction command).\n"
     "  (default)   write the fold to _build/aggregates/; data/ is never overwritten.\n"
-    "  --out DIR   write the fold to DIR instead.\n"
+    "  --out DIR   write the fold to DIR instead; DIR must stay inside the "
+    "repository.\n"
     "  --in-place  write the fold into data/, replacing the frozen tables "
     "(only when a re-measurement is intended).\n"
     "  --dry-run   compute and report, write nothing.\n"
@@ -540,6 +541,9 @@ def main(argv):
         dest = DATA
     elif dest is None:
         dest = REPLAY
+    if not (dest == ROOT or ROOT in dest.parents):
+        sys.exit(f"--out must stay inside the repository ({ROOT}); "
+                 f"got {dest}\n\n" + USAGE)
     if not from_published and len(directories) < 3 and not verify:
         sys.exit(
             "need at least 3 run directories for a dispersion estimate, or pass "

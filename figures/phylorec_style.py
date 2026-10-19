@@ -38,6 +38,27 @@ import os
 # (pyrolite installs a prop_cycle and its own rc sheet on this machine).
 os.environ.pop("MPLSTYLE", None)
 
+# --------------------------------------------------- repository confinement --
+# Every carrier these scripts write is repository content.  confine_to_repo()
+# turns that invariant into an enforced one: a stray PR_FIG_OUT / PR_ALT_DIR /
+# PR_BUILD_DIR override, or a caller-supplied path, cannot land a file outside
+# the project.  The figure scripts resolve every write through it.
+_REPO_ROOT = os.path.realpath(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+
+def confine_to_repo(path):
+    """resolve `path`; raise ValueError unless it stays inside the repository.
+
+    Returns the resolved path, so callers should write through the return value
+    rather than the original argument.
+    """
+    resolved = os.path.realpath(os.path.abspath(path))
+    if resolved != _REPO_ROOT and not resolved.startswith(_REPO_ROOT + os.sep):
+        raise ValueError("refusing to write outside the repository: %s" % (path,))
+    return resolved
+
+
 # --------------------------------------------------------------- page setup --
 PRINT_MM = 166.0                    # the article's text block, MBE single column
 PRINT_IN = PRINT_MM / 25.4          # 6.5354 in
@@ -302,6 +323,7 @@ def save(fig, source, outdir=None):
     base = os.path.splitext(os.path.basename(source))[0]
     outdir = os.path.abspath(outdir or os.environ.get("PR_FIG_OUT")
                              or os.path.dirname(os.path.abspath(source)))
+    outdir = confine_to_repo(outdir)
     os.makedirs(outdir, exist_ok=True)
     png = os.path.join(outdir, base + ".png")
     pdf = os.path.join(outdir, base + ".pdf")
@@ -383,6 +405,7 @@ def png_to_tiff(png_path, tiff_path, dpi=DPI):
     the figure is still delivered.  Returns the codec actually used.
     """
     arr, _ = _pixels_and_dpi(png_path)
+    tiff_path = confine_to_repo(tiff_path)
     blob, codec = _best_lossless_tiff(arr, dpi)
     if blob is None:
         from PIL import Image
@@ -408,6 +431,7 @@ def compress_tiff_in_place(tiff_path, limit=25 * 1024 * 1024):
     alone.  `compress_carriers.py` is the command-line front for this.
     """
     import os
+    tiff_path = confine_to_repo(tiff_path)
     raw_size = os.path.getsize(tiff_path)
     name = os.path.basename(tiff_path)
     if raw_size <= limit:
