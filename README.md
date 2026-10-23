@@ -3,6 +3,9 @@
 **English** | [中文](./README.zh-CN.md)
 
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.23053317.svg)](https://doi.org/10.5281/zenodo.23053317)
+[![CI](https://github.com/ZengZichao/PhyloRecViewer/actions/workflows/ci.yml/badge.svg)](https://github.com/ZengZichao/PhyloRecViewer/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![ORCID](https://img.shields.io/badge/ORCID-0000--0001--6553--970X-a6ce39?logo=orcid&logoColor=white)](https://orcid.org/0000-0001-6553-970X)
 
 Beautiful, offline, interactive **recPhyloXML / NHX** phylogenetic-reconciliation viewer. Built with Tauri v2 (Rust + React 18 / TypeScript strict) with a deterministic, pure-style SVG renderer.
 
