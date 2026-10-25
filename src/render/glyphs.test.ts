@@ -51,8 +51,8 @@ describe("event glyph geometry", () => {
   it("draws duplications as axis-aligned squares, not circles", () => {
     const rects = svg.match(/<rect[^>]*width="[\d.]+"[^>]*height="[\d.]+"[^>]*>/g) ?? [];
     const squares = rects.filter((r) => {
-      const w = Number(/width="([\d.]+)"/.exec(r)?.[1]);
-      const h = Number(/height="([\d.]+)"/.exec(r)?.[1]);
+      const w = Number(r.match(/width="([\d.]+)"/)?.[1]);
+      const h = Number(r.match(/height="([\d.]+)"/)?.[1]);
       return w > 0 && Math.abs(w - h) < 1e-6;
     });
     // exactly one per duplication glyph - no more, no less
@@ -62,7 +62,7 @@ describe("event glyph geometry", () => {
   it("draws losses as a cross of two diagonal lines", () => {
     const lines = svg.match(/<line[^>]*>/g) ?? [];
     const diagonals = lines.filter((l) => {
-      const g = (k: string) => Number(new RegExp(`${k}="(-?[\\d.]+)"`).exec(l)?.[1]);
+      const g = (k: string) => Number(l.match(new RegExp(`${k}="(-?[\\d.]+)"`))?.[1]);
       return g("x1") !== g("x2") && g("y1") !== g("y2");
     });
     expect(diagonals.length).toBe(EVENTS.loss * 2);

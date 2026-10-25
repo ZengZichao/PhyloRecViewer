@@ -97,7 +97,7 @@ export function parseNewick(text: string): NewickNode[] {
     // percent-encode those colons, so third-party NHX needs this key-aware
     // split. Fragments that carry no `key=` surface through `nhxUnparsed`.
     const keyAt = (k: number): RegExpMatchArray | null =>
-      /^[A-Za-z][A-Za-z0-9_.-]*=/.exec(c.slice(k));
+      c.slice(k).match(/^[A-Za-z][A-Za-z0-9_.-]*=/);
     let i = 0;
     while (i < c.length) {
       const eq = c.indexOf("=", i);

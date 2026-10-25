@@ -127,7 +127,7 @@ describe("canvas bounds cover the bowed transfer arcs", () => {
         // Read the control point back out of the renderer's own path so this
         // test fails if the bow formula and the bounds estimate ever diverge.
         const d = transferArc(a, b);
-        const m = /Q([-\d.]+),([-\d.]+)/.exec(d);
+        const m = d.match(/Q([-\d.]+),([-\d.]+)/);
         expect(m, `no quadratic control point in ${d}`).not.toBeNull();
         const cx = Number(m![1]);
         const cy = Number(m![2]);

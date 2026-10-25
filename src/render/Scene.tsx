@@ -13,6 +13,7 @@ import {
   connect,
   makeProjector,
   pj,
+  routedGeneEdge,
   transferArc,
   type Orientation,
   type Projector,
@@ -519,10 +520,11 @@ function dimmed(id: string, highlight: Set<string> | null): number {
 /**
  * Path for a gene edge between parent `g` and child `c`.
  *
- * Curved mode keeps the smooth connector. In elbow (non-curved) mode the edge
- * bends at the *child's species-branch midpoint* - the same y where the square
- * species tube turns - so the gene skeleton stays inside the tube instead of
- * cutting diagonally across the gap between branches.
+ * Whenever both ends have a resolvable species the edge is routed along the
+ * species tubes (see {@link routedGeneEdge}); otherwise it falls back to the
+ * plain connector. In fallback elbow mode the edge bends at the *child's
+ * species-branch midpoint* - the closest single-bend approximation of the
+ * tube turn.
  */
 function geneEdgePath(
   proj: Projector,
@@ -532,6 +534,23 @@ function geneEdgePath(
   c: GeneNode,
   curved: boolean,
 ): string {
+  const routed = routedGeneEdge(species, pos, g, c, curved);
+  if (routed && routed.segs.length > 0) {
+    const p0 = pj(proj, routed.start);
+    let d = `M${p0.x},${p0.y}`;
+    for (const s of routed.segs) {
+      if (s.kind === "L") {
+        const p = pj(proj, s.to);
+        d += ` L${p.x},${p.y}`;
+      } else {
+        const a = pj(proj, s.c1);
+        const b = pj(proj, s.c2);
+        const p = pj(proj, s.to);
+        d += ` C${a.x},${a.y} ${b.x},${b.y} ${p.x},${p.y}`;
+      }
+    }
+    return d;
+  }
   const c0 = gnPoint(pos, g);
   const c1 = gnPoint(pos, c);
   if (curved) return connect(proj, c0, c1, true);

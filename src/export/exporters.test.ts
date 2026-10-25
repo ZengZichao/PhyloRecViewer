@@ -417,7 +417,7 @@ describe("the interactive HTML export", () => {
     expect(html.match(/<script/g)).toHaveLength(1);
     const head = html.slice(0, html.indexOf("<svg"));
     expect(head.match(/<title/g)).toHaveLength(1);
-    const title = /<title>([\s\S]*?)<\/title>/.exec(html)?.[1] ?? "";
+    const title = html.match(/<title>([\s\S]*?)<\/title>/)?.[1] ?? "";
     expect(title).not.toContain("<");
     expect(title).toContain("&lt;/title&gt;");
     expect(title).toContain("&lt;script&gt;");
