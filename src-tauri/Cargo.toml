@@ -1,6 +1,6 @@
 [package]
 name = "phylorecviewer"
-version = "0.1.1"
+version = "0.1.2"
 description = "Beautiful, offline, interactive recPhyloXML reconciliation viewer"
 authors = ["Zichao Zeng <zengzichao@sjtu.edu.cn>"]
 edition = "2021"

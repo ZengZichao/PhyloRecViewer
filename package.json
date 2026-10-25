@@ -1,6 +1,6 @@
 {
   "name": "phylorecviewer",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "license": "MIT",
   "type": "module",
   "private": true,
@@ -11,8 +11,15 @@
   },
   "description": "Beautiful, offline, interactive recPhyloXML reconciliation viewer",
   "author": "Zichao Zeng <zengzichao@sjtu.edu.cn>",
-  "keywords": ["phylogenetics", "gene tree reconciliation", "recPhyloXML",
-    "NHX", "visualization", "horizontal gene transfer", "tube-map"],
+  "keywords": [
+    "phylogenetics",
+    "gene tree reconciliation",
+    "recPhyloXML",
+    "NHX",
+    "visualization",
+    "horizontal gene transfer",
+    "tube-map"
+  ],
   "repository": {
     "type": "git",
     "url": "git+https://github.com/ZengZichao/PhyloRecViewer.git"
