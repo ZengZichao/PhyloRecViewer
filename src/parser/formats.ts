@@ -51,7 +51,8 @@ export function parseReconciliation(
  * Parse several gene-family files and merge them into one reconciliation that
  * shares the *first* file's species tree. Gene trees are re-indexed and named
  * after their source file so the legend/colors can tell them apart. Species
- * referenced by later files but absent from the first tree are reported.
+ * referenced by later files but absent from the first tree are reported, as are
+ * branches of the first tree that a later file's own species tree lacks.
  */
 export function parseMerged(files: { name: string; text: string }[]): Reconciliation {
   const parsed = files
@@ -68,10 +69,20 @@ export function parseMerged(files: { name: string; text: string }[]): Reconcilia
   // Warnings from *every* file are kept, prefixed by file name - dropping the
   // later files' warnings would hide malformed input from the user.
   const warnings: string[] = [];
+  // Same-basename files (e.g. two directories both containing "result.xml")
+  // would produce identical family names and indistinguishable legend colors;
+  // disambiguate with a numbered suffix.
+  const famNameSeen = new Map<string, number>();
+  const famNameFor = (fileName: string): string => {
+    const base_ = fileName.replace(/\.[^.]+$/, "");
+    const n = famNameSeen.get(base_) ?? 0;
+    famNameSeen.set(base_, n + 1);
+    return n === 0 ? base_ : `${base_} (${n + 1})`;
+  };
   let idx = 0;
   for (const { name, recon } of parsed) {
     for (const w of recon.warnings) warnings.push(`${name}: ${w}`);
-    const famBase = name.replace(/\.[^.]+$/, "");
+    const famBase = famNameFor(name);
     const multi = recon.geneTrees.length > 1;
     for (const gt of recon.geneTrees) {
       const newIdx = idx++;
@@ -105,9 +116,11 @@ export function parseMerged(files: { name: string; text: string }[]): Reconcilia
     );
   }
 
-  // Detect species-tree TOPOLOGY mismatches between files. Shared species names
-  // with different parentage would otherwise be drawn on the wrong tree with no
-  // warning at all: compare each file's edge set against the first's.
+  // Detect species-tree TOPOLOGY mismatches between files, in BOTH directions:
+  // branches a later file lacks (its species tree is a subset - a dropped
+  // clade) and branches it adds. Either way the merged view is drawn on the
+  // first file's tree, and a family drawn on a tree that disagrees with its own
+  // input must be visible, not silent.
   const edgeSet = (st: Reconciliation["species"]): Set<string> => {
     const s = new Set<string>();
     for (const n of st.nodes) if (n.parent) s.add(`${n.parent.name}\u2192${n.name}`);
@@ -117,13 +130,57 @@ export function parseMerged(files: { name: string; text: string }[]): Reconcilia
   for (const { name, recon } of parsed.slice(1)) {
     const edges = edgeSet(recon.species);
     let extra = 0;
-    for (const e of edges) if (!baseEdges.has(e)) extra++;
+    let missingEdges = 0;
+    const missingSpecies = new Set<string>();
+    for (const e of edges) {
+      if (!baseEdges.has(e)) {
+        extra++;
+      }
+    }
+    for (const e of baseEdges) {
+      if (!edges.has(e)) {
+        missingEdges++;
+        const child = e.split("\u2192")[1];
+        if (child) missingSpecies.add(child);
+      }
+    }
     if (extra > 0) {
       warnings.push(
         `${name}: its species tree has ${extra} branch(es) that differ from the first file's species tree; the merged view is drawn on the first file's species tree only.`,
       );
     }
+    if (missingEdges > 0) {
+      warnings.push(
+        `${name}: its species tree is missing ${missingEdges} branch(es) present in the first file's species tree (e.g. ${[...missingSpecies].slice(0, 3).join(", ")}); the merged view is drawn on the first file's species tree only.`,
+      );
+    }
   }
 
   return { species: base.species, geneTrees, warnings };
+}
+
+/**
+ * Detect an encoding problem a successful-but-lossy UTF-8 decode would leave
+ * behind, before the text reaches the parsers: UTF-16 byte pairs decoded as
+ * UTF-8 show up as NUL characters, and an XML declaration naming another
+ * single-byte encoding means the bytes were NOT decoded as the file claims.
+ * Returns a user-facing problem description, or null when the text is plausibly
+ * correct UTF-8.
+ */
+export function detectEncodingProblem(text: string): string | null {
+  const head = text.slice(0, 400);
+  if (head.includes("\u0000")) {
+    return "This file does not appear to be UTF-8 text (it contains NUL bytes, as UTF-16 files do when decoded as UTF-8). Re-export it as UTF-8 and try again.";
+  }
+  const decl = head.match(/^\s*<\?xml[^>]*encoding\s*=\s*["']([^"']+)["']/i);
+  if (decl) {
+    const enc = decl[1].trim().toLowerCase();
+    if (enc !== "utf-8" && enc !== "utf8") {
+      return `The XML declaration says encoding="${decl[1]}" but the file was decoded as UTF-8. Non-UTF-8 files (e.g. ${decl[1]}) are not supported; re-save the file as UTF-8.`;
+    }
+  }
+  if (/^\uFFFD/.test(text)) {
+    return "This file could not be decoded as UTF-8 (it starts with a replacement character). Re-save it as UTF-8.";
+  }
+  return null;
 }

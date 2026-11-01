@@ -4,6 +4,17 @@ import { samples } from "../samples";
 import { useStore } from "../state/store";
 import { AppLogo } from "./AppLogo";
 
+/** Per-sample badge: what the sample opens, so the choice is informed (the
+ *  nested/compare samples auto-enter their split views). */
+function sampleBadge(
+  s: (typeof samples)[number],
+  t: ReturnType<typeof useT>,
+): string | null {
+  if (s.nestedXml) return `${t.paneGeneSymbiont} / ${t.paneSymbiontHost}`;
+  if (s.compareXml) return t.panelDiff;
+  return null;
+}
+
 /**
  * First-run / no-document onboarding hub. Gives the empty screen an actionable
  * starting point: open a file, choose one of the three bundled samples, drag &
@@ -32,6 +43,7 @@ export function EmptyState() {
       if (s.compareXml)
         loadCompareXml(s.compareXml, s.compareLabelKey ? t[s.compareLabelKey] : "compare");
       setSampleId(s.id);
+      useStore.getState().markDocClean();
     });
   };
 
@@ -42,10 +54,21 @@ export function EmptyState() {
       </div>
       <h2 className="empty-app-name">Phylo<span className="brand-mark">Rec</span>Viewer</h2>
       <p className="muted">{t.emptyBody}</p>
+      <p className="muted">
+        ① {t.panelStats} · {t.dataHealth} &nbsp;&nbsp;② {t.panelDiff} &nbsp;&nbsp;③ {t.exportLabel} (SVG / PDF / {t.exportRecPhylo.replace(/（.*/, "")})
+      </p>
 
       <div className="empty-actions">
         <button className="btn primary" onClick={() => fileInput.current?.click()}>
           {t.openFile}
+        </button>
+        <button
+          className="btn"
+          onClick={() => {
+            setTimeout(() => document.dispatchEvent(new CustomEvent("rpv:replay-tour")), 0);
+          }}
+        >
+          {t.viewTour}
         </button>
         <button className="btn" onClick={() => setHelpOpen(true)}>
           {t.viewShortcuts}
@@ -69,16 +92,20 @@ export function EmptyState() {
       <div className="empty-samples">
         <span className="empty-samples-label">{t.emptyOrSample}</span>
         <div className="empty-sample-list">
-          {samples.map((s) => (
-            <button
-              key={s.id}
-              className="btn ghost empty-sample-btn"
-              onClick={() => loadSample(s)}
-            >
-              <span className="empty-sample-arrow" aria-hidden="true">▸</span>
-              {t[s.labelKey]}
-            </button>
-          ))}
+          {samples.map((s) => {
+            const badge = sampleBadge(s, t);
+            return (
+              <button
+                key={s.id}
+                className="btn ghost empty-sample-btn"
+                onClick={() => loadSample(s)}
+              >
+                <span className="empty-sample-arrow" aria-hidden="true">▸</span>
+                {t[s.labelKey]}
+                {badge && <span className="multi-open-badge">{badge}</span>}
+              </button>
+            );
+          })}
         </div>
       </div>
 

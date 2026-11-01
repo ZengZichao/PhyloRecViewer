@@ -344,6 +344,135 @@ donutTotal: string;
   checkNonBinaryNode: string;
   checkNameTransferBackwardsInTime: string;
   checkTransferBackwardsInTime: string;
+  overviewMode: string;
+  renameLabel: string;
+  renameAllSameName: string;
+  menuNew: string;
+  openRecent: string;
+  noRecent: string;
+  closeTabMenu: string;
+  closeOthers: string;
+  closeAll: string;
+  reopenClosed: string;
+  pasteTree: string;
+  pasteTreeEmpty: string;
+  pasteTreeOk: string;
+  loadSpeciesTree: string;
+  speciesTreeLoaded: string;
+  speciesTreeCleared: string;
+  saveSessionAs: string;
+  openSession: string;
+  exportRecPhylo: string;
+  exportNhxExt: string;
+  nhxDialectTitle: string;
+  nhxLossList: string;
+  nhxExportAnyway: string;
+  nhxUseRecPhylo: string;
+  pngScreen: string;
+  dpiCustom: string;
+  dpiCustomLabel: string;
+  pixelEstimate: string;
+  transparentBg: string;
+  whiteBg: string;
+  themeBg: string;
+  copySvg: string;
+  copyPng: string;
+  copyOk: string;
+  copyFailed: string;
+  aboutTitle: string;
+  aboutVersion: string;
+  aboutCitation: string;
+  aboutLicense: string;
+  copyDiagnostics: string;
+  dataHealth: string;
+  parseWarnings: string;
+  nestedWarningsLabel: string;
+  compareWarningsLabel: string;
+  exportReport: string;
+  locateFirst: string;
+  levelError: string;
+  levelWarning: string;
+  levelInfo: string;
+  splitSideBySide: string;
+  splitStacked: string;
+  linkViews: string;
+  diffMatched: string;
+  diffOnlyA: string;
+  diffOnlyB: string;
+  speciesAgreeShort: string;
+  diffColStatus: string;
+  diffOnlyDiff: string;
+  exportDiffCsv: string;
+  scopePrimary: string;
+  scopeNote: string;
+  arrivalsCol: string;
+  topOf: string;
+  unknownSpeciesRow: string;
+  nodeLoss: string;
+  regexInvalid: string;
+  resultsList: string;
+  restoreTitle: string;
+  restoreBody: string;
+  restoreAccept: string;
+  restoreDecline: string;
+  restoreCleared: string;
+  presentation: string;
+  exitPresentation: string;
+  unsavedChanges: string;
+  closeSaveAndClose: string;
+  closeDontSave: string;
+  close: string;
+  autosaveSection: string;
+  autosaveOn: string;
+  autosaveNone: string;
+  autosaveFailedLabel: string;
+  clearAutosave: string;
+  clearAutosaveDone: string;
+  recoverySection: string;
+  recoveryFound: string;
+  recoveryExport: string;
+  applyAllTabs: string;
+  resetSection: string;
+  renameTab: string;
+  tabTooltipMerged: string;
+  batchPreview: string;
+  batchPreviewEmpty: string;
+  batchCaseSensitive: string;
+  batchInvalidRegex: string;
+  familyColors: string;
+  heatmapMax: string;
+  speciesInternalNames: string;
+  inspectorTitle: string;
+  inspSpecies: string;
+  inspTimeSlice: string;
+  inspConfidence: string;
+  inspSupport: string;
+  inspBranch: string;
+  inspFamily: string;
+  inspParent: string;
+  inspChildren: string;
+  inspDonor: string;
+  inspRecipient: string;
+  inspAnnotation: string;
+  inspCopy: string;
+  inspLocate: string;
+  inspPath: string;
+  inspNone: string;
+  mergeFiles: string;
+  mergeBase: string;
+  mergeConflict: string;
+  mergeNoConflict: string;
+  fullLabels: string;
+  checkNameSameSpeciesTransfer: string;
+  checkSameSpeciesTransfer: string;
+  checkNameTransferTimeUnknown: string;
+  checkTransferTimeUnknown: string;
+  checkNameConfidenceScaleSuspect: string;
+  checkConfidenceScaleSuspect: string;
+  checkNameNegativeBranchLength: string;
+  checkNegativeBranchLength: string;
+  checkNameVerticalEdgeAcrossClades: string;
+  checkVerticalEdgeAcrossClades: string;
   // events
   event: Record<EventType, string>;
 }
@@ -650,6 +779,135 @@ donutTotal: "Total",
   checkNameNonBinaryNode: "Speciation / duplication are binary",
   checkTransferBackwardsInTime: "transfers into an ancestor species (time-travelling)",
   checkNameTransferBackwardsInTime: "Transfers move forward in time",
+  overviewMode: "Overview mode — zoom in to see labels",
+  renameLabel: "Rename label",
+  renameAllSameName: "Apply to all {n} labels with this name",
+  menuNew: "New workspace",
+  openRecent: "Open recent",
+  noRecent: "No recent files",
+  closeTabMenu: "Close tab",
+  closeOthers: "Close other tabs",
+  closeAll: "Close all tabs",
+  reopenClosed: "Reopen closed tab",
+  pasteTree: "Paste tree from clipboard",
+  pasteTreeEmpty: "The clipboard does not contain any text",
+  pasteTreeOk: "Pasted tree opened",
+  loadSpeciesTree: "Load species tree (Newick)…",
+  speciesTreeLoaded: "Species tree \"{name}\" loaded; gene trees you open next will use it",
+  speciesTreeCleared: "External species tree cleared",
+  saveSessionAs: "Save session as…",
+  openSession: "Open session…",
+  exportRecPhylo: "recPhyloXML (lossless round-trip)",
+  exportNhxExt: "NHX (extended dialect)…",
+  nhxDialectTitle: "About the NHX export",
+  nhxLossList: "This NHX file will NOT carry:",
+  nhxExportAnyway: "Export NHX anyway",
+  nhxUseRecPhylo: "Use recPhyloXML instead",
+  pngScreen: "Screen 2×",
+  dpiCustom: "Custom…",
+  dpiCustomLabel: "Custom DPI",
+  pixelEstimate: "Output ≈ {w} × {h} px",
+  transparentBg: "Transparent background",
+  whiteBg: "White background",
+  themeBg: "Theme background",
+  copySvg: "Copy SVG",
+  copyPng: "Copy PNG",
+  copyOk: "Copied to clipboard",
+  copyFailed: "Clipboard unavailable in this browser",
+  aboutTitle: "About PhyloRecViewer",
+  aboutVersion: "Version",
+  aboutCitation: "Citation",
+  aboutLicense: "Released under the MIT License. Runs fully offline; no telemetry.",
+  copyDiagnostics: "Copy diagnostics",
+  dataHealth: "Data health",
+  parseWarnings: "Parser warnings",
+  nestedWarningsLabel: "Nested layer warnings",
+  compareWarningsLabel: "Compare layer warnings",
+  exportReport: "Export QC report (CSV)",
+  locateFirst: "Locate first occurrence",
+  levelError: "Error",
+  levelWarning: "Warning",
+  levelInfo: "Note",
+  splitSideBySide: "Side by side",
+  splitStacked: "Stacked",
+  linkViews: "Link views",
+  diffMatched: "{n} matched",
+  diffOnlyA: "{n} only in A",
+  diffOnlyB: "{n} only in B",
+  speciesAgreeShort: "{p}% species match",
+  diffColStatus: "Status",
+  diffOnlyDiff: "Show differences only",
+  exportDiffCsv: "Export CSV",
+  scopePrimary: "Primary document",
+  scopeNote: "Covers the primary document only",
+  arrivalsCol: "Arrivals",
+  topOf: "top {n} of {total}",
+  unknownSpeciesRow: "(no species)",
+  nodeLoss: "Loss",
+  regexInvalid: "Invalid regular expression — plain-text matching is used instead",
+  resultsList: "Matches",
+  restoreTitle: "Restore last workspace?",
+  restoreBody: "An autosaved snapshot from {time} is available.",
+  restoreAccept: "Restore",
+  restoreDecline: "Start blank",
+  restoreCleared: "Previous snapshot discarded",
+  presentation: "Presentation mode",
+  exitPresentation: "Exit presentation (Esc)",
+  unsavedChanges: "Unsaved changes",
+  closeSaveAndClose: "Save session and close",
+  closeDontSave: "Close without saving",
+  close: "Close",
+  autosaveSection: "Autosave",
+  autosaveOn: "On — last saved {time}",
+  autosaveNone: "On — nothing saved yet this session",
+  autosaveFailedLabel: "FAILED — export a session file to be safe",
+  clearAutosave: "Clear autosave data",
+  clearAutosaveDone: "Autosave data cleared",
+  recoverySection: "Recovery",
+  recoveryFound: "A snapshot that failed to restore was kept. Export it to inspect or re-import:",
+  recoveryExport: "Export snapshot (JSON)",
+  applyAllTabs: "Apply layout/style to all tabs",
+  resetSection: "Reset this section",
+  renameTab: "Rename tab",
+  tabTooltipMerged: "Merged document — {n} source files",
+  batchPreview: "{n} label(s) will be replaced",
+  batchPreviewEmpty: "No label matches this pattern",
+  batchCaseSensitive: "Case sensitive",
+  batchInvalidRegex: "Invalid regular expression",
+  familyColors: "Family colors",
+  heatmapMax: "max {n} lanes",
+  speciesInternalNames: "Species clade names",
+  inspectorTitle: "Inspector",
+  inspSpecies: "Species",
+  inspTimeSlice: "Time slice",
+  inspConfidence: "Confidence",
+  inspSupport: "Support",
+  inspBranch: "Branch length",
+  inspFamily: "Family",
+  inspParent: "Parent",
+  inspChildren: "Children",
+  inspDonor: "Donor",
+  inspRecipient: "Recipient",
+  inspAnnotation: "Annotation",
+  inspCopy: "Copy details",
+  inspLocate: "Locate",
+  inspPath: "Lineage",
+  inspNone: "—",
+  mergeFiles: "Files",
+  mergeBase: "Species tree base: {name}",
+  mergeConflict: "{n} file(s) differ from the base species tree",
+  mergeNoConflict: "All files share the base species tree",
+  fullLabels: "Show full labels (no truncation)",
+  checkNameSameSpeciesTransfer: "Same-species transfer",
+  checkSameSpeciesTransfer: "A transfer arrives in the species it left. This may be intended gene flow within one lineage - decide based on your model; it is not a time-direction error.",
+  checkNameTransferTimeUnknown: "Transfer time not assessable",
+  checkTransferTimeUnknown: "No timeSlice on the donor or the arrival, and the species are unrelated, so the time direction cannot be judged (topology depth is not time).",
+  checkNameConfidenceScaleSuspect: "Confidence looks like 0-100",
+  checkConfidenceScaleSuspect: "A confidence/support value is above 1 and at most 100, which suggests a 0-100 percentage rather than a 0-1 probability; the confidence filter expects 0-1.",
+  checkNameNegativeBranchLength: "Negative / invalid branch length",
+  checkNegativeBranchLength: "A branch length is negative or not finite; it is clamped to 0 for drawing.",
+  checkNameVerticalEdgeAcrossClades: "Vertical edge between unrelated clades",
+  checkVerticalEdgeAcrossClades: "A non-transfer gene edge jumps from one species to an unrelated clade - impossible without a transfer. Check the speciesLocation annotations.",
   event: {
     speciation: "Speciation",
     duplication: "Duplication",
@@ -956,6 +1214,135 @@ donutTotal: "\u603b\u8ba1",
   checkNameNonBinaryNode: "\u7269\u79cd\u5f62\u6210/\u91cd\u590d\u4e3a\u4e8c\u6b67",
   checkTransferBackwardsInTime: "\u8f6c\u79fb\u5230\u7956\u5148\u7269\u79cd\uff08\u65f6\u95f4\u5012\u6d41\uff09",
   checkNameTransferBackwardsInTime: "\u8f6c\u79fb\u6cbf\u65f6\u95f4\u6b63\u5411",
+  overviewMode: "总览模式 — 放大后显示标签",
+  renameLabel: "重命名标签",
+  renameAllSameName: "应用到所有 {n} 个同名标签",
+  menuNew: "新建工作区",
+  openRecent: "最近打开",
+  noRecent: "暂无最近文件",
+  closeTabMenu: "关闭标签",
+  closeOthers: "关闭其他标签",
+  closeAll: "关闭所有标签",
+  reopenClosed: "重新打开已关闭标签",
+  pasteTree: "从剪贴板粘贴树",
+  pasteTreeEmpty: "剪贴板中没有文本",
+  pasteTreeOk: "已打开粘贴的树",
+  loadSpeciesTree: "载入物种树（Newick）…",
+  speciesTreeLoaded: "已载入物种树「{name}」，之后打开的基因树将使用它",
+  speciesTreeCleared: "已清除外部物种树",
+  saveSessionAs: "会话另存为…",
+  openSession: "打开会话…",
+  exportRecPhylo: "recPhyloXML（无损往返）",
+  exportNhxExt: "NHX（扩展方言）…",
+  nhxDialectTitle: "关于 NHX 导出",
+  nhxLossList: "此 NHX 文件不包含：",
+  nhxExportAnyway: "仍要导出 NHX",
+  nhxUseRecPhylo: "改用 recPhyloXML",
+  pngScreen: "屏幕 2×",
+  dpiCustom: "自定义…",
+  dpiCustomLabel: "自定义 DPI",
+  pixelEstimate: "输出约 {w} × {h} 像素",
+  transparentBg: "透明背景",
+  whiteBg: "白色背景",
+  themeBg: "主题背景",
+  copySvg: "复制 SVG",
+  copyPng: "复制 PNG",
+  copyOk: "已复制到剪贴板",
+  copyFailed: "当前浏览器不支持剪贴板复制",
+  aboutTitle: "关于 PhyloRecViewer",
+  aboutVersion: "版本",
+  aboutCitation: "引用",
+  aboutLicense: "基于 MIT 许可证发布。完全离线运行，无遥测。",
+  copyDiagnostics: "复制诊断信息",
+  dataHealth: "数据健康",
+  parseWarnings: "解析警告",
+  nestedWarningsLabel: "嵌套层警告",
+  compareWarningsLabel: "对比层警告",
+  exportReport: "导出质检报告（CSV）",
+  locateFirst: "定位第一处",
+  levelError: "错误",
+  levelWarning: "警告",
+  levelInfo: "提示",
+  splitSideBySide: "左右分栏",
+  splitStacked: "上下分栏",
+  linkViews: "联动视图",
+  diffMatched: "匹配 {n}",
+  diffOnlyA: "仅 A 有 {n}",
+  diffOnlyB: "仅 B 有 {n}",
+  speciesAgreeShort: "物种一致 {p}%",
+  diffColStatus: "差异",
+  diffOnlyDiff: "只看差异",
+  exportDiffCsv: "导出 CSV",
+  scopePrimary: "主文档",
+  scopeNote: "仅覆盖主文档",
+  arrivalsCol: "到达",
+  topOf: "前 {n} / 共 {total}",
+  unknownSpeciesRow: "（无物种）",
+  nodeLoss: "丢失",
+  regexInvalid: "正则表达式无效 — 已改用普通文本匹配",
+  resultsList: "匹配结果",
+  restoreTitle: "恢复上次工作区？",
+  restoreBody: "发现 {time} 自动保存的工作区快照。",
+  restoreAccept: "恢复",
+  restoreDecline: "从空白开始",
+  restoreCleared: "已丢弃上次的自动保存",
+  presentation: "演示模式",
+  exitPresentation: "退出演示（Esc）",
+  unsavedChanges: "未保存的更改",
+  closeSaveAndClose: "保存会话并关闭",
+  closeDontSave: "不保存关闭",
+  close: "关闭",
+  autosaveSection: "自动保存",
+  autosaveOn: "已开启 — 上次保存 {time}",
+  autosaveNone: "已开启 — 本次会话尚未保存",
+  autosaveFailedLabel: "失败 — 请导出会话文件以防丢失",
+  clearAutosave: "清除自动保存数据",
+  clearAutosaveDone: "已清除自动保存数据",
+  recoverySection: "恢复",
+  recoveryFound: "存在一份未能恢复的快照，已保留。可导出以便检查或重新导入：",
+  recoveryExport: "导出快照（JSON）",
+  applyAllTabs: "将布局/样式应用到所有标签",
+  resetSection: "重置本区设置",
+  renameTab: "重命名标签",
+  tabTooltipMerged: "合并文档 — {n} 个源文件",
+  batchPreview: "将替换 {n} 个标签",
+  batchPreviewEmpty: "没有标签匹配该模式",
+  batchCaseSensitive: "区分大小写",
+  batchInvalidRegex: "正则表达式无效",
+  familyColors: "家族颜色",
+  heatmapMax: "最多 {n} 泳道",
+  speciesInternalNames: "物种内部节点名",
+  inspectorTitle: "检查器",
+  inspSpecies: "物种",
+  inspTimeSlice: "时间片",
+  inspConfidence: "置信度",
+  inspSupport: "支持度",
+  inspBranch: "枝长",
+  inspFamily: "家族",
+  inspParent: "父节点",
+  inspChildren: "子节点",
+  inspDonor: "供体",
+  inspRecipient: "受体",
+  inspAnnotation: "批注",
+  inspCopy: "复制详情",
+  inspLocate: "定位",
+  inspPath: "谱系路径",
+  inspNone: "—",
+  mergeFiles: "文件",
+  mergeBase: "基准物种树：{name}",
+  mergeConflict: "{n} 个文件与基准物种树存在差异",
+  mergeNoConflict: "所有文件的物种树与基准一致",
+  fullLabels: "显示完整标签（不截断）",
+  checkNameSameSpeciesTransfer: "同物种内转移",
+  checkSameSpeciesTransfer: "一次转移到达其出发的同一物种。这可能是预期的种内基因流，请结合模型判断——它不是时间方向错误。",
+  checkNameTransferTimeUnknown: "转移时间不可判定",
+  checkTransferTimeUnknown: "供体或到达事件缺少 timeSlice，且两个物种不构成祖先关系，因此无法判断时间方向（拓扑深度不是时间）。",
+  checkNameConfidenceScaleSuspect: "置信度疑似 0-100 刻度",
+  checkConfidenceScaleSuspect: "某个置信度/支持度大于 1 且不超过 100，可能是 0-100 百分数而非 0-1 概率；置信度筛选按 0-1 解释。",
+  checkNameNegativeBranchLength: "负值/非法枝长",
+  checkNegativeBranchLength: "某个枝长为负或非有限值；绘图时按 0 处理。",
+  checkNameVerticalEdgeAcrossClades: "垂直边跨到无关分支",
+  checkVerticalEdgeAcrossClades: "一条非转移的基因边从一个物种直接跳到无关分支——没有转移时不可能发生，请检查 speciesLocation 标注。",
   event: {
     speciation: "\u7269\u79cd\u5f62\u6210",
     duplication: "\u57fa\u56e0\u91cd\u590d",

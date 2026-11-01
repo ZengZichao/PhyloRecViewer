@@ -63,8 +63,12 @@ describe("full-event-type matrix", () => {
     }
   });
 
-  it("a well-formed full-event file reports no consistency issues", () => {
-    expect(checkConsistency(recon)).toEqual([]);
+  it("a well-formed full-event file reports no error/warning consistency issues", () => {
+    // Transfers without timeSlice evidence are reported as info-level
+    // "not assessable" (transferTimeUnknown) - an explicit non-verdict, not a
+    // silent pass - so filter to the issues that actually flag a problem.
+    const problems = checkConsistency(recon).filter((i) => i.level !== "info");
+    expect(problems).toEqual([]);
   });
 
   it("produces a finite layout with coordinates for every gene node", () => {

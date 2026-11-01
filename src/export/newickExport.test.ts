@@ -167,8 +167,10 @@ describe("the NHX export round trip", () => {
   it("writes a transfer-back arrival as TB=<donor>|<recipient>", () => {
     const nhx = reconToNhx(parseReconciliation(FULL_EVENTS_XML, "full"));
     // With no donor species on the event, the donor is the arrival node's parent
-    // species (A) and the recipient is the declared destination (B).
-    expect(nhx).toContain("TB=A|B");
+    // species (A) and the recipient is the declared destination (B). The `|`
+    // separator inside a species value is percent-encoded; the separator itself
+    // stays a bare `|` between donor and recipient.
+    expect(nhx).toMatch(/TB=A\|B/);
   });
 
   it("reads back species names that contain NHX metacharacters", () => {
@@ -300,7 +302,7 @@ describe("edge cases in NHX value encoding", () => {
     arrival.parent = parent;
     // With no speciesLocation on the transferBack event, the donor is the parent's
     // species - the most the tree structure alone can say.
-    expect(reconToNhx(reconOf([parent]))).toContain("TB=A|B");
+    expect(reconToNhx(reconOf([parent]))).toMatch(/TB=A\|B/);
 
     const orphan = node({
       id: "o",
@@ -310,7 +312,7 @@ describe("edge cases in NHX value encoding", () => {
     });
     // With neither a donor nor a declared destination, the donor is written "?"
     // and the arrival takes the node's own species.
-    expect(reconToNhx(reconOf([orphan]))).toContain("TB=?|B");
+    expect(reconToNhx(reconOf([orphan]))).toMatch(/TB=\?\|B/);
   });
 
   it("writes a lone newline for an empty gene-tree list", () => {

@@ -10,9 +10,9 @@
 
 - **格式支持**：recPhyloXML 和 NHX/Newick 格式解析（按内容自动检测，无法识别时回退为 recPhyloXML），多文件合并。NHX 导入依靠 `S=` 注释重建物种树——对自包含文件可靠，但输入中**未加标注**的水平转移无法被辨别，因此含 HGT 的结果请优先使用 recPhyloXML
 - **可视化**：物种 + 基因树调和绘制，四种方向，紧凑/矩形布局
-- **嵌套视图**：三级嵌套（基因 → 共生体 → 宿主）和并排对比
+- **嵌套视图**：三级嵌套（基因 → 共生体 → 宿主），以及对比视图（画布默认上下堆叠，可切换为左右并排）
 - **分析**：搜索 / 筛选 / 统计 / 一致性检查，转移网络
-- **导出**：SVG / PNG / PDF / 交互式 HTML / NHX；会话保存与恢复（覆盖全部标签页的工作区快照与自动保存）。NHX 导出在本软件内可无损往返，但使用的是扩展方言——外部 Newick 读取器可能丢失基因丢失与转移事件，因此需要完全无损、自描述的往返时请使用 recPhyloXML
+- **导出**：SVG / PNG / PDF / 交互式 HTML / NHX；会话保存与恢复（覆盖全部标签页的工作区快照与自动保存）。无头命令行还可导出 **recPhyloXML**——完全无损、自描述的往返格式。NHX 是扩展方言：现已携带全部转移到达、timeSlice、置信度、支持度与枝长，但仍会丢失物种树本身、物种枝长、基因树名称以及从未被任何基因树取样的物种
 - **平台**：中英双语，浅色和深色主题；完全离线运行
 - **开源**：MIT 许可证；提供 macOS、Windows 和 Linux 安装包
 
@@ -66,6 +66,8 @@ npm run lint          # eslint . --max-warnings 0
 npm test              # vitest
 npm run coverage      # vitest 并输出覆盖率报告
 npm run check:tracked # 确认被引用的文件都已纳入版本控制（见 CONTRIBUTING.md）
+npm run cli           # 无头导出（输入为保存的会话文件 .rpvsession.json）：
+                      # 统计 CSV、检查 JSON、SVG / HTML / recPhyloXML / NHX
 ```
 
 `npm run measure` 走一遍真实的解析器 → 布局 → 渲染器路径，把基准 CSV 写入 `_build/`
@@ -74,8 +76,10 @@ npm run check:tracked # 确认被引用的文件都已纳入版本控制（见 C
 ## 使用方法
 
 1. 启动 PhyloRecViewer。
-2. 通过 **文件 → 打开**、拖放或系统文件关联，打开 `.recphyloxml`、`.recphylo`、
-   `.xml`、`.phyloxml`、`.nhx`、`.nwk` 或 `.newick` 文件。
+2. 通过 **文件 → 打开**、拖放或系统文件关联，打开 `.recphyloxml` / `.recphylo` /
+   `.xml` / `.phyloxml` 文件（软件读取的是 **recPhyloXML 内容**；不含 `<recPhylo>`
+   根元素的普通 PhyloXML 树不是调和结果，会被拒绝），或 `.nhx` / `.nwk` /
+   `.newick` 基因树文件。
 3. 使用左侧面板调整布局、样式和标签。
 4. 使用右侧面板进行搜索、统计、转移网络和一致性检查。
 5. 通过菜单栏的 **导出** 菜单导出为 SVG / PNG / PDF / HTML。
@@ -100,7 +104,7 @@ src/
 ├── layout/     # 六步布局流水线
 ├── analysis/   # 统计、对比、一致性检查
 ├── render/     # 纯 SVG 渲染器
-├── export/     # SVG/PNG/PDF/HTML/NHX 导出
+├── export/     # SVG/PNG/PDF/HTML/recPhyloXML/NHX 导出
 ├── state/      # Zustand 状态管理、撤销/重做
 ├── app/        # React 组件
 ├── samples/    # 随附示例谱系
@@ -111,7 +115,7 @@ src/
 
 如果您在研究中使用 PhyloRecViewer，请引用已归档的发布版本：
 
-> Zeng, Z., & Wang, Y. (2026). *PhyloRecViewer* (v0.1.1) [Computer software]. Zenodo. https://doi.org/10.5281/zenodo.23053317
+> Zeng, Z., & Wang, Y. (2026). *PhyloRecViewer* (v0.2.0) [Computer software]. Zenodo. https://doi.org/10.5281/zenodo.23053317
 
 上面这个 DOI 是归档的**概念 DOI**：它始终解析到当前最新的已发布版本。每个已归档版本
 另有自己不可变的**版本 DOI**——v0.1.0 是 `10.5281/zenodo.23053318`——各版本对应的版本

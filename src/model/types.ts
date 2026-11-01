@@ -35,6 +35,18 @@ export interface RecEvent {
 }
 
 /**
+ * Node/branch-level statistical support (bootstrap, posterior, ...). Distinct
+ * from the per-event `confidence` attribute: recPhyloXML carries clade-level
+ * `<confidence>` elements and NHX/Newick files carry numeric internal labels or
+ * `B=` tags, and none of them describe an EVENT.
+ */
+export interface NodeSupport {
+  value: number;
+  /** Declared or inferred kind; "unknown" when the input does not say. */
+  type?: "bootstrap" | "posterior" | "alrt" | "unknown";
+}
+
+/**
  * A node of the species (host) tree.
  *
  * This is a pure structural description: geometry (x/y/width/laneCount) is
@@ -50,6 +62,8 @@ export interface SpeciesNode {
   depth: number;
   /** Optional branch length (from the parent), when the input provides one. */
   branchLength?: number;
+  /** Clade-level statistical support (bootstrap / posterior), when provided. */
+  support?: NodeSupport;
 }
 
 /**
@@ -77,6 +91,8 @@ export interface GeneNode {
    * `useBranchLengths` option are not fed an all-missing column.
    */
   branchLength?: number;
+  /** Clade-level statistical support (bootstrap / posterior), when provided. */
+  support?: NodeSupport;
 }
 
 export interface GeneTree {

@@ -1,21 +1,58 @@
 /**
  * Compare two reconciliations of the *same* gene family and derive a consensus:
- * which nodes agree on their event type and which disagree.
+ * which nodes agree and which disagree, across THREE dimensions - terminal
+ * event type, species mapping, and transfer donor/recipient - so a result that
+ * merely moves a gene to another species can no longer score a false 100%
+ * (compare used to look at the event type only).
  *
  * Nodes are matched by a stable key - the gene name for internal nodes and the
  * extant gene name for leaves - so identically named nodes in the two results
- * are lined up. Nodes present in only one result, or with a different event
- * type, count as disagreements.
+ * are lined up. Nodes present in only one result, or disagreeing on any
+ * compared dimension, are reported as disagreements.
  */
 import type { GeneNode, GeneTree, Reconciliation } from "../model/types";
+
+/** One matched pair of nodes with the detail both sides of the diff table need. */
+export interface MatchedPair {
+  aId: string;
+  bId: string;
+  /** Display label: the gene name, or the node name for internal clades. */
+  name: string;
+  family: string;
+  eventA: string;
+  eventB: string;
+  speciesA: string;
+  speciesB: string;
+  /** Donor species of the first transfer arrival (null when the node has none). */
+  donorA: string | null;
+  donorB: string | null;
+  /** Recipient species of the first transfer arrival (null when the node has none). */
+  recipientA: string | null;
+  recipientB: string | null;
+  timeSliceA: number | null;
+  timeSliceB: number | null;
+  agreeEvent: boolean;
+  agreeSpecies: boolean;
+  agreeTransfer: boolean;
+}
 
 export interface DiffResult {
   /** Gene node ids in A that disagree with (or are absent from) B. */
   disagreeA: Set<string>;
   /** Gene node ids in B that disagree with (or are absent from) A. */
   disagreeB: Set<string>;
-  /** Matched nodes that agree on event type. */
+  /**
+   * Matched nodes that agree on EVERY compared dimension (event type, species
+   * mapping and transfer donor/recipient). This is the headline metric: a
+   * result that only moves a gene to another species must NOT score 100%.
+   */
   agree: number;
+  /** Matched nodes agreeing on the terminal event type alone. */
+  agreeEvent: number;
+  /** Matched nodes whose species mapping is identical. */
+  agreeSpecies: number;
+  /** Matched nodes whose transfer donor/recipient agree (arrivals only). */
+  agreeTransfer: number;
   /** Total matched nodes compared. */
   compared: number;
   /**
@@ -24,6 +61,13 @@ export interface DiffResult {
    * omits nodes cannot inflate the percentage.
    */
   union: number;
+  /** Matched nodes present only in A / only in B. */
+  onlyA: number;
+  onlyB: number;
+  /** Matched nodes where either side carries a transfer arrival. */
+  transferCompared: number;
+  /** Matched-pair details for the diff table (complete; the UI caps rows). */
+  pairs: MatchedPair[];
 }
 
 /** Sorted extant-leaf-name signature of a node's subtree (topology key). */
@@ -81,15 +125,70 @@ function indexByKey(recon: Reconciliation): Map<string, GeneNode> {
   return map;
 }
 
+/** First transfer arrival of a node, as (donor, recipient, timeSlice). */
+function arrivalOf(g: GeneNode): {
+  donor: string | null;
+  recipient: string | null;
+  timeSlice: number | null;
+} {
+  const t = g.events.find((e) => e.type === "transferBack");
+  if (!t) return { donor: null, recipient: null, timeSlice: null };
+  return {
+    donor: t.speciesLocation ?? g.parent?.speciesId ?? null,
+    recipient: t.destinationSpecies ?? g.speciesId ?? null,
+    timeSlice: t.timeSlice ?? null,
+  };
+}
+
+function pairOf(a: GeneNode, b: GeneNode, family: string): MatchedPair {
+  const arrA = arrivalOf(a);
+  const arrB = arrivalOf(b);
+  const eventA = a.endEvent.type;
+  const eventB = b.endEvent.type;
+  const speciesA = a.speciesId || a.endEvent.speciesLocation || "";
+  const speciesB = b.speciesId || b.endEvent.speciesLocation || "";
+  const hasTransferA = arrA.donor !== null || arrA.recipient !== null;
+  const hasTransferB = arrB.donor !== null || arrB.recipient !== null;
+  const transferCompared = hasTransferA || hasTransferB;
+  return {
+    aId: a.id,
+    bId: b.id,
+    name: a.endEvent.geneName || a.name || b.endEvent.geneName || b.name || "(unnamed)",
+    family,
+    eventA,
+    eventB,
+    speciesA,
+    speciesB,
+    donorA: arrA.donor,
+    donorB: arrB.donor,
+    recipientA: arrA.recipient,
+    recipientB: arrB.recipient,
+    timeSliceA: arrA.timeSlice,
+    timeSliceB: arrB.timeSlice,
+    agreeEvent: eventA === eventB,
+    agreeSpecies: speciesA === speciesB,
+    agreeTransfer:
+      !transferCompared ||
+      (arrA.donor === arrB.donor && arrA.recipient === arrB.recipient),
+  };
+}
+
 export function computeDiff(a: Reconciliation, b: Reconciliation): DiffResult {
   const mapA = indexByKey(a);
   const mapB = indexByKey(b);
   const disagreeA = new Set<string>();
   const disagreeB = new Set<string>();
+  const pairs: MatchedPair[] = [];
   let agree = 0;
+  let agreeEvent = 0;
+  let agreeSpecies = 0;
+  let agreeTransfer = 0;
+  let transferCompared = 0;
   let compared = 0;
   let onlyA = 0;
   let onlyB = 0;
+
+  const familyNameA = new Map(a.geneTrees.map((t) => [t.index, t.name ?? `#${t.index}`]));
 
   for (const [k, ga] of mapA) {
     const gb = mapB.get(k);
@@ -99,9 +198,19 @@ export function computeDiff(a: Reconciliation, b: Reconciliation): DiffResult {
       continue;
     }
     compared++;
-    if (ga.endEvent.type === gb.endEvent.type) {
-      agree++;
-    } else {
+    const pair = pairOf(ga, gb, familyNameA.get(ga.treeIndex) ?? `#${ga.treeIndex}`);
+    pairs.push(pair);
+    if (pair.agreeEvent) agreeEvent++;
+    if (pair.agreeSpecies) agreeSpecies++;
+    // The transfer dimension is counted only when at least one side actually
+    // carries an arrival, so plain vertical clades do not dilute it.
+    const hasArrival = pair.donorA !== null || pair.donorB !== null;
+    if (hasArrival) {
+      transferCompared++;
+      if (pair.agreeTransfer) agreeTransfer++;
+    }
+    if (pair.agreeEvent && pair.agreeSpecies && pair.agreeTransfer) agree++;
+    if (!pair.agreeEvent || !pair.agreeSpecies || !pair.agreeTransfer) {
       disagreeA.add(ga.id);
       disagreeB.add(gb.id);
     }
@@ -113,15 +222,38 @@ export function computeDiff(a: Reconciliation, b: Reconciliation): DiffResult {
     }
   }
 
-  return { disagreeA, disagreeB, agree, compared, union: compared + onlyA + onlyB };
+  return {
+    disagreeA,
+    disagreeB,
+    agree,
+    agreeEvent,
+    agreeSpecies,
+    agreeTransfer,
+    compared,
+    union: compared + onlyA + onlyB,
+    onlyA,
+    onlyB,
+    transferCompared,
+    pairs,
+  };
 }
 
 /**
- * Agreement percentage (0-100), or null when there are no comparable nodes.
- * The denominator is the union of both results' comparable nodes, so a node
- * present in only one result counts as a disagreement, which is this module's
- * stated contract.
+ * Event-type agreement percentage (0-100), or null when there are no comparable
+ * nodes. The denominator is the union of both results' comparable nodes, so a
+ * node present in only one result counts as a disagreement, which is this
+ * module's stated contract.
  */
 export function agreementPct(d: DiffResult): number | null {
   return d.union > 0 ? Math.round((d.agree / d.union) * 100) : null;
+}
+
+/**
+ * Species-mapping agreement among MATCHED nodes (0-100), or null when nothing
+ * matched. Species mapping is only defined for paired nodes - a node missing
+ * from one side has no mapping to compare - so the denominator here is
+ * `compared`, not `union`. Displayed alongside the event-type percentage.
+ */
+export function speciesAgreementPct(d: DiffResult): number | null {
+  return d.compared > 0 ? Math.round((d.agreeSpecies / d.compared) * 100) : null;
 }

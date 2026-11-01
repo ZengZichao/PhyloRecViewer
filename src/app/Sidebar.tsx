@@ -374,15 +374,43 @@ export function Sidebar({ width }: { width?: number }) {
   const clearLabelOverrides = useStore((s) => s.clearLabelOverrides);
   const showToast = useStore((s) => s.showToast);
   const [showRenameDialog, setShowRenameDialog] = useState(false);
+  // A first-time visitor gets the core layout controls OPEN: four collapsed
+  // headers + a tips list used to read as "this tool can only look".
+  const [firstVisit] = useState(() => {
+    try {
+      return localStorage.getItem("rpv.sec.layout") === null;
+    } catch {
+      return true;
+    }
+  });
 
   const resetAll = () => {
+    // Reset is a DESTRUCTIVE view operation and must be undoable like every
+    // other edit: the old version had no history step, so Ctrl+Z could only
+    // reach some earlier state, not undo the reset itself.
     applyViewState({
       layoutOptions: { ...defaultLayoutOptions },
       renderOptions: { ...defaultRenderOptions },
-      // Resetting the sliders must not discard the tab's earlier swap /
-      // collapse / annotation undo steps.
       resetHistory: false,
     });
+    useStore.setState((st) => ({
+      past: [...st.past, {
+        swapped: st.swapped,
+        nestedSwapped: st.nestedSwapped,
+        compareSwapped: st.compareSwapped,
+        collapsed: st.collapsed,
+        compareCollapsed: st.compareCollapsed,
+        geneColors: st.geneColors,
+        compareGeneColors: st.compareGeneColors,
+        annotations: st.annotations,
+        layoutOptions: st.layoutOptions,
+        renderOptions: st.renderOptions,
+        labelOverrides: st.labelOverrides,
+        labelOverridesById: st.labelOverridesById,
+      }].slice(-100),
+      future: [],
+      editSeq: st.editSeq + 1,
+    }));
   };
 
   return (
@@ -405,7 +433,7 @@ export function Sidebar({ width }: { width?: number }) {
           together so the sidebar keeps a single consistent accordion
           structure. */}
       <Section title={t.layoutActions} storageKey="rpv.sec.actions" defaultOpen={false}>
-        <button className="btn primary" title={t.reduceCrossingsTitle} onClick={optimizeSwaps}>
+        <button className="btn primary" title={t.reduceCrossingsTitle} onClick={() => optimizeSwaps()}>
           {t.reduceCrossings}
         </button>
         <button className="btn ghost" onClick={clearSwaps}>
@@ -416,7 +444,11 @@ export function Sidebar({ width }: { width?: number }) {
         </button>
       </Section>
 
-      <Section title={t.layoutParams} storageKey="rpv.sec.layout" defaultOpen={false}>
+      <Section
+        title={t.layoutParams}
+        storageKey="rpv.sec.layout"
+        defaultOpen={firstVisit}
+      >
         <Row label={t.includeLegend} title={t.includeLegendTitle}>
           <Switch checked={showLegend} onChange={setShowLegend} />
         </Row>
@@ -614,6 +646,42 @@ function LabelReplaceDialog({ onClose }: { onClose: () => void }) {
     }
   };
 
+  // Live preview: how many labels match and the first few before → after pairs,
+  // so a broad pattern cannot silently rewrite dozens of labels sight-unseen.
+  const recon = useStore((s) => s.recon);
+  const preview = (() => {
+    if (!find || !recon) return null;
+    let re: RegExp | null = null;
+    try {
+      re = useRegex ? new RegExp(find, "g") : null;
+    } catch {
+      return { error: t.batchInvalidRegex };
+    }
+    const labels = new Set<string>();
+    if (scope === "species" || scope === "all") {
+      for (const n of recon.species.nodes) {
+        if (n.children.length === 0) labels.add(n.name);
+      }
+    }
+    if (scope === "gene" || scope === "all") {
+      for (const tree of recon.geneTrees) {
+        for (const g of tree.nodes) {
+          const isLeaf = g.endEvent.type === "leaf";
+          const label = isLeaf ? g.endEvent.geneName || g.name : g.name;
+          if (label) labels.add(label);
+        }
+      }
+    }
+    const hits: [string, string][] = [];
+    for (const original of labels) {
+      const updated = re
+        ? original.replace(re, replace)
+        : original.split(find).join(replace);
+      if (updated !== original) hits.push([original, updated]);
+    }
+    return { count: hits.length, hits: hits.slice(0, 3) };
+  })();
+
   const findId = useId();
   const replaceId = useId();
 
@@ -653,6 +721,16 @@ function LabelReplaceDialog({ onClose }: { onClose: () => void }) {
           />
           {t.useRegex}
         </label>
+        {preview && (
+          <p className="settings-note" role="status">
+            {preview.error
+              ? preview.error
+              : preview.count === 0
+                ? t.batchPreviewEmpty
+                : `${t.batchPreview.replace("{n}", String(preview.count))}` +
+                  preview.hits!.map(([a, b]) => ` — ${a} → ${b}`).join("")}
+          </p>
+        )}
         <div className="label-rename-field">
           <label>{t.renameScope}</label>
           <div className="label-rename-scope">

@@ -3,6 +3,7 @@ import type {
   EndEventType,
   GeneNode,
   GeneTree,
+  NodeSupport,
   RecEvent,
   Reconciliation,
   SpeciesNode,
@@ -18,6 +19,10 @@ interface RawClade {
   /** The XSD declares the attribute and the child element as equivalent. */
   "@_branch_length"?: string;
   branch_length?: string | number;
+  /** phyloXML-style clade support, e.g. <confidence type="bootstrap">95</confidence>. */
+  confidence?: unknown;
+  /** Any other child element; read via the unknown-key scan so nothing is dropped silently. */
+  [key: string]: unknown;
 }
 
 /** Raw <phylogeny> shape (only the attributes/children we consume). */
@@ -125,7 +130,58 @@ function str(v: string | number | undefined): string | undefined {
 function num(v: string | number | undefined): number | undefined {
   if (v === undefined || v === null || v === "") return undefined;
   const n = Number(v);
-  return Number.isNaN(n) ? undefined : n;
+  // "Infinity" parses as a number but poisons every downstream coordinate;
+  // treating it as absent is the honest reading of a broken value.
+  return Number.isFinite(n) ? n : undefined;
+}
+
+/** Element keys every clade may carry without triggering the unknown-element warning. */
+const KNOWN_CLADE_KEYS = new Set([
+  "name",
+  "eventsRec",
+  "clade",
+  "branch_length",
+  "confidence",
+]);
+
+/**
+ * Read a phyloXML-style clade `<confidence>` element into a NodeSupport.
+ * Both the plain-text form (`<confidence>95</confidence>`) and the attributed
+ * form (`<confidence type="bootstrap">95</confidence>`) are accepted; the type
+ * is normalized to the small vocabulary the UI understands.
+ */
+function supportOf(raw: RawClade): NodeSupport | undefined {
+  const c = raw.confidence;
+  if (c === undefined || c === null || c === "") return undefined;
+  const value = typeof c === "object" && c !== null ? (c as Record<string, unknown>)["#text"] : c;
+  const declaredType =
+    typeof c === "object" && c !== null ? str((c as Record<string, unknown>)["@_type"] as string | number | undefined) : undefined;
+  const n = typeof value === "number" ? value : num(value as string | number | undefined);
+  if (n == null) return undefined;
+  const t = (declaredType ?? "").toLowerCase();
+  const type: NodeSupport["type"] =
+    t.includes("bootstrap") ? "bootstrap" :
+    t.includes("posterior") || t.includes("probability") ? "posterior" :
+    t.includes("alrt") || t.includes("likelihood") ? "alrt" :
+    t ? "unknown" : "unknown";
+  return { value: n, type };
+}
+
+/**
+ * Warn about clade child elements this reader does not consume (phyloXML
+ * metadata such as <taxonomy>, <date>, <property>, <sequence>). Losing them
+ * silently would hide scientific metadata from a user who cannot know the
+ * viewer dropped it.
+ */
+function warnUnknownCladeKeys(raw: RawClade, label: string, warnings: string[]): void {
+  for (const key of Object.keys(raw)) {
+    if (key.startsWith("@_")) continue;
+    if (key === "#text") continue;
+    if (KNOWN_CLADE_KEYS.has(key)) continue;
+    warnings.push(
+      `Clade "${label}" carries a <${key}> element this reader does not interpret; its content was not imported.`,
+    );
+  }
 }
 
 export class RecPhyloParseError extends Error {}
@@ -204,6 +260,14 @@ export function parseRecPhyloXML(xml: string, ns = ""): Reconciliation {
   if (xml.trim().length === 0) {
     throw new RecPhyloParseError("The file is empty (no recPhyloXML content).");
   }
+  // A DTD opens the door to entity-expansion ("billion laughs") attacks and the
+  // recPhyloXML schema never uses one. Refuse it up front instead of parsing an
+  // adversary-controlled expansion.
+  if (/<!DOCTYPE/i.test(xml)) {
+    throw new RecPhyloParseError(
+      "The file declares a <!DOCTYPE> with a DTD. recPhyloXML files do not use DTDs, and DTD entity expansion is a known XML attack vector, so this file was not parsed. Remove the DOCTYPE declaration and try again.",
+    );
+  }
   let doc: Record<string, unknown>;
   try {
     doc = parser.parse(xml) as Record<string, unknown>;
@@ -229,6 +293,22 @@ export function parseRecPhyloXML(xml: string, ns = ""): Reconciliation {
   }
 
   const warnings: string[] = [];
+
+  // The official schema targets http://www.recg.org. A document that declares
+  // some OTHER namespace parses fine (prefixes are stripped for compatibility),
+  // but the mismatch must be visible: the file may be a different XML dialect
+  // that happens to reuse the element names.
+  const nsMatches = xml.slice(0, 4000).match(/xmlns(?:\s*:\s*[A-Za-z0-9_-]+)?\s*=\s*"([^"]*)"/g) ?? [];
+  for (const decl of nsMatches) {
+    const m = decl.match(/"([^"]*)"/);
+    const uri = m?.[1] ?? "";
+    if (uri && uri !== "http://www.recg.org") {
+      warnings.push(
+        `The document declares the XML namespace "${uri}" instead of the recPhyloXML namespace "http://www.recg.org"; parsing proceeded, but this may not be a recPhyloXML file.`,
+      );
+      break;
+    }
+  }
 
   // ---- species tree ----
   const spTree = recPhylo.spTree as Record<string, unknown> | undefined;
@@ -263,7 +343,7 @@ export function parseRecPhyloXML(xml: string, ns = ""): Reconciliation {
       `Species tree contains ${spRoots.length} root <clade> elements; only the first is used.`,
     );
   }
-  const species = buildSpeciesTree(spRootRaw, seq);
+  const species = buildSpeciesTree(spRootRaw, seq, warnings);
   // Duplicate species names are ambiguous: gene nodes reference species by name,
   // so a repeated name resolves to the first occurrence. Surface it up front
   // (the consistency panel also reports it in detail).
@@ -331,7 +411,7 @@ export function parseRecPhyloXML(xml: string, ns = ""): Reconciliation {
   return { species, geneTrees, warnings };
 }
 
-function buildSpeciesTree(rootRaw: RawClade, seq: number): SpeciesTree {
+function buildSpeciesTree(rootRaw: RawClade, seq: number, warnings: string[]): SpeciesTree {
   const byName = new Map<string, SpeciesNode>();
   const nodes: SpeciesNode[] = [];
   let counter = 0;
@@ -354,6 +434,12 @@ function buildSpeciesTree(rootRaw: RawClade, seq: number): SpeciesTree {
     // referencing "" would land on the first clade and the name-keyed mirror
     // set would drag unrelated branches along.
     const name = str(raw.name) || `␟auto_${counter}`;
+    const branchLength = num(raw["@_branch_length"]) ?? num(raw.branch_length);
+    if (branchLength != null && branchLength < 0) {
+      warnings.push(
+        `Species "${name}" declares a negative branch length (${branchLength}); it is clamped to 0 for drawing.`,
+      );
+    }
     const node: SpeciesNode = {
       id: `s${seq}_${counter++}`,
       name,
@@ -362,8 +448,18 @@ function buildSpeciesTree(rootRaw: RawClade, seq: number): SpeciesTree {
       depth,
       // The XSD treats the branch_length attribute and child element as
       // equivalent (recGeneTreeXML.xsd); read both.
-      branchLength: num(raw["@_branch_length"]) ?? num(raw.branch_length),
+      branchLength,
     };
+    const support = supportOf(raw);
+    if (support) {
+      node.support = support;
+      if (support.value > 1 && support.value <= 100 && support.type !== "bootstrap") {
+        warnings.push(
+          `Species "${name}" carries support ${support.value}, which looks like a 0-100 percentage rather than a 0-1 probability.`,
+        );
+      }
+    }
+    warnUnknownCladeKeys(raw, name, warnings);
     // Species are referenced by name; keep first occurrence if duplicated.
     if (!byName.has(name)) byName.set(name, node);
     nodes.push(node);
@@ -535,6 +631,19 @@ function buildGeneNode(
     // Attribute form and child-element form are equivalent per the XSD.
     branchLength: num(raw["@_branch_length"]) ?? num(raw.branch_length),
   };
+  const support = supportOf(raw);
+  if (support) node.support = support;
+  if (node.support && node.support.value > 1 && node.support.value <= 100 && node.support.type !== "bootstrap") {
+    warnings.push(
+      `Gene node "${label}" carries support ${node.support.value}, which looks like a 0-100 percentage rather than a 0-1 probability.`,
+    );
+  }
+  if (node.branchLength != null && node.branchLength < 0) {
+    warnings.push(
+      `Gene node "${label}" declares a negative branch length (${node.branchLength}); it is clamped to 0 for drawing.`,
+    );
+  }
+  warnUnknownCladeKeys(raw, label, warnings);
   out.push(node);
 
   for (const childRaw of asArray(raw.clade)) {

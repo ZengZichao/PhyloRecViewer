@@ -2,7 +2,6 @@ import React from "react";
 import { createRoot } from "react-dom/client";
 import { App } from "./app/App";
 import { ErrorBoundary } from "./app/ErrorBoundary";
-import { restoreAutosave, startAutosave } from "./state/autosave";
 import { friendlyParseError, useStore } from "./state/store";
 import { loadPrefs } from "./state/prefs";
 import { isTauri } from "./platform/desktop";
@@ -50,10 +49,14 @@ if (prefs.defaultView?.layoutOptions || prefs.defaultView?.renderOptions) {
   });
 }
 
-// Restore the last autosaved document when there is one; otherwise the empty
-// state (the new-tab page) lets the user pick a sample or open a file.
-// Autosaving keeps running, so an unexpected quit never loses unsaved work.
-restoreAutosave();
+// A crash snapshot from a previous session is offered, not forced: the
+// startup prompt (rendered by App) lets the user restore the last workspace or
+// start from a blank one. Silently resuming used to hide the empty state from
+// new users and surprised anyone sharing a computer.
+import { hasAutosaveSnapshot, autosaveSnapshotTime, startAutosave } from "./state/autosave";
+if (hasAutosaveSnapshot()) {
+  useStore.setState({ pendingRestore: { savedAt: autosaveSnapshotTime() } });
+}
 startAutosave();
 
 // Async failures never reach the ErrorBoundary: React catches only throws from

@@ -2,7 +2,7 @@
 
 **English** | [中文](./USER_MANUAL.zh-CN.md)
 
-> **Applicable version**: v0.1.1
+> **Applicable version**: v0.2.0
 > **Purpose**: An offline, interactive desktop viewer for recPhyloXML / NHX gene–species reconciliations
 > **Platforms**: macOS / Windows / Linux desktop (Tauri 2), plus a browser build (Web Build)
 > **Application identifier**: `org.recphyloxml.viz`
@@ -59,7 +59,8 @@
 15. [Supported File Formats](#15-supported-file-formats)
 16. [Keyboard Shortcut Reference](#16-keyboard-shortcut-reference)
 17. [Troubleshooting](#17-troubleshooting)
-18. [Appendix](#18-appendix)
+18. [Known limitations](#18-known-limitations)
+19. [Appendix](#19-appendix)
 
 ---
 
@@ -72,24 +73,24 @@ PhyloRecViewer is an **interactive gene–species reconciliation viewer** for ev
 - Fully offline desktop application — your data never leaves the machine
 - Auto-detection of recPhyloXML and NHX / Newick formats
 - 3-level nested reconciliation view (Gene → Symbiont → Host)
-- Side-by-side comparison of two reconciliations (auto-highlights disagreeing nodes)
+- Comparison view for two reconciliations — panes stack vertically by default with a side-by-side toggle; disagreeing nodes are highlighted automatically (event type, species mapping and transfer donor/recipient are compared)
 - Rich, real-time layout & style parameters (4 orientations, compact layout, branch lengths, …)
 - Node search (regex supported), event-type filtering, gene-family filtering, confidence-range filtering
-- Statistics (with CSV export), transfer-network diagram, eleven structural data-consistency checks (every check is listed in [Section 7.4](#74-data-checks))
+- Statistics (with CSV export), transfer-network diagram, sixteen structural data-consistency checks (every check is listed in [Section 7.4](#74-data-checks))
 - Batch label renaming and per-node annotations (with a dedicated annotations mode)
 - Undo / redo (100 steps), session save/load, multiple document tabs
-- One-click export to PNG (600–4800 DPI selectable) / SVG / PDF / interactive HTML / NHX
+- One-click export to PNG (600–4800 DPI selectable) / SVG / PDF / interactive HTML / NHX; the headless CLI additionally exports a lossless recPhyloXML round-trip (see [Section 9.2](#92-data))
 - Bilingual UI (中文 / English) with light / dark / system themes
-- Four bundled samples: showcase reconciliation, all-event-types sample, nested gene/symbiont/host view, side-by-side comparison (see [Section 4.5](#45-loading-bundled-samples))
+- Four bundled samples: showcase reconciliation, all-event-types sample, nested gene/symbiont/host view, comparison demo (see [Section 4.5](#45-loading-bundled-samples))
 
 ### 1.2 Quick start
 
 1. **Launch**: the app opens on an empty-state hub — **Open file**, **Load sample** (one of the four bundled samples), drag files into the window, or click **Shortcuts & help** to get oriented first.
-2. **Open your data**: **File → Open file** (or `⌘O` / `Ctrl+O`) and pick a supported file (`.recphyloxml`, `.recphylo`, `.xml`, `.phyloxml`, `.nhx`, `.nwk`, `.newick` — see [Section 4.1](#41-opening-files)) — or simply drag files into the window.
+2. **Open your data**: **File → Open file** (or `⌘O` / `Ctrl+O`) and pick a supported file — `.recphyloxml` / `.recphylo` / `.xml` / `.phyloxml` holding **recPhyloXML content**, or `.nhx` / `.nwk` / `.newick` gene trees (see [Section 4.1](#41-opening-files)) — or simply drag files into the window.
 3. **Navigate**: scroll to zoom, drag empty space to pan, press `F` to fit the view.
-4. **Interact**: click a gene node to highlight its lineage; `Shift`-click to annotate; `Alt`/`Option`-click an internal node to collapse it; click a species branch to mirror (swap) it.
+4. **Interact**: click a gene node to highlight its lineage and open the node inspector; `Shift`-click to annotate; `Alt`/`Option`-click an internal node to collapse it; click a species branch to mirror (swap) it.
 5. **Analyse**: click the **◧** button (top-left of the canvas) to open the right analysis panel — search & filter, statistics, transfer network, data checks (see [Section 7](#7-right-analysis-panel)).
-6. **Export**: the **Export** menu offers publication-grade PNG / SVG / PDF / HTML, plus **NHX · Newick** data export.
+6. **Export**: the **Export** menu offers publication-grade PNG / SVG / PDF / HTML, plus **NHX · Newick** data export; the headless CLI (`npm run cli`) additionally writes a lossless recPhyloXML round-trip (see [Section 9.2](#92-data)).
 
 > The tips list at the bottom of the left panel and the shortcuts card under **Help** (press `?`) are always available.
 
@@ -139,6 +140,7 @@ npm run build      # production build -> dist/
 npm test           # Vitest unit tests
 npm run typecheck  # tsc -b type check
 npm run lint       # ESLint
+npm run cli -- --help   # headless CLI: stats / checks / SVG / HTML / recPhyloXML / NHX export
 ```
 
 Prerequisites: Node.js 20+, npm 9+; desktop packaging additionally needs Rust 1.77+.
@@ -158,7 +160,7 @@ Top to bottom, left to right:
 │  Layout       │ │           annotate/analysis toggle)              │ │  Search  │
 │  Actions      │ │ Center: species tubes + gene skeleton + transfer │ │  Stats   │
 │  Parameters   │ │         arcs + labels + annotations              │ │  Network │
-│  Style        │ │ Bottom-left: legend + minimap                    │ │  Checks  │
+│  Style        │ │ Bottom-left: legend · top-right: minimap         │ │  Checks  │
 │  Labels       │ │                                                  │ │  Annot.  │
 │  (Tips)       │ │                                                  │ │ (Diff)   │
 └───────────────┘ └──────────────────────────────────────────────────┘ └──────────┘
@@ -167,7 +169,7 @@ Top to bottom, left to right:
 - **Menu bar**: four dropdown menus — File, Export, View, Help (see [Section 12](#12-menu-bar-reference)). When parsing produces warnings, a warnings badge appears; hover it for the full list.
 - **Tab bar**: multiple document tabs — new, switch, close (see 4.8).
 - **Left panel (Controls)**: four collapsible sections (Layout Actions, Layout Parameters, Style, Labels) plus a tips list at the bottom (see [Section 6](#6-left-controls-panel)).
-- **Main canvas**: the visualization area. Floating toolbar top-left (zoom, fit, undo/redo, annotate mode, analysis toggle); legend and minimap bottom-left (see [Section 5](#5-canvas-navigation--interaction)).
+- **Main canvas**: the visualization area. Floating toolbar top-left (zoom, fit, undo/redo, annotate mode, analysis toggle); legend bottom-left; minimap top-right (see [Section 5](#5-canvas-navigation--interaction)).
 - **Right panel (Analysis)**: five fixed tabs (Search & Filter, Statistics, Transfer Network, Data checks, Annotations); a sixth **Differences** tab appears in compare mode (see [Section 7](#7-right-analysis-panel)).
 
 > Both side panels are resizable by dragging their dividers; the `‹` / `›` buttons collapse and re-expand them. Below 1000 px window width the analysis panel auto-collapses; below 820 px the left panel follows (both can be reopened manually).
@@ -183,9 +185,9 @@ Top to bottom, left to right:
 - **Desktop build**: native system file picker; multiple selection allowed.
 - **Browser build**: browser file picker.
 
-Accepted extensions: `.recphyloxml` `.recphylo` `.xml` `.phyloxml` `.nhx` `.nwk` `.newick` (the format is auto-detected — see [Section 15](#15-supported-file-formats)).
+Accepted extensions: `.recphyloxml` `.recphylo` `.xml` `.phyloxml` — these are containers for **recPhyloXML content** (a plain PhyloXML tree is not a reconciliation and is refused) — plus `.nhx` `.nwk` `.newick` for NHX / Newick gene trees. The format is auto-detected — see [Section 15](#15-supported-file-formats).
 
-A single file opens in the current tab if that tab is blank or only shows a bundled sample; otherwise a new tab is created to preserve your work.
+A single file opens in the current tab if that tab is blank or only shows a bundled sample **you have not edited**; if the tab holds a modified document (or an edited sample), a new tab is created to preserve your work.
 
 ### 4.2 Multi-file open: merge or separate tabs
 
@@ -198,18 +200,18 @@ After merging, a toast confirms "Merged N files into one reconciliation".
 
 ### 4.3 Drag & drop
 
-Drag one or more files **anywhere onto the window**; a **"Drop to open"** overlay appears — release to open. Dropping multiple files asks merge-vs-tabs (see 4.2); dropping a single file onto a window that already shows content always opens a new tab.
+Drag one or more files **anywhere onto the window**; a **"Drop to open"** overlay appears — release to open. Dropping multiple files asks merge-vs-tabs (see 4.2); a dropped single file reuses the current tab only when that tab is blank or shows an **unmodified** bundled sample — dropping onto a tab with a modified document opens a **new tab**, so your work is never overwritten.
 
 ### 4.4 OS file association (double-click / "Open with")
 
-The desktop build registers file associations for `.recphyloxml` / `.recphylo` and `.xml` / `.phyloxml` (recPhyloXML), plus `.nhx` / `.nwk` / `.newick` (NHX / Newick). Because `.xml` is a generic extension, the app can become a candidate default for other XML documents after installation; drop the `.xml` association in your system settings if you do not want that. In your file manager:
+The desktop build registers file associations for `.recphyloxml` / `.recphylo` and `.xml` / `.phyloxml` (recPhyloXML), plus `.nhx` / `.nwk` / `.newick` (NHX / Newick). The associations only decide which app opens the file — the content must still be recPhyloXML or NHX/Newick (a plain PhyloXML tree is refused, see [Section 15](#15-supported-file-formats)). Because `.xml` is a generic extension, the app can become a candidate default for other XML documents after installation; drop the `.xml` association in your system settings if you do not want that. In your file manager:
 
 - **Double-click** such a file, or **right-click → Open with → PhyloRecViewer**, to launch/wake the app with that file.
 - Files opened while the app is running load as new tabs (macOS delivers them via the `open-file` event).
 
 ### 4.5 Loading bundled samples
 
-**File → Load sample…** offers the bundled samples (each menu label describes the events the sample shows and follows the UI language):
+**File → Open session… sample…** offers the bundled samples (each menu label describes the events the sample shows and follows the UI language):
 
 | Sample | Description |
 |--------|-------------|
@@ -235,10 +237,12 @@ Once loaded the menu item becomes **"Nested: <filename> ✕"**; click it to remo
 
 **File → + Compare** loads an alternative reconciliation of the same family (e.g. from another tool or parameter set), entering compare view:
 
-- Two canvases side by side, titled by file name (A / B).
-- Gene nodes that **disagree** between the two (event type or species mapping) are highlighted automatically; the legend gains a "nodes differing between files" chip, and the highlight can be hidden from the Differences tab.
-- A badge shows the agreement percentage and the number of compared gene nodes, e.g. `71% agree · 7 gene nodes`.
-- The right panel gains a **Differences** tab (see 7.6).
+- Two canvases, titled by file name (A / B). Panes are **stacked vertically by default**; the ⇕ / ⇔ button in the compare status bar switches to **side-by-side**, and the choice is remembered.
+- Gene nodes that **disagree** between the two are highlighted automatically. Comparison covers **three dimensions** — terminal event type, species mapping, and transfer donor/recipient — so a result that only moves a gene to another species no longer scores as full agreement. The legend gains a "nodes differing between files" chip.
+- The **status bar** under the panes shows the breakdown: the agreement percentage (nodes agreeing on **all** dimensions, divided by the union of comparable nodes), the species-mapping agreement among matched nodes, and the counts of matched / only-in-A / only-in-B nodes — e.g. `71% agree · 80% species match · 7 matched · 1 only in A · 0 only in B`.
+- The **Link views** checkbox keeps the two panes' zoom/pan in sync; when unchecked each pane can be navigated independently.
+- The compare pane keeps its **own** mirror (swap), collapse and family-colour state, independent of the primary document — and the session file stores it too (see [Section 10](#10-session-save--load)).
+- The ◎ / ◉ button in the status bar hides or restores the diff highlighting; the right panel gains a **Differences** tab (see 7.6).
 
 Once loaded the menu item becomes **"Compare: <filename> ✕"**; click it to remove the comparison.
 
@@ -248,7 +252,7 @@ Once loaded the menu item becomes **"Compare: <filename> ✕"**; click it to rem
 
 - **＋** at the right end of the tab bar: new blank tab.
 - Click a tab to switch; each tab independently stores its own file, swaps, collapses, family colours, annotations, renames, search criteria, and undo history.
-- Hovering a tab reveals its **✕** close button. If the document holds unsaved annotations, swaps, or colour changes, a confirmation appears ("Close tab? … Keep / Close anyway"); closing the last tab resets it to blank rather than quitting.
+- Hovering a tab reveals its **✕** close button. If the document holds unsaved edits (annotations, swaps, colours, renames, …), a confirmation appears ("Close tab? … Keep / Close anyway"); closing the last tab resets it to blank rather than quitting.
 - Closing the active tab activates an adjacent tab.
 - Keyboard support on the tab bar: `←` / `→` to move, `Home` / `End` for first/last, `Enter` / `Space` to activate.
 
@@ -281,7 +285,7 @@ A floating button cluster sits at the **top-left** of the canvas (undo/redo and 
 | **`F`** or the `⤢` button | Fit to view |
 | **Zoom readout** | Live percentage in the floating toolbar |
 
-Zoom range is **3% – 1000%**. The zoom level drives a level-of-detail (LOD) switch: below **0.42×** the pure event glyphs (duplication squares, loss crosses, transfer and speciation markers) are dropped, while species labels, gene labels and the gene-edge halos are still drawn; below **0.16×** all labels and the halos go too. Collapsed wedges and leaf tips are drawn at every zoom level, so the tree structure always reads. For very large inputs a brief "Rendering…" indicator appears in the lower-left of the canvas.
+Zoom range is **3% – 1000%**. The zoom level drives a level-of-detail (LOD) switch: below **0.42×** the pure event glyphs (duplication squares, loss crosses, transfer and speciation markers) are dropped, while species labels, gene labels and the gene-edge halos are still drawn; below **0.16×** all labels and the halos go too. Collapsed wedges and leaf tips are drawn at every zoom level, so the tree structure always reads. For very large inputs a brief "Rendering…" indicator appears at the top-right of the window.
 
 ### 5.3 Fit to view
 
@@ -289,22 +293,25 @@ Press **F** or click `⤢` to zoom and centre the whole diagram. The view also r
 
 ### 5.4 Minimap
 
-Toggle **Layout Parameters → Minimap** in the left panel to show the overview thumbnail (bottom-left, 168×120):
+Toggle **Layout Parameters → Minimap** in the left panel to show the overview thumbnail (**top-right** of the canvas, 168×120):
 
 - Miniature species skeleton with the current viewport (highlighted rectangle).
 - **Drag** inside the minimap to pan the main canvas; wheel events are captured by the minimap and do not zoom the main canvas.
+- **Keyboard**: the minimap is focusable — arrow keys pan the viewport step by step, and `Enter` / `Space` re-centres the view on the whole drawing.
 
 ### 5.5 Gene-node interaction
 
 | Action | Effect |
 |--------|--------|
 | **Hover** | Tooltip: gene name / event type @ species |
-| **Click** | Highlight the node's **lineage** (ancestor → descendant path); other nodes dim. Click empty space to clear |
+| **Click** | Highlight the node's **lineage** (ancestor → descendant path) **and open the node inspector** (see below); other nodes dim. Click empty space to clear |
 | **`Shift` + click** | Open the **annotation editor** (see 5.8) |
 | **`Alt` / `Option` + click internal node** | Collapse / expand that subtree (see 5.7) |
 | **Click empty space** | Clear the lineage highlight, returning to the search/filter dim state |
 
-Highlight priority: manual click lineage > search/filter dimming. The first time you hover a gene node, a one-time coachmark ("Node interactions") appears; dismiss with "Got it".
+Highlight priority: manual click lineage > search/filter dimming.
+
+**Node inspector**: a plain click (on a gene node or on a transfer arc) opens a dockable card with the scientific detail of that node — species, family, transfer donor/recipient, timeSlice, event confidence or clade support, branch length, parent/children counts and the user annotation — plus **Locate**, **Annotate** and **Copy details** actions. Node tooltips and transfer-arc tooltips (donor → recipient, timeSlice, confidence) stay available for a quick read without clicking.
 
 ### 5.6 Species-branch interaction (mirror / swap)
 
@@ -351,15 +358,15 @@ The left panel is titled **Controls** and contains four collapsible sections (op
 | Parameter | Range | Description |
 |-----------|-------|-------------|
 | **Legend** | on/off | Show the legend on the canvas and include it in exported images |
-| **Minimap** | on/off | Show / hide the bottom-left minimap |
+| **Minimap** | on/off | Show / hide the top-right minimap |
 | **Orientation** | Root top / bottom / left / right | Four-way radio buttons |
 | **Level height** | 40–220 | Distance between adjacent species layers |
 | **Gene spacing** | 8–42 | Horizontal gap between adjacent gene trees |
 | **Species spacing** | 8–70 | Gap between adjacent species leaf nodes |
 | **Species width** | 12–80 | Thickness of the species tubes |
 | **Gene tree thickness** | 1–5 (step 0.2) | Thickness of the gene skeleton lines |
-| **Align tips** | on/off | Align all gene leaf nodes to a common baseline |
-| **Branch lengths** | on/off | Lay out by branch length (vs. uniform) |
+| **Align tips** | on/off | Snap extant species tips to a common baseline (ultrametric look). Warning: with **Branch lengths** on, this flattens the tips' length-derived positions — switch it off to read true time proportions |
+| **Branch lengths** | on/off | Lay out the **species tree** by branch length (vs. uniform depth); gene trees are unaffected. Missing lengths contribute 0 and negative lengths are clamped to 0 for drawing (both are reported by the data checks) |
 | **Compact layout** | on/off | Pack sibling subtrees closer (contour packing) instead of fixed-width leaf slots |
 | **Center duplications** | on/off | Place duplication nodes at the **midpoint** of their species branch (otherwise nearer the ancestor) |
 
@@ -372,7 +379,7 @@ The left panel is titled **Controls** and contains four collapsible sections (op
 | **Transfer curve** | 0–0.5 (step 0.02) | Bow (curvature) of transfer arcs |
 | **Halo under genes** | on/off | Light outline behind gene lines for contrast against species tubes |
 | **Event glyphs** | on/off | Show event glyphs (duplication square, loss cross, …) |
-| **Support values** | on/off | Show support / confidence values |
+| **Support values** | on/off | Show event confidence **and** clade/node support values beside nodes (the terminal event's confidence first, otherwise the clade support; species clade names carry bootstrap/posterior values too). Values also appear in node tooltips and the node inspector |
 | **Tube gradient** | on/off | Fill species tubes with a gradient |
 | **Overlapping copies (lanes) heatmap** | on/off | Colour species tubes by the number of gene lanes laid out inside them (the layout engine's concurrent lanes). This is a layout quantity, not a gene copy number: the per-species gene count excluding losses is listed separately in the statistics panel as **Lineages (non-loss)** |
 
@@ -414,13 +421,13 @@ Click the floating-toolbar **◧** button to open/close the panel (after closing
 
 ### 7.2 Statistics
 
-- **Totals**: counts of speciation / duplication / loss / transfer plus leaf-node, internal-node, and total-node counts. Transfer arrivals are overlay events — excluded from the composition above but counted in Totals.
-- **Event distribution**: proportional view of the event types.
+- **Totals**: total node count, extant (tip) nodes, internal event nodes, and the transfer-arrival count. Transfer arrivals are overlay events — excluded from the composition chart but counted in Totals (speciation / duplication / loss are broken down in the distribution chart and the per-family table).
+- **Event distribution**: proportional view of speciation / duplication / loss / transfer donor / bifurcation out / extant.
 - **By family** (multiple families): per-family event-count table.
 - **Transfer matrix**: donor → recipient transfer counts (top 25 rows; Donor / Recipient / Count columns).
-- **By species (top)**: per-species table of **Lineages (non-loss)** (gene lineages carried, excluding losses), speciation, duplication, loss, transfer (donor), bifurcation out and extant-gene counts (top 25 species).
-- **Nodes**: full node detail table (No., Name, Type, Event, Species, Family); truncated with a "table truncated" note for very large inputs.
-- **Export CSV**: writes the statistics to `<filename>-stats.csv`.
+- **By species (top)**: per-species table of **Lineages (non-loss)** (gene lineages carried, excluding losses), speciation, duplication, loss, transfer donor (branching out), bifurcation out and extant-gene counts (top 25 species). Transfer **arrivals** per species are reported separately from these donor-side events — in the CSV export's `transfer_arrivals` column (see below).
+- **Nodes**: full node detail table (No., Name, Type, Event, Species, Family). Nodes are classified **extant leaf / loss / internal** — losses are no longer folded into "internal" — and are listed extant tips first, then losses, then internal events. The table is capped at 500 rows with a "`X / Y gene nodes` · table truncated" note.
+- **Export CSV**: writes the statistics to `<filename>-stats.csv` with **stable English column names** and a **UTF-8 BOM** (so Windows Excel opens species names correctly), plus a provenance header (source file, app version, timestamp). Sections: `families`, `transfer_matrix`, `species` — including a `transfer_arrivals` column and a `(no species)` row whenever nodes without a species assignment exist — and `nodes`, which adds `donors`, `recipients`, `time_slice`, `confidence` and `branch_length` columns. The CSV is never truncated.
 
 ### 7.3 Transfer Network
 
@@ -434,7 +441,7 @@ A **circular graph** of donor → recipient transfers:
 
 ### 7.4 Data checks
 
-Eleven structural checks run on the loaded data — the table below is the complete list, and the panel itself shows one row per check; each row carries its **name**, the problem description, and a count:
+Sixteen structural checks run on the loaded data — the table below is the complete list, and the panel itself shows one row per check; each row carries its **name**, the problem description, and a count:
 
 | Check (name) | Problem found |
 |--------------|---------------|
@@ -448,7 +455,12 @@ Eleven structural checks run on the loaded data — the table below is the compl
 | Bifurcation donors are paired | A bifurcation-out donor lacks a transfer-arrival child |
 | Loss / extant events are leaves | A `loss`/`leaf` (terminal) node has children |
 | Speciation / duplication are binary | A speciation/duplication node is not 2-way |
-| Transfers move forward in time | A transfer arrives into an ancestor species (time-travelling) |
+| Transfers move forward in time | A transfer arrives into an ancestor species (time-travelling) — flagged as an error; when timeSlices are present on both sides they are compared directly |
+| Same-species transfer | A transfer arrives in the species it left — possible gene flow within one lineage; reported separately because it is a model question, not a time-direction error |
+| Transfer time not assessable | No timeSlice on the donor or the arrival and the species are unrelated, so the time direction cannot be judged (topology depth is not time) — the check reports "not assessable" instead of silently passing |
+| Confidence looks like 0-100 | A confidence/support value is above 1 and at most 100 — probably a percentage, while the confidence filter expects 0–1 |
+| Negative / invalid branch length | A branch length is negative or not finite; it is clamped to 0 for drawing |
+| Vertical edge between unrelated clades | A non-transfer gene edge jumps between unrelated species — impossible without a transfer; check the speciesLocation annotations |
 
 When everything passes the panel reports **"All checks passed"**; otherwise "N with issues".
 
@@ -460,9 +472,9 @@ Central management for the current document's annotations: each entry lists its 
 
 Only visible in compare view (4.7):
 
-- Lists / highlights **nodes that differ between the two files** (event type or species mapping).
-- A **Hide highlight** toggle temporarily switches off the diff highlighting.
-- Read together with the `71% agree · N gene nodes` badge.
+- Lists the **nodes that differ between the two files** — on any compared dimension (event type, species mapping, or transfer donor/recipient) or present in only one file — as two clickable lists (A / B); clicking an entry locates the node on that pane's canvas.
+- The compare **status bar** (4.7) carries the headline numbers: agreement %, species-mapping agreement %, and the matched / only-in-A / only-in-B counts; the ◎ / ◉ button there hides or restores the diff highlighting.
+- Read together with the legend's "nodes differing between files" chip.
 
 ---
 
@@ -501,13 +513,14 @@ The **Export** menu (disabled while empty; `⌘E` / `Ctrl+E` exports PNG directl
 | **PDF** | Vector page; good for paper figures |
 | **HTML** | Interactive HTML (keeps zoom / pan / tooltips); shareable offline |
 
-- Nested / compare views export **multiple panes side by side** in one image / page.
+- Nested / compare views export **multiple panes in one image / page**, arranged as on screen (stacked, or side by side when the pane toggle is set).
 - The default file name is the source file name without extension (special characters replaced by `_`), e.g. `myfile.png`.
 - While exporting, the menu shows "Export …"; a "Exported" toast confirms success, "Export failed" reports errors.
 
 ### 9.2 Data
 
-- **NHX · Newick**: exports the current reconciliation as NHX-annotated gene trees (`<filename>.nhx`).
+- **NHX · Newick**: exports the current reconciliation as NHX-annotated gene trees (`<filename>.nhx`). NHX is an **extended dialect** of this app, not a universal exchange format: the export writes **all transfer arrivals** (`TB=`, further arrivals as `TB2=`…`TB9=`), `timeSlice` (`TS=`), event confidence (`CN=`), node support (`B=`), and the branch length both as the standard Newick `:length` and a redundant `BL=` tag; `S=` species tags are inferred for internal nodes from their ancestors. It still loses the **species tree itself** (NHX rebuilds it from `S=` tags), **species branch lengths**, **gene-tree names**, and **species never sampled by any gene tree**.
+- **recPhyloXML — the lossless round-trip**: the headless CLI writes the reconciliation back as recPhyloXML with the species tree (including branch lengths), every event, multiple `transferBack` arrivals, timeSlice and confidence intact (`npm run cli -- export --session <file>.rpvsession.json --out <file>.recphyloxml`; the CLI also exports SVG / HTML / NHX and writes stats / checks reports — see [Section 18](#18-known-limitations) for what it does not export).
 
 > Desktop builds use the native save dialog; the browser build downloads to the default downloads folder.
 
@@ -515,19 +528,23 @@ The **Export** menu (disabled while empty; `⌘E` / `Ctrl+E` exports PNG directl
 
 ## 10. Session Save & Load
 
-**File → Save** (`⌘S` / `Ctrl+S`) writes the current session as `.rpvsession.json`; **File → Load** restores one.
+**File → Save session as…** (`⌘S` / `Ctrl+S`) writes the current session as `.rpvsession.json`; **File → Open session…** restores one.
 
-The session is plain JSON (its schema marker is `CURRENT_SESSION_VERSION` in `src/session.ts`) and captures:
+The session is plain JSON (its schema marker is `CURRENT_SESSION_VERSION` — this build writes **schema v2**) and captures:
 
 - the source file content (`xml`) plus the nested / comparison sources and their names
-- for a merged document, the **full list of source files** (`sourceFiles`), so a merge can be rebuilt exactly
-- all layout parameters, render parameters, theme
-- species-mirror sets (main and nested canvases stored separately), collapse sets
-- per-gene-tree colours, per-node annotations, and label renames
-- the current **search & filter criteria** (`searchQuery`, `searchRegex`, `eventFilter`, `familyFilter`, `confidenceMin` / `confidenceMax`)
+- for a merged document, the **full list of source files** (`sourceFiles`), so a merge can be rebuilt exactly — menu load and startup recovery share one restore path, so every merged gene family comes back
+- all layout parameters, render parameters, theme — and, since schema v2, **each background tab keeps its own layout/style options**
+- species-mirror sets (main, nested **and compare** canvases stored separately), collapse sets — including the compare pane's `compareSwapped` / `compareCollapsed` / `compareGeneColors`
+- per-gene-tree colours, per-node annotations, and label renames — by label text **and by node id** (`labelOverridesById`), so one of several same-named labels can be renamed alone
+- the current **search & filter criteria** (`searchQuery`, `searchRegex`, `eventFilter`, `familyFilter`, `confidenceMin` / `confidenceMax`, and the `onlyMatches` flag)
 - **snapshots of every other open tab** (`tabs`) and which of them is active (`activeTabIndex`), so saving and reloading restores the whole workspace, not just the active document
 
+**What is not saved**: the zoom/pan camera of each canvas is deliberately not part of the session (nor of the autosave) — restored views re-fit to the content, and only layout/style/mirror/collapse state is restored.
+
 **Compatibility**: a session file that omits fields opens with those fields at their defaults; a session file whose schema marker is ahead of this build is refused — the app says "This session was created by a newer version of PhyloRecViewer (vN); please update to open it." A JSON file without the `xml` field is rejected with "Not a PhyloRecViewer session file".
+
+**Autosave & startup restore**: the workspace autosaves about once per second (debounced; unchanged state is not rewritten), and a `beforeunload` / `pagehide` flush writes the final moments of edits, so closing the window does not lose them. On startup the app **asks** instead of silently restoring: **Restore last workspace** (the prompt shows when the snapshot was taken) or **Start blank** (discards the snapshot). If a snapshot cannot be restored — for example because it was written by a newer app version — it is **quarantined**: kept untouched and reported, rather than deleted, so its content can still be recovered from local storage.
 
 > A session stores source content and view state, **not** exported images, so it stays small and archivable.
 
@@ -548,15 +565,22 @@ Undoable actions: species mirroring (swap), collapse/expand, gene-family colour 
 
 | Menu | Item | Description |
 |------|------|-------------|
-| **File** | Open file `⌘O` | Open one or more files (multi-select) |
+| **File** | New workspace | Open a fresh blank tab |
+| | Open file `⌘O` | Open one or more files (multi-select) |
+| | Paste tree from clipboard | Open a Newick/NHX tree pasted as text |
 | | Load sample… | Four bundled samples (Showcase / All event types / Compare / Nested) |
-| | Save `⌘S` | Save session `.rpvsession.json` |
-| | Load | Restore a session |
+| | Save session as… `⌘S` | Save session `.rpvsession.json` |
+| | Open session… | Restore a session |
+| | Close tab `⌘W` | Close the current tab |
+| | Load species tree (Newick)… | Provide a standalone species tree for leaf-only S= NHX gene trees |
 | | + Nested level / Nested: <name> ✕ | Add / remove the host layer of the 3-level view |
 | | + Compare / Compare: <name> ✕ | Add / remove the comparison |
 | **Export** | PNG / SVG / PDF / HTML | Export image / page |
-| | PNG DPI | 600 / 1200 / 2400 / 4800 resolution selector |
-| | NHX · Newick | Export NHX data |
+| | Copy SVG / Copy PNG | Copy the current figure to the clipboard |
+| | recPhyloXML (lossless round-trip) | Native export: species tree, branch lengths, all events (incl. multiple arrivals), timeSlice, confidence |
+| | NHX (extended dialect)… | Shows a "what will be lost" list first; switch to recPhyloXML or export anyway |
+| | PNG DPI | Screen 2× / 300 / 600 / 1200 / custom, with an output pixel estimate |
+| | Background | Theme / white / transparent |
 | **View** | Language: 中文 / English | Switch UI language |
 | | Theme: Light ☀ / Dark 🌙 / System 🖥 | Three theme modes |
 | | Preferences ⚙ | Open the preferences dialog |
@@ -572,11 +596,11 @@ The menu bar also shows a **warnings badge** (e.g. `3 warnings`; hover for the f
 **View → Preferences ⚙** opens the preferences dialog:
 
 - **Theme**: Light ☀ / Dark 🌙 / **System** 🖥 (follows the OS dark/light setting live). Default: system.
-- **Language**: 中文 / English. Default: 中文 (`zh`); switching applies instantly; data (gene and species names) is never translated.
-- **PNG DPI**: 600 / 1200 / 2400 / 4800, linked with the Export menu.
+- **Language**: 中文 / English. Default: **English**, unless the operating-system locale starts with `zh` (in which case Chinese); switching applies instantly; data (gene and species names) is never translated.
+- **PNG DPI**: Screen 2× / 300 / 600 / 1200 / 2400 / 4800 / custom, linked with the Export menu.
 - **View tutorial**: replay the onboarding tour.
 - **Default view**: **Use current view as default** — store the current layout/style as the initial state for every new document; **Clear default view** restores the built-in defaults.
-- **Reset preferences**: factory reset (theme = system, PNG DPI = 600, default layout/style; the UI language is kept unchanged) and clears the default view.
+- **Reset preferences**: factory reset (theme = system, PNG DPI = 300, default layout/style; the UI language is kept unchanged) and clears the default view.
 
 Themes affect the UI and canvas only; exports always render in the current theme.
 
@@ -586,7 +610,6 @@ Themes affect the UI and canvas only; exports always render in the current theme
 
 - **Shortcuts & help card** (`?` or Help → Shortcuts & help): all keyboard shortcuts, on-canvas gestures, and mouse/touch hints, with a one-click tour replay at the bottom. Close with `Esc`, the backdrop, or ✕.
 - **Onboarding tour**: **5 steps** (Controls → Analysis → Canvas → Nested & compare → Export) with a spotlight highlight; `←` / `→` to navigate, skippable. Play it any time from the **Help menu / Preferences / help card**.
-- **Node-interactions coachmark**: a one-time hint on first gene-node hover ("Click to highlight its lineage; Shift-click to annotate; Alt/Option-click to collapse").
 - **Empty state**: a blank tab explains how to open a recPhyloXML file, offers a **Load sample ▸** shortcut and a drag-and-drop hint.
 - **Parse-error panel**: shows "Could not parse this file" with supported formats, plus three recovery actions — **Choose another file / Back to previous / Load a sample**.
 
@@ -598,14 +621,15 @@ The format is auto-detected; no manual selection needed:
 
 | Format | Extensions | Notes |
 |--------|------------|-------|
-| **recPhyloXML** | `.recphyloxml` `.recphylo` `.xml` `.phyloxml` | Native format; root element `<recPhylo>` |
+| **recPhyloXML** | `.recphyloxml` `.recphylo` `.xml` `.phyloxml` | Native format; root element `<recPhylo>`. The extensions are only containers — the file content must be recPhyloXML |
 | **NHX** | `.nhx` `.nwk` `.newick` | Reconciled gene trees (with `[&&NHX]` annotations) |
 | **Newick** | `.nwk` `.newick` | Phylogenetic tree (parsed via the NHX parser) |
-| **PhyloXML** | `.phyloxml` | Phylogenetic tree |
 
-**Detection logic**: the first 8000 characters are inspected for `<recPhylo` or `[&&NHX]` / a leading `(`; otherwise the file extension decides; the fallback is recPhyloXML.
+> **Plain PhyloXML is not supported**: a `<phyloxml>` document without `<recPhylo>` content is not a reconciliation, and the parser refuses it ("No `<recPhylo>` root element was found"). Run a reconciliation tool (Ancestors, ALE, Ranger-DTL, GeneRax, …) first.
 
-**NHX tag dialect**: the reader interprets `S=` (the species a node lives in — `SP=` is accepted as an alias), `D=` (duplication), `L=` (loss), `BO=` / `BC=` (transfer donors), `TB=` (transfer arrival) and `BL=` (gene-tree branch length). A node carrying no event tag falls back to leaf / speciation by structure; when several event tags compete on one node, the recPhyloXML precedence applies (duplication > loss > branching-out > bifurcation-out) and a warning names the conflict. Any other tag key stays in the file but is dropped from the model, and a warning lists the dropped key names, so the loss is never silent.
+**Detection logic**: the first 8000 characters are inspected for `<recPhylo` or `[&&NHX]` / a Newick statement or a leading `(`; otherwise the file extension decides; the fallback is recPhyloXML.
+
+**NHX tag dialect**: the reader interprets `S=` (the species a node lives in — `SP=` is accepted as an alias), `D=` (duplication), `L=` (loss), `BO=` / `BC=` (transfer donors), `TB=` (transfer arrival; the exporter writes further arrivals on the same node as `TB2=`…`TB9=`), `TS=` (timeSlice), `CN=` (event confidence), `B=` (clade support) and `BL=` (gene-tree branch length, redundant with the standard Newick `:length`). A node carrying no event tag falls back to leaf / speciation by structure; when several event tags compete on one node, the recPhyloXML precedence applies (duplication > loss > branching-out > bifurcation-out) and a warning names the conflict. Any other tag key stays in the file but is dropped from the model, and a warning lists the dropped key names, so the loss is never silent.
 
 **Multi-file merge**: see 4.2 — gene families merge against the first file's species tree; missing species are reported as warnings.
 
@@ -673,7 +697,7 @@ The format is auto-detected; no manual selection needed:
 ### Q4 Exported image is blurry / too low resolution
 
 - For publication figures prefer vector formats (**SVG / PDF**).
-- For **PNG**, pick 1200 / 2400 / 4800 DPI in **Export menu → PNG DPI** or in **Preferences**.
+- For **PNG**, pick 300 / 1200 / 2400 / 4800 DPI or a custom value in **Export menu → PNG DPI** or in **Preferences**.
 
 ### Q5 Session file won't open
 
@@ -697,11 +721,22 @@ The format is auto-detected; no manual selection needed:
 
 ### Q8 I closed a tab that had annotations — can I recover it?
 
-Closing a tab with unsaved annotations / swaps / colours asks for confirmation ("Keep / Close anyway"). If you saved a session beforehand, restore it via **File → Load**. In addition, the workspace autosave snapshots **all open tabs** (not just the active one) about once per second, so after an unexpected quit the next launch restores every tab's document and view state.
+Closing a tab with unsaved annotations / swaps / colours asks for confirmation ("Keep / Close anyway"). If you saved a session beforehand, restore it via **File → Open session…**. In addition, the workspace autosave snapshots **all open tabs** (not just the active one) about once per second and is flushed again when the window closes, so after an unexpected quit the next launch **offers to restore** every tab's document and view state (**Restore last workspace** / **Start blank**).
 
 ---
 
-## 18. Appendix
+## 18. Known limitations
+
+- **No XSD validation**: recPhyloXML files are parsed structurally, not validated against the official schema; the data checks (7.4) catch common mistakes but are not a schema validator.
+- **Parser diagnostics are English-only**, regardless of the UI language.
+- **Zoom / pan camera is not saved**: neither sessions nor the autosave store each canvas's zoom/pan state; restored views re-fit to the content.
+- **PDF font embedding depends on the environment**: the PDF is vector, with text embedded using the fonts available to the converter; the full-page raster fallback kicks in only when the converter errors.
+- **The headless CLI (`npm run cli`) exports SVG / HTML / recPhyloXML / NHX and JSON stats + checks, but no PNG** (rasterization needs a browser canvas).
+- **Compare "agreement" covers event type + species mapping + transfer donor/recipient — not topology or support values**: nodes are matched by gene/family name (unnamed clades by their leaf set), so renamed clades count as mismatches, and differing branch support is not compared.
+
+---
+
+## 19. Appendix
 
 ### A. Architecture (for developers)
 
@@ -726,7 +761,7 @@ Closing a tab with unsaved annotations / swaps / colours asks for confirmation (
 
 ### C. Session file fields
 
-`version` (the session schema marker), `fileName`, `xml`, `sourceFiles` (the full file list of a merged document), `nestedName` / `nestedXml`, `compareName` / `compareXml`, `layoutOptions`, `renderOptions`, `themeId`, `swapped`, `nestedSwapped`, `collapsed`, `geneColors`, `annotations`, `labelOverrides`, `tabs` (a snapshot of every other open tab), `activeTabIndex`, and the search/filter criteria `searchQuery`, `searchRegex`, `eventFilter`, `familyFilter`, `confidenceMin`, `confidenceMax`.
+`version` (the session schema marker — v2 in this build), `fileName`, `xml`, `sourceFiles` (the full file list of a merged document), `nestedName` / `nestedXml`, `compareName` / `compareXml`, `layoutOptions`, `renderOptions`, `themeId`, `swapped`, `nestedSwapped`, `compareSwapped` / `compareCollapsed` / `compareGeneColors` (the compare pane's own state, v2), `collapsed`, `geneColors`, `annotations`, `labelOverrides`, `labelOverridesById` (renames keyed by node id, v2), `tabs` (a snapshot of every other open tab, each with its own `layoutOptions` / `renderOptions`, v2), `activeTabIndex`, and the search/filter criteria `searchQuery`, `searchRegex`, `onlyMatches` (v2), `eventFilter`, `familyFilter`, `confidenceMin`, `confidenceMax`. The per-canvas zoom/pan camera is not part of the file.
 
 ### D. Practical ceilings
 
@@ -743,7 +778,7 @@ These are hard limits in the code, not configuration suggestions; hitting one pr
 | Crossing-optimizer sweeps | 8 | layout heuristic | the search stops early if no improvement is found |
 | Undo history | 100 steps | state store | the oldest step is discarded |
 | PNG canvas | 16,384 px per edge **and** ≈6.7×10⁷ px total | export | scale is reduced and the effective DPI is reported |
-| Statistics tables | top 25 rows | right panel | the per-species and transfer-matrix tables list the 25 largest entries; CSV export is not truncated |
+| Statistics tables | top 25 rows; node table 500 rows | right panel | the per-species and transfer-matrix tables list the 25 largest entries; the node detail table caps at 500 rows with a truncation note; CSV export is not truncated |
 | Viewport culling | above 1,500 gene nodes | canvas | gene elements outside the viewport are not drawn; species tubes, labels and transfer arcs always are |
 | Level of detail | zoom < 0.42× and < 0.16× | canvas | independent of document size: pure event glyphs are dropped below 0.42×; all labels and gene-edge halos drop below 0.16× |
 

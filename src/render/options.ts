@@ -47,6 +47,10 @@ export interface RenderOptions {
   showSupport: boolean;
   /** Paint species tubes with a subtle gradient. */
   speciesGradient: boolean;
+  /** Also render names of INTERNAL species clades (phylum/class-level labels). */
+  showSpeciesCladeNames: boolean;
+  /** Show untruncated labels in the drawing and the export (may overflow). */
+  fullLabels: boolean;
   transferBow: number;
   haloUnderGenes: boolean;
   /** Shade species tubes by the number of gene copies passing through them. */
@@ -72,6 +76,8 @@ export const defaultRenderOptions: RenderOptions = {
   showEvents: true,
   showSupport: false,
   speciesGradient: false,
+  showSpeciesCladeNames: false,
+  fullLabels: false,
   transferBow: 0.22,
   haloUnderGenes: true,
   copyHeatmap: false,

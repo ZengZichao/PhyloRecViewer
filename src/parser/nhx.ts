@@ -33,6 +33,7 @@ import type {
   EndEventType,
   GeneNode,
   GeneTree,
+  NodeSupport,
   RecEvent,
   Reconciliation,
   SpeciesNode,
@@ -62,8 +63,27 @@ const MAX_TREE_DEPTH = 1000;
 const speciesOf = (node: NewickNode): string | undefined =>
   node.nhx.S || node.nhx.SP || undefined;
 
-/** NHX keys this reader interprets. Anything else is kept but reported. */
-const INTERPRETED_NHX_KEYS = new Set(["S", "SP", "D", "L", "BO", "BC", "TB", "BL"]);
+/**
+ * NHX keys this reader interprets. Anything else is kept but reported.
+ * TB2..TB9 hold the SECOND and further transfer arrivals of a node (the
+ * exporter writes them there so nothing is lost on round-trip); B= carries a
+ * clade support value, TS= a time slice and CN= an event confidence.
+ */
+const INTERPRETED_NHX_KEYS = new Set<string>([
+  "S", "SP", "D", "L", "BO", "BC", "TB", "BL", "TS", "CN", "B",
+  "TB2", "TB3", "TB4", "TB5", "TB6", "TB7", "TB8", "TB9",
+]);
+
+/** All transfer-arrival tags of a node, in written order (TB, then TB2..TB9). */
+function arrivalTags(nd: NewickNode): { key: string; value: string }[] {
+  const out: { key: string; value: string }[] = [];
+  const keys = ["TB", "TB2", "TB3", "TB4", "TB5", "TB6", "TB7", "TB8", "TB9"];
+  for (const k of keys) {
+    const v = nd.nhx[k];
+    if (v != null && v !== "") out.push({ key: k, value: v });
+  }
+  return out;
+}
 
 const flag = (v: string | undefined): boolean =>
   (v ?? "").toUpperCase() === "Y";
@@ -71,13 +91,21 @@ const flag = (v: string | undefined): boolean =>
 /** Classified event view of one Newick node (structure + NHX tags). */
 interface Classified {
   endType: EndEventType;
-  /** Transfer-back arrival, when present: donor and recipient species. */
-  arrival?: { donor: string; recipient: string };
+  /** Transfer-back arrivals, in file order: donor and recipient species. */
+  arrivals: { donor: string; recipient: string }[];
   /** Branch length, when the input provides one. */
   branchLength?: number;
+  /** timeSlice (TS=) and confidence (CN=) of the terminal event, when given. */
+  timeSlice?: number;
+  confidence?: number;
+  /** Clade-level support (B= tag or a numeric internal Newick label). */
+  support?: NodeSupport;
   /** True when this node is the child end of a horizontal transfer edge. */
   isTransferArrival: boolean;
 }
+
+/** Purely-numeric labels (`)95`) are bootstrap/support values, not gene names. */
+const NUMERIC_LABEL = /^\d+(?:\.\d+)?$/;
 
 function classify(nd: NewickNode, warnings: string[]): Classified {
   const isLeaf = nd.children.length === 0;
@@ -87,11 +115,10 @@ function classify(nd: NewickNode, warnings: string[]): Classified {
   const branching = flag(nd.nhx.BO);
   const bifurc = flag(nd.nhx.BC);
 
-  let arrival: Classified["arrival"];
-  const tb = nd.nhx.TB;
-  if (tb) {
-    const [donor, recipient] = tb.replace(/^@/, "").split("|");
-    arrival = { donor: donor ?? "?", recipient: recipient ?? speciesOf(nd) ?? "?" };
+  const arrivals: Classified["arrivals"] = [];
+  for (const { value } of arrivalTags(nd)) {
+    const [donor, recipient] = value.replace(/^@/, "").split("|");
+    arrivals.push({ donor: donor ?? "?", recipient: recipient ?? speciesOf(nd) ?? "?" });
   }
 
   // Resolve competing event tags with the recPhyloXML reader's shared
@@ -151,11 +178,32 @@ function classify(nd: NewickNode, warnings: string[]): Classified {
     );
   }
 
+  const tsNum = nd.nhx.TS != null && nd.nhx.TS !== "" ? Number(nd.nhx.TS) : undefined;
+  const cnNum = nd.nhx.CN != null && nd.nhx.CN !== "" ? Number(nd.nhx.CN) : undefined;
+
+  // Clade support: an explicit B= tag wins; otherwise a purely-numeric internal
+  // Newick label (`)95`) is the conventional bootstrap support, not a gene
+  // name. Numeric LEAF labels stay gene names - extant ids can be numeric.
+  let support: NodeSupport | undefined;
+  const bRaw = nd.nhx.B;
+  if (bRaw != null && bRaw !== "" && Number.isFinite(Number(bRaw))) {
+    support = { value: Number(bRaw), type: "unknown" };
+  } else if (!isLeaf && nd.name && NUMERIC_LABEL.test(nd.name.trim())) {
+    support = { value: Number(nd.name.trim()), type: "unknown" };
+    nd.name = "";
+    warnings.push(
+      `An internal node label ("${support.value}") was interpreted as a statistical support value, not a gene name; if it really is a name, add S=/D= tags or export from recPhyloXML.`,
+    );
+  }
+
   return {
     endType,
-    arrival,
+    arrivals,
     branchLength: branchLength != null && Number.isFinite(branchLength) ? branchLength : undefined,
-    isTransferArrival: !!arrival,
+    timeSlice: tsNum != null && Number.isFinite(tsNum) ? tsNum : undefined,
+    confidence: cnNum != null && Number.isFinite(cnNum) ? cnNum : undefined,
+    support,
+    isTransferArrival: arrivals.length > 0,
   };
 }
 
@@ -165,12 +213,33 @@ function classify(nd: NewickNode, warnings: string[]): Classified {
  * (see model/stableId.ts and parseRecPhyloXML); merged / restored views pass a
  * deterministic namespace so two files with the same content never share node
  * ids.
+ *
+ * `externalSpecies` supplies a separately provided species tree (see
+ * parser/speciesTree.ts). When given, the strict "every internal node needs
+ * S=" requirement is lifted: leaf-only S= annotations are accepted, internal
+ * nodes without a species tag resolve to no species, and the provided tree is
+ * used verbatim instead of a leaf-annotation reconstruction.
  */
-export function parseNhxReconciliation(text: string, ns = ""): Reconciliation {
+export function parseNhxReconciliation(
+  text: string,
+  ns = "",
+  externalSpecies?: SpeciesTree,
+): Reconciliation {
   const seq = NHX_SEQ++;
   const forest = parseNewick(text);
   if (forest.length === 0) {
     throw new NhxParseError("No Newick/NHX tree was found in this file.");
+  }
+  // Newick's standard `[&U]` unrooted marker means the tree has no root and a
+  // reconciliation cannot be drawn on it. Accepting it silently would render a
+  // wrong rooting as if it were data, so refuse with an actionable message.
+  for (const root of forest) {
+    const frags = [...(root.nhxUnparsed ?? []), ...Object.keys(root.nhx)];
+    if (frags.some((f) => /^&?\s*U$/i.test(f.trim()))) {
+      throw new NhxParseError(
+        "This Newick/NHX tree is marked unrooted ([&U]). A reconciliation needs a rooted gene tree: re-root it (outgroup or midpoint) and re-export, or remove the [&U] marker if the tree is in fact rooted.",
+      );
+    }
   }
 
   // Pre-classify every node (structure + event) before reconstructing the
@@ -193,8 +262,10 @@ export function parseNhxReconciliation(text: string, ns = ""): Reconciliation {
   const ignoredKeys = new Set<string>();
   const walkTags = (nd: NewickNode): void => {
     const t = nd.nhx;
-    if (flag(t.D) || flag(t.L) || flag(t.BO) || flag(t.BC) || t.TB) sawDOrOther = true;
-    if (flag(t.L) || flag(t.BO) || flag(t.BC) || t.TB) sawLossOrTransfer = true;
+    if (
+      flag(t.D) || flag(t.L) || flag(t.BO) || flag(t.BC) || arrivalTags(nd).length > 0
+    ) sawDOrOther = true;
+    if (flag(t.L) || flag(t.BO) || flag(t.BC) || arrivalTags(nd).length > 0) sawLossOrTransfer = true;
     for (const k of Object.keys(t)) if (!INTERPRETED_NHX_KEYS.has(k)) ignoredKeys.add(k);
     for (const c of nd.children) walkTags(c);
   };
@@ -214,106 +285,133 @@ export function parseNhxReconciliation(text: string, ns = ""): Reconciliation {
     );
   }
 
-  // Every internal node must carry a species tag for reconstruction to work.
-  for (const root of forest) {
-    const stack = [root];
-    while (stack.length) {
-      const nd = stack.pop() as NewickNode;
-      if (nd.children.length > 0 && !speciesOf(nd)) {
-        throw new NhxParseError(
-          "NHX internal nodes lack species (S=) annotations, so the species tree cannot be reconstructed from this file. " +
-            "Add an S=<species> tag to every internal node, or export the reconciliation as recPhyloXML.",
-        );
-      }
-      for (const c of nd.children) stack.push(c);
-    }
-  }
-
-  // ---- reconstruct the species tree from S= tags, VERTICAL edges only ----
-  const parentOf = new Map<string, string>();
-  const allSpecies = new Set<string>();
-  for (const root of forest) {
-    const walk = (nd: NewickNode): void => {
-      const s = speciesOf(nd);
-      if (s) allSpecies.add(s);
-      for (const c of nd.children) {
-        const cs = speciesOf(c);
-        if (cs) allSpecies.add(cs);
-        // A transfer-arrival child moved INTO species cs from another species;
-        // the parent->child Newick edge is horizontal, not common ancestry, so
-        // counting it would make an HGT edge an ancestor of the species.
-        const childIsTransfer = cls.get(c)?.isTransferArrival ?? false;
-        if (s && cs && cs !== s && !childIsTransfer) {
-          const prev = parentOf.get(cs);
-          if (prev === undefined) {
-            parentOf.set(cs, s);
-          } else if (prev !== s) {
-            // Conflicting ancestors that our vertical filter could not resolve
-            // (e.g. an external NHX file whose HGT edges are unmarked). Keep the
-            // first and tell the user the reconstruction is uncertain rather
-            // than silently choosing a winner or blaming their annotation.
-            warnings.push(
-              `Species "${cs}" is annotated under conflicting parents ("${prev}" and "${s}"); kept "${prev}". The NHX format cannot always tell vertical ancestry from unmarked horizontal transfers, so the reconstructed species tree may differ from the true one.`,
-            );
-          }
+  // Every internal node must carry a species tag for reconstruction to work -
+  // unless a separately provided species tree takes over that role.
+  if (!externalSpecies) {
+    for (const root of forest) {
+      const stack = [root];
+      while (stack.length) {
+        const nd = stack.pop() as NewickNode;
+        if (nd.children.length > 0 && !speciesOf(nd)) {
+          throw new NhxParseError(
+            "NHX internal nodes lack species (S=) annotations, so the species tree cannot be reconstructed from this file. " +
+              "Add an S=<species> tag to every internal node, load a species tree first (File → Load species tree) and open the gene trees against it, or export the reconciliation as recPhyloXML.",
+          );
         }
-        walk(c);
+        for (const c of nd.children) stack.push(c);
       }
-    };
-    walk(root);
-  }
-  if (allSpecies.size === 0) {
-    throw new NhxParseError("No species (S=) annotations found in the NHX file.");
-  }
-
-  // The root species is the topmost ancestor of the first tree's root species.
-  let rootSpecies = speciesOf(forest[0]) ?? [...allSpecies][0];
-  const seen = new Set<string>();
-  while (rootSpecies && parentOf.has(rootSpecies) && !seen.has(rootSpecies)) {
-    seen.add(rootSpecies);
-    rootSpecies = parentOf.get(rootSpecies) as string;
-  }
-
-  const childrenBySpecies = new Map<string, string[]>();
-  for (const [child, parent] of parentOf) {
-    const arr = childrenBySpecies.get(parent) ?? [];
-    arr.push(child);
-    childrenBySpecies.set(parent, arr);
-  }
-
-  const byName = new Map<string, SpeciesNode>();
-  const spNodes: SpeciesNode[] = [];
-  let spCounter = 0;
-  const built = new Set<string>();
-  const buildSpecies = (name: string, parent: SpeciesNode | null, depth: number): SpeciesNode => {
-    if (depth > MAX_TREE_DEPTH) {
-      throw new NhxParseError("Species tree is nested too deep (possible malformed input).");
     }
-    built.add(name);
-    const node: SpeciesNode = {
-      id: `sn${seq}_${spCounter++}`,
-      name,
-      children: [],
-      parent,
-      depth,
-    };
-    if (!byName.has(name)) byName.set(name, node);
-    spNodes.push(node);
-    for (const cn of childrenBySpecies.get(name) ?? []) {
-      if (!built.has(cn)) node.children.push(buildSpecies(cn, node, depth + 1));
-    }
-    return node;
-  };
-  const spRoot = buildSpecies(rootSpecies, null, 0);
-  const species: SpeciesTree = { root: spRoot, byName, nodes: spNodes };
+  }
 
-  // Species referenced by gene nodes but unreachable from the reconstructed
+  // ---- the species tree: externally provided, or reconstructed from S= tags
+  // (VERTICAL edges only) ----
+  let species: SpeciesTree;
+  let allSpecies = new Set<string>();
+  let builtNames = new Set<string>();
+
+  if (externalSpecies) {
+    species = externalSpecies;
+    // Record which species the file actually annotates, so gene nodes in
+    // species the external tree lacks produce the normal unknown-species report.
+    for (const root of forest) {
+      const walk = (nd: NewickNode): void => {
+        const s = speciesOf(nd);
+        if (s) allSpecies.add(s);
+        for (const c of nd.children) walk(c);
+      };
+      walk(root);
+    }
+    builtNames = new Set(species.nodes.map((n) => n.name));
+    warnings.push(
+      "Species tree taken from the separately provided file; NHX internal nodes without S= resolve to no species.",
+    );
+  } else {
+    const parentOf = new Map<string, string>();
+    allSpecies = new Set<string>();
+    for (const root of forest) {
+      const walk = (nd: NewickNode): void => {
+        const s = speciesOf(nd);
+        if (s) allSpecies.add(s);
+        for (const c of nd.children) {
+          const cs = speciesOf(c);
+          if (cs) allSpecies.add(cs);
+          // A transfer-arrival child moved INTO species cs from another species;
+          // the parent->child Newick edge is horizontal, not common ancestry, so
+          // counting it would make an HGT edge an ancestor of the species.
+          const childIsTransfer = cls.get(c)?.isTransferArrival ?? false;
+          if (s && cs && cs !== s && !childIsTransfer) {
+            const prev = parentOf.get(cs);
+            if (prev === undefined) {
+              parentOf.set(cs, s);
+            } else if (prev !== s) {
+              // Conflicting ancestors that our vertical filter could not resolve
+              // (e.g. an external NHX file whose HGT edges are unmarked). Keep the
+              // first and tell the user the reconstruction is uncertain rather
+              // than silently choosing a winner or blaming their annotation.
+              warnings.push(
+                `Species "${cs}" is annotated under conflicting parents ("${prev}" and "${s}"); kept "${prev}". The NHX format cannot always tell vertical ancestry from unmarked horizontal transfers, so the reconstructed species tree may differ from the true one.`,
+              );
+            }
+          }
+          walk(c);
+        }
+      };
+      walk(root);
+    }
+    if (allSpecies.size === 0) {
+      throw new NhxParseError("No species (S=) annotations found in the NHX file.");
+    }
+
+    // The root species is the topmost ancestor of the first tree's root species.
+    let rootSpecies = speciesOf(forest[0]) ?? [...allSpecies][0];
+    const seen = new Set<string>();
+    while (rootSpecies && parentOf.has(rootSpecies) && !seen.has(rootSpecies)) {
+      seen.add(rootSpecies);
+      rootSpecies = parentOf.get(rootSpecies) as string;
+    }
+
+    const childrenBySpecies = new Map<string, string[]>();
+    for (const [child, parent] of parentOf) {
+      const arr = childrenBySpecies.get(parent) ?? [];
+      arr.push(child);
+      childrenBySpecies.set(parent, arr);
+    }
+
+    const byName = new Map<string, SpeciesNode>();
+    const spNodes: SpeciesNode[] = [];
+    let spCounter = 0;
+    const built = new Set<string>();
+    const buildSpecies = (name: string, parent: SpeciesNode | null, depth: number): SpeciesNode => {
+      if (depth > MAX_TREE_DEPTH) {
+        throw new NhxParseError("Species tree is nested too deep (possible malformed input).");
+      }
+      built.add(name);
+      const node: SpeciesNode = {
+        id: `sn${seq}_${spCounter++}`,
+        name,
+        children: [],
+        parent,
+        depth,
+      };
+      if (!byName.has(name)) byName.set(name, node);
+      spNodes.push(node);
+      for (const cn of childrenBySpecies.get(name) ?? []) {
+        if (!built.has(cn)) node.children.push(buildSpecies(cn, node, depth + 1));
+      }
+      return node;
+    };
+    const spRoot = buildSpecies(rootSpecies, null, 0);
+    species = { root: spRoot, byName, nodes: spNodes };
+    builtNames = built;
+  }
+
+  // Species referenced by gene nodes but unreachable from the (reconstructed)
   // root (multi-tree files, disconnected annotations) never enter the species
   // tree; explain the cause rather than only emitting confusing per-node errors.
   for (const s of allSpecies) {
-    if (!built.has(s)) {
+    if (!builtNames.has(s)) {
       warnings.push(
-        `Species "${s}" cannot be attached to the reconstructed species tree (disconnected annotations); gene nodes placed in it are reported as unknown-species.`,
+        `Species "${s}" cannot be attached to the species tree (disconnected annotations); gene nodes placed in it are reported as unknown-species.`,
       );
     }
   }
@@ -331,11 +429,13 @@ export function parseNhxReconciliation(text: string, ns = ""): Reconciliation {
       const info = cls.get(nd)!;
       const s = speciesOf(nd) ?? "";
       const events: RecEvent[] = [];
-      if (info.arrival) {
+      // Every arrival tag becomes its own transferBack event, so a node with
+      // several arrivals survives the NHX round trip one-for-one.
+      for (const a of info.arrivals) {
         events.push({
           type: "transferBack",
-          destinationSpecies: info.arrival.recipient,
-          speciesLocation: info.arrival.donor,
+          destinationSpecies: a.recipient,
+          speciesLocation: a.donor,
         });
       }
       const endEvent: RecEvent = {
@@ -343,6 +443,8 @@ export function parseNhxReconciliation(text: string, ns = ""): Reconciliation {
         speciesLocation: s,
         geneName: info.endType === "leaf" ? nd.name : undefined,
       };
+      if (info.timeSlice != null) endEvent.timeSlice = info.timeSlice;
+      if (info.confidence != null) endEvent.confidence = info.confidence;
       events.push(endEvent);
       if (s && !species.byName.has(s)) {
         warnings.push(`Gene node references unknown species "${s}".`);
@@ -358,6 +460,7 @@ export function parseNhxReconciliation(text: string, ns = ""): Reconciliation {
         treeIndex: idx,
         branchLength: info.branchLength,
       };
+      if (info.support) gene.support = info.support;
       nodes.push(gene);
       for (const c of nd.children) gene.children.push(build(c, gene, depth + 1));
       return gene;
@@ -382,7 +485,7 @@ export function parseNhxReconciliation(text: string, ns = ""): Reconciliation {
       break;
     }
   }
-  if (hasTransfers) {
+  if (hasTransfers && !externalSpecies) {
     warnings.push(
       "Species tree reconstructed from NHX species (S=) annotations; horizontal transfers carried by TB= were excluded from ancestry. If this file also contains HGT without TB= markers, re-export it with TB= annotations on every transfer arrival (or as recPhyloXML), because unmarked transfers cannot be told apart from speciation here.",
     );

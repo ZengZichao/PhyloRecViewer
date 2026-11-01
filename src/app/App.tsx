@@ -1,4 +1,5 @@
 import {
+  useCallback,
   useEffect,
   useMemo,
   useRef,
@@ -8,15 +9,17 @@ import {
 } from "react";
 import { layout } from "../layout";
 import { countLabel, useT } from "../i18n";
-import { agreementPct, computeDiff } from "../analysis/compare";
+import { agreementPct, speciesAgreementPct, computeDiff } from "../analysis/compare";
 import { desktopTakePendingFiles, onDesktopOpenFile, onDesktopOpenFailed } from "../platform/desktop";
 import { themes } from "../render/theme";
 import { useStore, type ToastData } from "../state/store";
 import { loadPrefs, savePrefs } from "../state/prefs";
+import { restoreAutosave, clearAutosaveSnapshot } from "../state/autosave";
 import { samples } from "../samples";
-import { Canvas } from "./Canvas";
+import { Canvas, type ViewSync } from "./Canvas";
 import { AnnotationEditor } from "./AnnotationEditor";
 import { Legend } from "./Legend";
+import { NodeInspector } from "./NodeInspector";
 import { RightPanel } from "./RightPanel";
 import { Sidebar } from "./Sidebar";
 import { TabBar } from "./TabBar";
@@ -25,6 +28,8 @@ import { modalOpen } from "./hooks";
 
 /** A referentially-stable empty set: the nested view has no collapse state. */
 const NO_COLLAPSE: Set<string> = new Set();
+
+const SPLIT_ORIENT_KEY = "rpv.split.orientation";
 
 /**
  * Put the caret in the analysis panel's search field. Opening the tab alone
@@ -72,13 +77,21 @@ export function App() {
   const rightPanelTab = useStore((s) => s.rightPanelTab);
   const swapped = useStore((s) => s.swapped);
   const nestedSwapped = useStore((s) => s.nestedSwapped);
+  const compareSwapped = useStore((s) => s.compareSwapped);
   const toggleSwap = useStore((s) => s.toggleSwap);
   const toggleNestedSwap = useStore((s) => s.toggleNestedSwap);
+  const toggleCompareSwap = useStore((s) => s.toggleCompareSwap);
   const collapsed = useStore((s) => s.collapsed);
+  const compareCollapsed = useStore((s) => s.compareCollapsed);
   const toggleCollapse = useStore((s) => s.toggleCollapse);
+  const toggleCompareCollapse = useStore((s) => s.toggleCompareCollapse);
   const geneColors = useStore((s) => s.geneColors);
+  const compareGeneColors = useStore((s) => s.compareGeneColors);
   const labelOverrides = useStore((s) => s.labelOverrides);
+  const labelOverridesById = useStore((s) => s.labelOverridesById);
   const onlyMatches = useStore((s) => s.onlyMatches);
+  const compareLinked = useStore((s) => s.compareLinked);
+  const setCompareLinked = useStore((s) => s.setCompareLinked);
   const locate = useStore((s) => s.locate);
   const showLegend = useStore((s) => s.showLegend);
   const undo = useStore((s) => s.undo);
@@ -97,15 +110,23 @@ export function App() {
   const loadNestedXml = useStore((s) => s.loadNestedXml);
   const loadCompareXml = useStore((s) => s.loadCompareXml);
   const setSampleId = useStore((s) => s.setSampleId);
+  const pendingRestore = useStore((s) => s.pendingRestore);
   const theme = themes[resolvedThemeId];
   const [dragOver, setDragOver] = useState(false);
   // Nested dragenter/dragleave events fire as the pointer crosses child
   // elements; a counter keeps the drop overlay stable (no flicker) until the
   // drag actually leaves the app surface or drops.
   const dragDepth = useRef(0);
+  // Split orientation for nested/compare: vertical stacking wastes the wide
+  // half of a landscape window, so a side-by-side arrangement is available.
+  const [splitRow, setSplitRow] = useState(
+    () => localStorage.getItem(SPLIT_ORIENT_KEY) !== "row",
+  );
+  // Presentation mode: hide both panels and give the drawing the window.
+  const [presenting, setPresenting] = useState(false);
   const [sidebarWidth, setSidebarWidth] = useState(() => loadPrefs().panelWidths?.sidebar ?? 360);
   const resizing = useRef(false);
-  const [rightPanelWidth, setRightPanelWidth] = useState(() => loadPrefs().panelWidths?.right ?? 340);
+  const [rightPanelWidth, setRightPanelWidth] = useState(() => loadPrefs().panelWidths?.right ?? 400);
   const resizingRight = useRef(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [onboardVisible, setOnboardVisible] = useState(false);
@@ -113,6 +134,21 @@ export function App() {
   const fileInput = useRef<HTMLInputElement>(null);
   const multiDialogRef = useRef<HTMLDivElement>(null);
   useFocusTrap(!!pendingMulti, multiDialogRef);
+
+  // Linked-view sync between the two compare panes.
+  const [viewA, setViewA] = useState<ViewSync | null>(null);
+  const [viewB, setViewB] = useState<ViewSync | null>(null);
+  const onPrimaryView = useCallback((v: ViewSync) => setViewA(v), []);
+  const onCompareView = useCallback((v: ViewSync) => setViewB(v), []);
+
+  const setSplitRowPersist = (row: boolean) => {
+    setSplitRow(row);
+    try {
+      localStorage.setItem(SPLIT_ORIENT_KEY, row ? "column" : "row");
+    } catch {
+      // ignore
+    }
+  };
 
   const onResizeDown = (e: ReactPointerEvent<HTMLDivElement>) => {
     resizing.current = true;
@@ -163,10 +199,12 @@ export function App() {
       nested ? layout(nested, layoutOptions, nestedSwapped, NO_COLLAPSE, renderOptions.curved) : null,
     [nested, layoutOptions, nestedSwapped, renderOptions.curved],
   );
+  // The compare pane carries its OWN mirror/collapse state: A and B may not
+  // even share a topology, and mirroring a branch in B used to rearrange A.
   const compareResult = useMemo(
     () =>
-      compare ? layout(compare, layoutOptions, swapped, collapsed, renderOptions.curved) : null,
-    [compare, layoutOptions, swapped, collapsed, renderOptions.curved],
+      compare ? layout(compare, layoutOptions, compareSwapped, compareCollapsed, renderOptions.curved) : null,
+    [compare, layoutOptions, compareSwapped, compareCollapsed, renderOptions.curved],
   );
   const diff = useMemo(
     () => (recon && compare ? computeDiff(recon, compare) : null),
@@ -186,19 +224,19 @@ export function App() {
     const hoNested = onlyMatches && focusNested ? focusNested : null;
     if (nestedResult && nested) {
       return [
-        { result, highlight: focusPrimary, hideOutside: ho, labelOverrides, title: t.paneGeneSymbiont },
-        { result: nestedResult, highlight: focusNested, hideOutside: hoNested, labelOverrides, title: t.paneSymbiontHost },
+        { result, highlight: focusPrimary, hideOutside: ho, labelOverrides, labelOverridesById, title: t.paneGeneSymbiont },
+        { result: nestedResult, highlight: focusNested, hideOutside: hoNested, labelOverrides, labelOverridesById, title: t.paneSymbiontHost },
       ];
     }
     if (compareResult && compare && diff) {
       const hide = diffHidden ? null : diff.disagreeA;
       const hideB = diffHidden ? null : diff.disagreeB;
       return [
-        { result, highlight: hide, labelOverrides, title: fileName ?? "A" },
-        { result: compareResult, highlight: hideB, labelOverrides, title: compareName ?? "B" },
+        { result, highlight: hide, hideOutside: ho, labelOverrides, labelOverridesById, title: fileName ?? "A" },
+        { result: compareResult, highlight: hideB, hideOutside: ho, labelOverrides, labelOverridesById, title: compareName ?? "B" },
       ];
     }
-    return [{ result, highlight: focusPrimary, hideOutside: ho, labelOverrides }];
+    return [{ result, highlight: focusPrimary, hideOutside: ho, labelOverrides, labelOverridesById }];
   }, [
     result,
     nested,
@@ -211,6 +249,7 @@ export function App() {
     focusNested,
     onlyMatches,
     labelOverrides,
+    labelOverridesById,
     t,
     fileName,
     compareName,
@@ -224,6 +263,11 @@ export function App() {
     document.body.style.background = theme.background;
   }, [theme, resolvedThemeId, locale]);
 
+  // The window (and OS task switcher) should name the open document.
+  useEffect(() => {
+    document.title = fileName ? `${fileName} — PhyloRecViewer` : "PhyloRecViewer";
+  }, [fileName]);
+
   // Listen for OS dark/light changes so "system" theme follows in real time.
   useEffect(() => {
     const mq = window.matchMedia("(prefers-color-scheme: dark)");
@@ -232,8 +276,9 @@ export function App() {
     return () => mq.removeEventListener("change", handler);
   }, [syncSystemTheme]);
 
-  // Centralised keyboard shortcuts: undo/redo (⌘Z / ⌘⇧Z / ⌘Y) and help (?).
-  // Uses the shared useGlobalShortcuts hook with a unified input-field guard.
+  // Centralised keyboard shortcuts: undo/redo (⌘Z / ⌘⇧Z / ⌘Y), search (⌘F),
+  // help (?) and presentation (P). Uses the shared useGlobalShortcuts hook
+  // with a unified input-field guard.
   useGlobalShortcuts((e) => {
     if (isTextInput(e)) return;
     if ((e.metaKey || e.ctrlKey) && !e.altKey) {
@@ -256,37 +301,61 @@ export function App() {
     if (!e.metaKey && !e.ctrlKey && !e.altKey && e.key === "?") {
       e.preventDefault();
       setHelpOpen(true);
+    } else if (!e.metaKey && !e.ctrlKey && !e.altKey && (e.key === "p" || e.key === "P")) {
+      e.preventDefault();
+      setPresenting((v) => !v);
     }
   });
 
-  // Escape collapses the analysis panel, as the help overlay advertises. Each
-  // dialog handles its own Escape, so this one stands aside while a modal is
-  // up; "clear the selection" is deliberately not claimed here because
-  // selection lives inside the canvas and is cleared by clicking empty space.
+  // Escape collapses the analysis panel — but never while a presentation is
+  // up (there it exits the presentation) and never "through" a modal. Each
+  // dialog handles its own Escape. "Clear the selection" is deliberately not
+  // claimed here because selection lives inside the canvas and is cleared by
+  // clicking empty space.
   useGlobalShortcuts(
     (e) => {
-      if (e.key !== "Escape" || modalOpen() || isTextInput(e)) return;
+      if (e.key !== "Escape" || isTextInput(e)) return;
+      if (presenting) {
+        e.preventDefault();
+        setPresenting(false);
+        return;
+      }
+      if (modalOpen()) return;
+      // An open menu consumes its own Escape (closing the menu); the panel
+      // must not also close on that same keypress.
+      if (document.querySelector(".dropdown-menu")) return;
       e.preventDefault();
       closePanel();
     },
     { allowInModals: true },
   );
 
-  // Responsive: on narrow windows the two side panels crowd the canvas, so
-  // auto-collapse the analysis panel (then the sidebar) when crossing down
-  // through a width threshold. Users can always reopen them.
+  // Panel widths saved on a wide screen must not crush the canvas on a small
+  // one: clamp both to the current viewport. Narrow FIRST launches collapse
+  // the panels outright (the old resize-crossing logic never fired on load,
+  // so a 900px window opened with both panels open and a sliver of canvas).
   useEffect(() => {
-    let prev = window.innerWidth;
-    const apply = (w: number) => {
-      if (w < 1000 && prev >= 1000) closePanel();
-      if (w < 820 && prev >= 820) setSidebarOpen(false);
-      prev = w;
-    };
-    apply(window.innerWidth);
-    const onResize = () => apply(window.innerWidth);
-    window.addEventListener("resize", onResize);
-    return () => window.removeEventListener("resize", onResize);
-  }, [closePanel, setSidebarOpen]);
+    setSidebarWidth((w) => Math.min(w, Math.max(360, window.innerWidth - 420)));
+    setRightPanelWidth((w) => Math.min(w, Math.max(320, window.innerWidth - 720)));
+    const w = window.innerWidth;
+    if (w < 1000) useStore.getState().closePanel();
+    if (w < 820) useStore.getState().setSidebarOpen(false);
+  }, []);
+
+  // Presentation mode always collapses the panels on entry and restores them
+  // on exit, so Esc gives the user their workspace back.
+  const prevPanelState = useRef({ sidebar: true, panel: true });
+  useEffect(() => {
+    if (presenting) {
+      prevPanelState.current = { sidebar: useStore.getState().sidebarOpen, panel: useStore.getState().rightPanelOpen };
+      setSidebarOpen(false);
+      closePanel();
+    } else {
+      setSidebarOpen(prevPanelState.current.sidebar);
+      if (prevPanelState.current.panel) openPanel(rightPanelTab);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [presenting]);
 
   // Desktop: load files opened via OS association (double-click / "Open with"),
   // both those present at launch and those opened while already running.
@@ -340,10 +409,16 @@ export function App() {
     };
   }, [openInNewTab, t.openFailedToast]);
 
-  // First-run tour is NOT shown automatically: it is opt-in from the Help
-  // overlay and Preferences ("View tutorial"). The event below is the single
-  // entry point used by both surfaces, dispatched by Settings / HelpOverlay.
+  // First-run tour: shown ONCE automatically (skippable) so a new user ever
+  // sees it; afterwards it is opt-in from Help / Preferences.
   useEffect(() => {
+    try {
+      if (localStorage.getItem("rpv.onboarded") !== "1") {
+        setOnboardVisible(true);
+      }
+    } catch {
+      // ignore
+    }
     const onReplay = () => setOnboardVisible(true);
     document.addEventListener("rpv:replay-tour", onReplay);
     return () => document.removeEventListener("rpv:replay-tour", onReplay);
@@ -369,7 +444,22 @@ export function App() {
       if (s.compareXml)
         loadCompareXml(s.compareXml, s.compareLabelKey ? t[s.compareLabelKey] : "compare");
       setSampleId(s.id);
+      useStore.getState().markDocClean();
     });
+  };
+
+  // Restore-prompt actions: restoring runs through the heavy-task contract so
+  // the loading overlay covers the (synchronous) parse of a large workspace.
+  const onRestoreAccept = () => {
+    useStore.setState({ pendingRestore: null });
+    void useStore.getState().runHeavy(() => {
+      restoreAutosave();
+    });
+  };
+  const onRestoreDecline = () => {
+    clearAutosaveSnapshot();
+    useStore.setState({ pendingRestore: null });
+    useStore.getState().showToast(t.restoreCleared, "info");
   };
 
   const stats = useMemo(() => {
@@ -382,10 +472,12 @@ export function App() {
     };
   }, [recon]);
 
+  const splitClass = `split${splitRow ? "" : " split-row"}`;
+
   return (
     <TooltipProvider>
       <div
-        className="app"
+        className={`app${presenting ? " presenting" : ""}`}
         onDragOver={(e) => {
           e.preventDefault();
         }}
@@ -414,6 +506,20 @@ export function App() {
             <Sidebar width={sidebarWidth} />
             <div
               className="sidebar-resizer"
+              role="separator"
+              aria-label={t.controlsPanel}
+              aria-orientation="vertical"
+              tabIndex={0}
+              onKeyDown={(e) => {
+                const step = e.shiftKey ? 24 : 8;
+                if (e.key === "ArrowLeft") {
+                  e.preventDefault();
+                  setSidebarWidth((w) => Math.max(360, w - step));
+                } else if (e.key === "ArrowRight") {
+                  e.preventDefault();
+                  setSidebarWidth((w) => Math.min(560, w + step));
+                }
+              }}
               onPointerDown={onResizeDown}
               onPointerCancel={onResizeUp}
               onLostPointerCapture={onResizeUp}
@@ -467,7 +573,7 @@ export function App() {
             </div>
           ) : result && recon ? (
             nestedResult && nested ? (
-              <div className="split">
+              <div className={splitClass}>
                 <div className="split-pane">
                   <Canvas
                     result={result}
@@ -479,6 +585,8 @@ export function App() {
                     onToggleCollapse={toggleCollapse}
                     geneColors={geneColors}
                     focus={focusPrimary}
+                    hideOutside={onlyMatches && focusPrimary ? focusPrimary : null}
+                    labelOverridesById={labelOverridesById}
                     locate={locate}
                   />
                 </div>
@@ -492,13 +600,15 @@ export function App() {
                     onSpeciesClick={toggleNestedSwap}
                     geneColors={geneColors}
                     focus={focusNested}
+                    hideOutside={onlyMatches && focusNested ? focusNested : null}
+                    labelOverridesById={labelOverridesById}
                     locate={locate}
                   />
                 </div>
                 {showLegend && <Legend theme={theme} recon={recon} />}
               </div>
             ) : compareResult && compare && diff ? (
-              <div className="split">
+              <div className={splitClass}>
                 <div className="split-pane">
                   <Canvas
                     result={result}
@@ -510,7 +620,12 @@ export function App() {
                     onToggleCollapse={toggleCollapse}
                     geneColors={geneColors}
                     focus={diffHidden ? null : diff.disagreeA}
+                    diffSet={diffHidden ? null : diff.disagreeA}
+                    hideOutside={onlyMatches && focusPrimary ? focusPrimary : null}
+                    labelOverridesById={labelOverridesById}
                     locate={locate}
+                    syncView={compareLinked ? viewB : null}
+                    onViewChange={compareLinked ? onPrimaryView : undefined}
                   />
                 </div>
                 <div className="split-pane">
@@ -520,48 +635,74 @@ export function App() {
                     options={renderOptions}
                     title={compareName ?? "B"}
                     paneId="compare"
-                    onSpeciesClick={toggleSwap}
-                    onToggleCollapse={toggleCollapse}
-                    geneColors={geneColors}
+                    onSpeciesClick={toggleCompareSwap}
+                    onToggleCollapse={toggleCompareCollapse}
+                    geneColors={compareGeneColors}
                     focus={diffHidden ? null : diff.disagreeB}
+                    diffSet={diffHidden ? null : diff.disagreeB}
+                    hideOutside={onlyMatches && focusPrimary ? focusPrimary : null}
+                    labelOverridesById={labelOverridesById}
                     locate={locate}
+                    syncView={compareLinked ? viewA : null}
+                    onViewChange={compareLinked ? onCompareView : undefined}
                   />
                 </div>
-                <div className="compare-badge">
+                {/* One bottom status bar instead of three absolutely-positioned
+                    overlays that used to cover each other. */}
+                <div className="compare-status" role="status">
                   {(() => {
-                    // Computed once; pure but called twice would be wasteful.
                     const pct = agreementPct(diff);
-                    return pct === null ? "N/A" : `${pct}% ${t.agree}`;
-                  })()} &middot; {diff.compared} {t.geneNodes}
+                    const spct = speciesAgreementPct(diff);
+                    return (
+                      <>
+                        <span className="compare-pct">
+                          {pct === null ? "N/A" : `${pct}% ${t.agree}`}
+                        </span>
+                        {spct !== null && (
+                          <span className="compare-sub">{t.speciesAgreeShort.replace("{p}", String(spct))}</span>
+                        )}
+                        <span className="compare-sub">{t.diffMatched.replace("{n}", String(diff.compared))}</span>
+                        <span className="compare-sub">{t.diffOnlyA.replace("{n}", String(diff.onlyA))}</span>
+                        <span className="compare-sub">{t.diffOnlyB.replace("{n}", String(diff.onlyB))}</span>
+                      </>
+                    );
+                  })()}
+                  <span className="compare-spacer" />
+                  <label className="compare-link">
+                    <input
+                      type="checkbox"
+                      checked={compareLinked}
+                      onChange={(e) => setCompareLinked(e.target.checked)}
+                    />
+                    {t.linkViews}
+                  </label>
                   <button
-                    className="diff-hide"
-                    data-tooltip={t.diffHide}
-                    aria-label={t.diffHide}
+                    className={`btn ghost diff-hide-btn${diffHidden ? " active" : ""}`}
                     aria-pressed={diffHidden}
+                    aria-label={t.diffHide}
+                    data-tooltip={t.diffHide}
                     onClick={() => setDiffHidden((v) => !v)}
                   >
                     {diffHidden ? "◉" : "◎"}
                   </button>
+                  <button
+                    className="btn ghost"
+                    aria-label={t.splitSideBySide}
+                    aria-pressed={!splitRow}
+                    onClick={() => setSplitRowPersist(!splitRow)}
+                  >
+                    {splitRow ? "⇔" : "⇕"}
+                  </button>
+                  {!diffHidden && (
+                    <span className="diff-legend-inline">
+                      <span className="diff-swatch" aria-hidden="true" />
+                      {t.diffLegend}
+                      <button className="btn ghost diff-jump" onClick={() => openPanel("diff")}>
+                        {t.panelDiff} ▸
+                      </button>
+                    </span>
+                  )}
                 </div>
-                {!diffHidden && (
-                  <div className="diff-legend">
-                    <span className="diff-swatch" aria-hidden="true" />
-                    {t.diffLegend}
-                    <button className="btn ghost diff-jump" onClick={() => openPanel("diff")}>
-                      {t.panelDiff} ▸
-                    </button>
-                  </div>
-                )}
-                {/* The event legend and the reading of the stats belong to every
-                    drawing, not only the single-pane one: the compare and nested
-                    splits render the same legend and stats line the exported
-                    figure carries for each pane. */}
-                {showLegend && <Legend theme={theme} recon={recon} />}
-                {stats && (
-                  <div className="stats">
-                    {countLabel(stats.species, t.species)} &middot; {countLabel(stats.trees, t.geneTreeUnit)} &middot; {countLabel(stats.genes, t.geneNodes)}
-                  </div>
-                )}
               </div>
             ) : (
               <>
@@ -574,6 +715,7 @@ export function App() {
                   onToggleCollapse={toggleCollapse}
                   geneColors={geneColors}
                   focus={focusPrimary}
+                  labelOverridesById={labelOverridesById}
                   locate={locate}
                 />
                 {showLegend && <Legend theme={theme} recon={recon} />}
@@ -586,6 +728,11 @@ export function App() {
             )
           ) : (
             <EmptyState />
+          )}
+          {presenting && (
+            <button className="exit-presentation" onClick={() => setPresenting(false)}>
+              {t.exitPresentation}
+            </button>
           )}
           {dragOver && <div className="drop-overlay">{t.dropToOpen}</div>}
           {loading && <LoadingOverlay />}
@@ -606,18 +753,32 @@ export function App() {
             </div>
           )}
           {pendingMulti && (
-            <div className="multi-open" role="dialog" aria-modal="true" aria-label={t.multiOpenTitle}>
-              <div className="multi-open-card" ref={multiDialogRef}>
-                <h3>{t.multiOpenTitle.replace("{n}", String(pendingMulti.length))}</h3>
+            <MultiFileDialog
+              files={pendingMulti}
+              onMerge={confirmMerge}
+              onTabs={confirmTabs}
+              onCancel={cancelPendingMulti}
+              dialogRef={multiDialogRef}
+            />
+          )}
+          {pendingRestore && (
+            <div className="multi-open" role="dialog" aria-modal="true" aria-label={t.restoreTitle}>
+              <div className="multi-open-card">
+                <h3>{t.restoreTitle}</h3>
+                <p className="muted">
+                  {t.restoreBody.replace(
+                    "{time}",
+                    pendingRestore.savedAt
+                      ? new Date(pendingRestore.savedAt).toLocaleString()
+                      : "—",
+                  )}
+                </p>
                 <div className="multi-open-actions">
-                  <button className="btn primary" onClick={confirmMerge}>
-                    {t.mergeMode}
+                  <button className="btn primary" onClick={onRestoreAccept}>
+                    {t.restoreAccept}
                   </button>
-                  <button className="btn" onClick={confirmTabs}>
-                    {t.tabMode}
-                  </button>
-                  <button className="btn ghost" onClick={cancelPendingMulti}>
-                    {t.annoCancel}
+                  <button className="btn" onClick={onRestoreDecline}>
+                    {t.restoreDecline}
                   </button>
                 </div>
               </div>
@@ -627,6 +788,20 @@ export function App() {
         {rightPanelOpen && (
           <div
             className="sidebar-resizer right"
+            role="separator"
+            aria-label={t.analyze}
+            aria-orientation="vertical"
+            tabIndex={0}
+            onKeyDown={(e) => {
+              const step = e.shiftKey ? 24 : 8;
+              if (e.key === "ArrowLeft") {
+                e.preventDefault();
+                setRightPanelWidth((w) => Math.min(680, w + step));
+              } else if (e.key === "ArrowRight") {
+                e.preventDefault();
+                setRightPanelWidth((w) => Math.max(320, w - step));
+              }
+            }}
             onPointerDown={onRightResizeDown}
               onPointerCancel={onRightResizeUp}
               onLostPointerCapture={onRightResizeUp}
@@ -647,6 +822,7 @@ export function App() {
         )}
       </div>
       <AnnotationEditor />
+      <NodeInspector />
       <HelpOverlay />
       <Settings open={settingsOpen} onClose={() => setSettingsOpen(false)} />
       <Onboarding visible={onboardVisible} onClose={() => setOnboardVisible(false)} />
@@ -656,19 +832,121 @@ export function App() {
   );
 }
 
-/** App-level singleton toast — rendered once so MenuBar and RightPanel never
- *  overlap each other's status messages. The colour follows the message kind
- *  (success green, error red, info accent). */
-function ToastSingleton() {
-  const toast = useStore((s) => s.toast);
-  if (!toast) return null;
-  return <ToastView data={toast} />;
+/**
+ * The multi-file open dialog used to be three opaque buttons: nothing said
+ * that merging draws every family on the FIRST file's species tree, and
+ * Escape did not close it. It now lists the files, states the base-species
+ * decision up front, reports species-tree conflicts, and closes on Escape.
+ */
+function MultiFileDialog({
+  files,
+  onMerge,
+  onTabs,
+  onCancel,
+  dialogRef,
+}: {
+  files: { name: string; text: string }[];
+  onMerge: () => void;
+  onTabs: () => void;
+  onCancel: () => void;
+  dialogRef: { current: HTMLDivElement | null };
+}) {
+  const t = useT();
+  // Lightweight species-name scan per file (names inside spTree): enough to
+  // warn when the files clearly disagree, without parsing them all.
+  const scan = useMemo(() => {
+    const speciesOf = (text: string): Set<string> => {
+      const out = new Set<string>();
+      const at = text.search(/<sptree/i);
+      if (at < 0) return out;
+      const spTree = text.slice(at);
+      const re = /<name>([^<]*)<\/name>/gi;
+      let m: RegExpExecArray | null;
+      while ((m = re.exec(spTree)) !== null) {
+        out.add(m[1].trim());
+        if (out.size > 400) break;
+      }
+      return out;
+    };
+    if (files.length < 2) return { conflicts: 0 };
+    const base = speciesOf(files[0].text);
+    let conflicts = 0;
+    for (const f of files.slice(1)) {
+      const sp = speciesOf(f.text);
+      if (sp.size > 0 && base.size > 0) {
+        let differs = false;
+        for (const n of sp) if (!base.has(n)) differs = true;
+        for (const n of base) if (!sp.has(n)) differs = true;
+        if (differs) conflicts++;
+      }
+    }
+    return { conflicts };
+  }, [files]);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        e.stopPropagation();
+        onCancel();
+      }
+    };
+    document.addEventListener("keydown", onKey, true);
+    return () => document.removeEventListener("keydown", onKey, true);
+  }, [onCancel]);
+
+  return (
+    <div className="multi-open" role="dialog" aria-modal="true" aria-label={t.multiOpenTitle}>
+      <div className="multi-open-card" ref={dialogRef}>
+        <h3>{t.multiOpenTitle.replace("{n}", String(files.length))}</h3>
+        <ul className="multi-open-files">
+          {files.map((f, i) => (
+            <li key={`${f.name}-${i}`}>
+              <span className="multi-open-name">{f.name}</span>
+              {i === 0 && <span className="multi-open-badge">{t.mergeBase.replace("{name}", f.name)}</span>}
+            </li>
+          ))}
+        </ul>
+        <p className="muted">
+          {scan.conflicts > 0
+            ? t.mergeConflict.replace("{n}", String(scan.conflicts))
+            : t.mergeNoConflict}
+        </p>
+        <div className="multi-open-actions">
+          <button className="btn primary" onClick={onMerge}>
+            {t.mergeMode}
+          </button>
+          <button className="btn" onClick={onTabs}>
+            {t.tabMode}
+          </button>
+          <button className="btn ghost" onClick={onCancel}>
+            {t.annoCancel}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
 }
 
-function ToastView({ data }: { data: ToastData }) {
+/** App-level singleton toast — rendered once so MenuBar and RightPanel never
+ *  overlap each other's status messages. Errors use role="alert" (they must
+ *  interrupt) and can be dismissed by hand. */
+function ToastSingleton() {
+  const toast = useStore((s) => s.toast);
+  const clearToast = useStore((s) => s.clearToast);
+  if (!toast) return null;
+  return <ToastView data={toast} onClose={clearToast} />;
+}
+
+function ToastView({ data, onClose }: { data: ToastData; onClose: () => void }) {
+  const t = useT();
+  const isError = data.kind === "error";
   return (
-    <div className={`toast ${data.kind}`} role="status">
-      {data.msg}
+    <div className={`toast ${data.kind}`} role={isError ? "alert" : "status"}>
+      <span className="toast-msg">{data.msg}</span>
+      <button className="toast-close" aria-label={t.close} onClick={onClose}>
+        ✕
+      </button>
     </div>
   );
 }

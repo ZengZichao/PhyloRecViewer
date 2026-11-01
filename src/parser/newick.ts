@@ -21,7 +21,8 @@ const STOP = new Set(["(", ")", ",", ":", ";", "["]);
 
 /**
  * Percent-encode the characters that would otherwise break NHX comment
- * parsing (the `:` key/value separator and the `[` `]` comment delimiters).
+ * parsing (the `:` key/value separator, the `[` `]` comment delimiters and the
+ * `|` transfer donor/recipient separator).
  * Species / strain names such as `Candida sp. JH-1:2` therefore survive an
  * NHX export → import round-trip without truncation.
  */
@@ -30,17 +31,18 @@ export function encodeNhxValue(v: string): string {
     .replace(/%/g, "%25")
     .replace(/:/g, "%3A")
     .replace(/\[/g, "%5B")
-    .replace(/\]/g, "%5D");
+    .replace(/\]/g, "%5D")
+    .replace(/\|/g, "%7C");
 }
 
 /** Inverse of {@link encodeNhxValue}.
  *
- * Only the four escapes encodeNhxValue ever produces are decoded: decoding any
+ * Only the five escapes encodeNhxValue ever produces are decoded: decoding any
  * `%XX` blindly would rewrite third-party values holding a literal percent
  * followed by hex digits (a label like `100%AE` would become `100®`).
  */
 export function decodeNhxValue(v: string): string {
-  return v.replace(/%(25|3A|5B|5D)/gi, (m) => String.fromCharCode(parseInt(m.slice(1), 16)));
+  return v.replace(/%(25|3A|5B|5D|7C)/gi, (m) => String.fromCharCode(parseInt(m.slice(1), 16)));
 }
 
 /** Parse a Newick/NHX string into a forest (one entry per `;`-terminated tree). */

@@ -4,6 +4,7 @@ import { useStore } from "../state/store";
 import { defaultLayoutOptions } from "../layout";
 import { defaultRenderOptions } from "../render/options";
 import { loadPrefs, savePrefs, setOnboarded } from "../state/prefs";
+import { hasUnrecoveredSnapshot, unrecoveredSnapshotText, clearAutosaveSnapshot } from "../state/autosave";
 import type { ThemePref } from "../render/theme";
 import { useFocusTrap } from "./hooks";
 
@@ -25,11 +26,16 @@ export function Settings({ open, onClose }: { open: boolean; onClose: () => void
   const layoutOptions = useStore((s) => s.layoutOptions);
   const renderOptions = useStore((s) => s.renderOptions);
   const applyViewState = useStore((s) => s.applyViewState);
+  const autosaveAt = useStore((s) => s.autosaveAt);
+  const autosaveFailed = useStore((s) => s.autosaveFailed);
+  const showToast = useStore((s) => s.showToast);
   const [hasDefault, setHasDefault] = useState(false);
+  const [quarantined, setQuarantined] = useState(false);
 
   useEffect(() => {
     if (!open) return;
     setHasDefault(!!loadPrefs().defaultView);
+    setQuarantined(hasUnrecoveredSnapshot());
   }, [open]);
 
   useEffect(() => {
@@ -69,7 +75,7 @@ export function Settings({ open, onClose }: { open: boolean; onClose: () => void
     const { locale } = loadPrefs();
     localStorage.removeItem("rpv.prefs");
     setTheme("system");
-    setPngDpi(600);
+    setPngDpi(300);
     savePrefs({ ...loadPrefs(), locale });
     applyViewState({ layoutOptions: { ...defaultLayoutOptions }, renderOptions: { ...defaultRenderOptions }, resetHistory: false });
     setHasDefault(false);
@@ -95,7 +101,7 @@ export function Settings({ open, onClose }: { open: boolean; onClose: () => void
       <div className="help-card settings-card" ref={dialogRef} onClick={(e) => e.stopPropagation()}>
         <div className="help-head">
           <span className="sidebar-title">{t.prefsTitle}</span>
-          <button className="panel-collapse" onClick={onClose} data-tooltip={t.collapse} aria-label={t.collapse}>
+          <button className="panel-collapse" onClick={onClose} data-tooltip={t.close} aria-label={t.close}>
             ✕
           </button>
         </div>
@@ -131,13 +137,13 @@ export function Settings({ open, onClose }: { open: boolean; onClose: () => void
 
         <h4>{t.pngResolution}</h4>
         <div className="settings-row">
-          {[600, 1200, 2400, 4800].map((sc) => (
+          {[192, 300, 600, 1200, 2400, 4800].map((sc) => (
             <button
               key={sc}
               className={`btn ghost${pngDpi === sc ? " active" : ""}`}
               onClick={() => setPngDpi(sc)}
             >
-              {sc}
+              {sc === 192 ? t.pngScreen : `${sc} DPI`}
             </button>
           ))}
         </div>
@@ -166,6 +172,53 @@ export function Settings({ open, onClose }: { open: boolean; onClose: () => void
             </button>
           )}
         </div>
+
+        <h4>{t.autosaveSection}</h4>
+        <p className="settings-note">
+          {autosaveFailed
+            ? t.autosaveFailedLabel
+            : autosaveAt
+              ? t.autosaveOn.replace("{time}", new Date(autosaveAt).toLocaleString())
+              : t.autosaveNone}
+        </p>
+        <div className="settings-row">
+          <button
+            className="btn ghost"
+            onClick={() => {
+              clearAutosaveSnapshot();
+              showToast(t.clearAutosaveDone, "success");
+            }}
+          >
+            {t.clearAutosave}
+          </button>
+        </div>
+
+        {quarantined && (
+          <>
+            <h4>{t.recoverySection}</h4>
+            <p className="settings-note">{t.recoveryFound}</p>
+            <div className="settings-row">
+              <button
+                className="btn"
+                onClick={() => {
+                  const text = unrecoveredSnapshotText();
+                  if (!text) return;
+                  const blob = new Blob([text], { type: "application/json" });
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement("a");
+                  a.href = url;
+                  a.download = "phylorecviewer-recovered-session.json";
+                  document.body.appendChild(a);
+                  a.click();
+                  a.remove();
+                  setTimeout(() => URL.revokeObjectURL(url), 1000);
+                }}
+              >
+                {t.recoveryExport}
+              </button>
+            </div>
+          </>
+        )}
 
         <div className="settings-divider" />
         <div className="settings-row">

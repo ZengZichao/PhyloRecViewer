@@ -493,9 +493,10 @@ describe("PNG rasterization and canvas limits", () => {
     expect(out.blob.type).toBe("image/png");
   });
 
-  it("holds the DPI defaults the user manual documents (600 dpi)", () => {
-    expect(DEFAULT_PNG_DPI).toBe(600);
-    expect(MIN_PNG_DPI).toBe(DEFAULT_PNG_DPI);
+  it("holds the DPI defaults the user manual documents (300 dpi)", () => {
+    expect(DEFAULT_PNG_DPI).toBe(300);
+    // The floor allows screen-resolution exports (72) as well.
+    expect(MIN_PNG_DPI).toBe(72);
   });
 
   it("keeps a 1x floor when the requested DPI is under the screen reference", async () => {

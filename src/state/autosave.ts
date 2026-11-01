@@ -21,6 +21,8 @@
  */
 import { useStore, friendlyParseError, type DocState } from "./store";
 import { ALL_EVENTS } from "../analysis/focus";
+import { defaultLayoutOptions } from "../layout";
+import { defaultRenderOptions } from "../render/options";
 import {
   serializeSession,
   parseSession,
@@ -34,6 +36,9 @@ import {
 const KEY = "rpv.autosave.v1";
 /** Copy of a snapshot the app failed to restore. */
 const UNRECOVERED_KEY = "rpv.autosave.v1.unrecovered";
+/** Wall-clock time of the last successful snapshot write (advisory, for the
+ *  "restore last workspace?" prompt). */
+const TIME_KEY = "rpv.autosave.v1.time";
 const DEBOUNCE_MS = 1000;
 
 /** Counter for synthetic ids assigned to restored (inactive) tabs. Declared
@@ -44,27 +49,47 @@ let docsSeq = 1;
 interface TabViewSlice {
   swapped: string[];
   nestedSwapped: string[];
+  compareSwapped: string[];
   collapsed: string[];
+  compareCollapsed: string[];
   geneColors: Record<number, string>;
+  compareGeneColors: Record<number, string>;
   annotations: Record<string, { text: string; color: string }>;
   labelOverrides: Record<string, string>;
+  labelOverridesById: Record<string, string>;
+  layoutOptions: typeof defaultLayoutOptions;
+  renderOptions: typeof defaultRenderOptions;
 }
 
 function viewSliceOf(d: {
   swapped: Set<string>;
   nestedSwapped: Set<string>;
+  compareSwapped: Set<string>;
   collapsed: Set<string>;
+  compareCollapsed: Set<string>;
   geneColors: Record<number, string>;
+  compareGeneColors: Record<number, string>;
   annotations: Record<string, { text: string; color: string }>;
   labelOverrides: Record<string, string>;
+  labelOverridesById: Record<string, string>;
+  layoutOptions: typeof defaultLayoutOptions;
+  renderOptions: typeof defaultRenderOptions;
 }): TabViewSlice {
   return {
     swapped: [...d.swapped],
     nestedSwapped: [...d.nestedSwapped],
+    compareSwapped: [...d.compareSwapped],
     collapsed: [...d.collapsed],
+    compareCollapsed: [...d.compareCollapsed],
     geneColors: d.geneColors,
+    compareGeneColors: d.compareGeneColors,
     annotations: d.annotations,
     labelOverrides: d.labelOverrides,
+    labelOverridesById: d.labelOverridesById,
+    // Layout/style options belong to the document, so a background tab keeps
+    // its own arrangement across saves.
+    layoutOptions: d.layoutOptions,
+    renderOptions: d.renderOptions,
   };
 }
 
@@ -86,6 +111,7 @@ function savedTabOfDoc(title: string | null, d: DocState): SavedTab | null {
     ...tabViewOfDoc(d),
     searchQuery: d.searchQuery,
     searchRegex: d.searchRegex,
+    onlyMatches: d.onlyMatches,
     eventFilter: d.eventFilter,
     familyFilter: d.familyFilter ? [...d.familyFilter] : null,
     confidenceMin: d.confidenceMin,
@@ -149,14 +175,19 @@ export function sessionDataOfStore(): SessionData | null {
     themeId: st.themeId,
     swapped: [...st.swapped],
     nestedSwapped: [...st.nestedSwapped],
+    compareSwapped: [...st.compareSwapped],
     collapsed: [...st.collapsed],
+    compareCollapsed: [...st.compareCollapsed],
     geneColors: st.geneColors,
+    compareGeneColors: st.compareGeneColors,
     annotations: st.annotations,
     labelOverrides: st.labelOverrides,
+    labelOverridesById: st.labelOverridesById,
     tabs: savedTabs.length > 0 ? savedTabs : undefined,
     activeTabIndex: tabsActiveTabIndex(savedTabs),
     searchQuery: st.searchQuery,
     searchRegex: st.searchRegex,
+    onlyMatches: st.onlyMatches,
     eventFilter: st.eventFilter,
     familyFilter: st.familyFilter ? [...st.familyFilter] : null,
     confidenceMin: st.confidenceMin,
@@ -205,21 +236,32 @@ function lazyDocFrom(tab: SavedTab): DocState {
     nestedName: tab.nestedName ?? null,
     nestedXml: tab.nestedXml ?? null,
     nestedError: null,
+    nestedWarnings: [],
     compare: null,
     compareName: tab.compareName ?? null,
     compareXml: tab.compareXml ?? null,
     compareError: null,
+    compareWarnings: [],
+    // Restored tabs carry their own layout/style options; a session written by
+    // an older version without them falls back to the app defaults.
+    layoutOptions: tab.layoutOptions ?? { ...defaultLayoutOptions },
+    renderOptions: tab.renderOptions ?? { ...defaultRenderOptions },
     swapped: new Set(tab.swapped ?? []),
     nestedSwapped: new Set(tab.nestedSwapped ?? []),
+    compareSwapped: new Set(tab.compareSwapped ?? []),
     collapsed: new Set(tab.collapsed ?? []),
+    compareCollapsed: new Set(tab.compareCollapsed ?? []),
     geneColors: tab.geneColors ?? {},
+    compareGeneColors: tab.compareGeneColors ?? {},
     annotations: tab.annotations ?? {},
     labelOverrides: tab.labelOverrides ?? {},
+    labelOverridesById: tab.labelOverridesById ?? {},
     annotating: null,
     lazyDoc: tab,
     sampleId: null,
     searchQuery: tab.searchQuery ?? "",
     searchRegex: tab.searchRegex ?? false,
+    onlyMatches: tab.onlyMatches ?? false,
     eventFilter: tab.eventFilter ?? { ...ALL_EVENTS },
     familyFilter: tab.familyFilter ? new Set(tab.familyFilter) : null,
     confidenceMin: tab.confidenceMin ?? 0,
@@ -227,6 +269,9 @@ function lazyDocFrom(tab: SavedTab): DocState {
     locate: null,
     past: [],
     future: [],
+    // A restored workspace IS the clean baseline: no phantom dirty dot.
+    editSeq: 0,
+    savedSeq: 0,
   };
 }
 
@@ -327,10 +372,15 @@ function workspaceSignature(st: ReturnType<typeof useStore.getState>): string {
     st.themeId,
     setSig(st.swapped),
     setSig(st.nestedSwapped),
+    setSig(st.compareSwapped),
     setSig(st.collapsed),
+    setSig(st.compareCollapsed),
     mapSig(st.geneColors),
+    mapSig(st.compareGeneColors),
     mapSig(st.annotations),
     mapSig(st.labelOverrides),
+    mapSig(st.labelOverridesById),
+    st.onlyMatches ? 1 : 0,
     st.searchQuery,
     st.searchRegex,
     st.confidenceMin,
@@ -420,6 +470,7 @@ export function writeAutosave(): void {
     if (hasUnrecoveredSnapshot()) return;
     try {
       localStorage.removeItem(KEY);
+      localStorage.removeItem(TIME_KEY);
     } catch {
       // ignore
     }
@@ -438,8 +489,7 @@ export function writeAutosave(): void {
     nestedXml: st.nestedXml,
     compareName: st.compareName,
     compareXml: st.compareXml,
-    layoutOptions: st.layoutOptions,
-    renderOptions: st.renderOptions,
+    // layout/render options come from viewSliceOf(st) below.
     themeId: st.themeId,
     ...viewSliceOf(st),
     tabs: tabs.length > 0 ? tabs : undefined,
@@ -447,6 +497,7 @@ export function writeAutosave(): void {
     activeTabIndex: activeIndexOf(st),
     searchQuery: st.searchQuery,
     searchRegex: st.searchRegex,
+    onlyMatches: st.onlyMatches,
     eventFilter: st.eventFilter,
     familyFilter: st.familyFilter ? [...st.familyFilter] : null,
     confidenceMin: st.confidenceMin,
@@ -457,11 +508,18 @@ export function writeAutosave(): void {
   try {
     text = serializeSession(data);
     localStorage.setItem(KEY, text);
+    try {
+      localStorage.setItem(TIME_KEY, String(Date.now()));
+    } catch {
+      // The snapshot itself landed; the timestamp is advisory.
+    }
+    useStore.setState({ autosaveAt: Date.now(), autosaveFailed: false });
   } catch (e) {
     // Private mode / quota exceeded: the stored snapshot stays exactly as it is
     // and, because the signature was NOT advanced, the next change retries the
     // write. Say so once - silent autosave death is how work gets lost.
     console.warn("PhyloRecViewer: autosave write failed", e);
+    useStore.setState({ autosaveFailed: true });
     if (!unavailableNoted) {
       unavailableNoted = true;
       const zh = st.locale === "zh";
@@ -483,6 +541,62 @@ export function writeAutosave(): void {
   }
 }
 
+/**
+ * The ONE restore path for saved workspaces, shared by the startup autosave
+ * restore and File → Open Session. It handles merged documents via
+ * `sourceFiles` (a menu-load that only read `xml` used to drop every merged
+ * family silently), the search/filter criteria, the compare/nested layers and
+ * the background tabs, and marks the result as the clean dirty-baseline.
+ */
+export function restoreSessionData(data: SessionData): void {
+  const st = useStore.getState();
+  // Restore a merged document from sourceFiles, or a single-file document.
+  // An empty top-level xml means the workspace was saved with a blank active
+  // tab but other tabs present - restore only those tabs.
+  if (data.xml) {
+    if (data.sourceFiles && data.sourceFiles.length > 1) {
+      st.loadMany(data.sourceFiles);
+    } else {
+      st.loadXml(data.xml, data.fileName ?? "session");
+    }
+  }
+  if (data.nestedXml) st.loadNestedXml(data.nestedXml, data.nestedName ?? "nested");
+  if (data.compareXml) st.loadCompareXml(data.compareXml, data.compareName ?? "compare");
+  st.applyViewState({
+    layoutOptions: data.layoutOptions,
+    renderOptions: data.renderOptions,
+    themeId: data.themeId,
+    swapped: data.swapped,
+    nestedSwapped: data.nestedSwapped,
+    compareSwapped: data.compareSwapped,
+    collapsed: data.collapsed,
+    compareCollapsed: data.compareCollapsed,
+    geneColors: data.geneColors,
+    compareGeneColors: data.compareGeneColors,
+    annotations: data.annotations,
+    labelOverrides: data.labelOverrides,
+    labelOverridesById: data.labelOverridesById,
+    // A restored workspace IS the clean baseline: no phantom dirty dot.
+    clean: true,
+  });
+
+  // Restore the search/filter state carried by the session document.
+  if (data.searchQuery !== undefined || data.searchRegex !== undefined) {
+    useStore.setState({
+      searchQuery: data.searchQuery ?? "",
+      searchRegex: data.searchRegex ?? false,
+      onlyMatches: data.onlyMatches ?? false,
+      eventFilter: data.eventFilter ?? { ...ALL_EVENTS },
+      familyFilter: data.familyFilter ? new Set(data.familyFilter) : null,
+      confidenceMin: data.confidenceMin ?? 0,
+      confidenceMax: data.confidenceMax ?? 1,
+    });
+  }
+
+  // Restore the other tabs (unparsed; they build themselves on first open).
+  restoreTabs(data.tabs, { activeTabIndex: data.activeTabIndex });
+}
+
 /** Restore the last autosaved workspace into the active tab.
  *
  *  Returns true only when the snapshot really produced a usable workspace: the
@@ -500,46 +614,8 @@ export function restoreAutosave(): boolean {
     return false;
   }
 
-  const st = useStore.getState();
   try {
-    // Restore a merged document from sourceFiles, or a single-file document.
-    // An empty top-level xml means the workspace was saved with a blank active
-    // tab but other tabs present - restore only those tabs.
-    if (data.xml) {
-      if (data.sourceFiles && data.sourceFiles.length > 1) {
-        st.loadMany(data.sourceFiles);
-      } else {
-        st.loadXml(data.xml, data.fileName ?? "session");
-      }
-    }
-    if (data.nestedXml) st.loadNestedXml(data.nestedXml, data.nestedName ?? "nested");
-    if (data.compareXml) st.loadCompareXml(data.compareXml, data.compareName ?? "compare");
-    st.applyViewState({
-      layoutOptions: data.layoutOptions,
-      renderOptions: data.renderOptions,
-      themeId: data.themeId,
-      swapped: data.swapped,
-      nestedSwapped: data.nestedSwapped,
-      collapsed: data.collapsed,
-      geneColors: data.geneColors,
-      annotations: data.annotations,
-      labelOverrides: data.labelOverrides,
-    });
-
-    // Restore the search/filter state carried by the session document.
-    if (data.searchQuery !== undefined || data.searchRegex !== undefined) {
-      useStore.setState({
-        searchQuery: data.searchQuery ?? "",
-        searchRegex: data.searchRegex ?? false,
-        eventFilter: data.eventFilter ?? { ...ALL_EVENTS },
-        familyFilter: data.familyFilter ? new Set(data.familyFilter) : null,
-        confidenceMin: data.confidenceMin ?? 0,
-        confidenceMax: data.confidenceMax ?? 1,
-      });
-    }
-
-    // Restore the other tabs (unparsed; they build themselves on first open).
-    restoreTabs(data.tabs, { activeTabIndex: data.activeTabIndex });
+    restoreSessionData(data);
   } catch (e) {
     console.warn("PhyloRecViewer: autosave restore crashed", e);
     quarantine(text);
@@ -586,9 +662,54 @@ const PERSIST_KEYS = [
   "tabs", "activeTabId", "docs",
 ] as const;
 
+/** Is there a stored snapshot to offer restoring? (Cheap: no JSON parsing.) */
+export function hasAutosaveSnapshot(): boolean {
+  return readItem(KEY) !== null;
+}
+
+/** When the last successful snapshot was written, or null. */
+export function autosaveSnapshotTime(): number | null {
+  const raw = readItem(TIME_KEY);
+  const t = raw != null ? Number(raw) : NaN;
+  return Number.isFinite(t) ? t : null;
+}
+
+/** Forget the stored snapshot (and its timestamp). Used by "start blank" on
+ *  the restore prompt and by Settings → clear autosave data. */
+export function clearAutosaveSnapshot(): void {
+  try {
+    localStorage.removeItem(KEY);
+    localStorage.removeItem(TIME_KEY);
+  } catch {
+    // ignore
+  }
+  lastSignature = "";
+}
+
+/** Write the pending snapshot NOW (used before unload / when hidden). The
+ *  1 s debounce otherwise loses the final seconds of edits on a quick
+ *  close: no beforeunload/pagehide/visibilitychange hook existed. */
+export function flushAutosave(): void {
+  if (timer !== null) {
+    window.clearTimeout(timer);
+    timer = null;
+  }
+  writeAutosave();
+}
+
+/** Install the unload/hidden flush listeners. Call once at startup. */
+export function installUnloadFlush(): void {
+  window.addEventListener("beforeunload", flushAutosave);
+  window.addEventListener("pagehide", flushAutosave);
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "hidden") flushAutosave();
+  });
+}
+
 /** Begin autosaving on store changes (debounced, with a narrow selector so
  *  only document/view state changes trigger a write). Call once at startup. */
 export function startAutosave(): void {
+  installUnloadFlush();
   let prev = PERSIST_KEYS.map((k) => useStore.getState()[k]);
   useStore.subscribe((s) => {
     const next = PERSIST_KEYS.map((k) => s[k]);

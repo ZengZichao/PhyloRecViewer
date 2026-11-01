@@ -2,8 +2,13 @@ import { defaultLayoutOptions, type LayoutOptions } from "./layout";
 import { defaultRenderOptions, type LabelStyle, type RenderOptions } from "./render/options";
 import type { ThemePref } from "./render/theme";
 
-/** Session schema version this build writes; bump when the stored shape changes. */
-export const CURRENT_SESSION_VERSION = 1;
+/**
+ * Session schema version this build writes; bump when the stored shape changes.
+ * v2 adds the compare-pane view state (mirror/collapse/colors), the by-node
+ * label renames, `onlyMatches`, and per-tab layout/render options. v1 files
+ * still load: every v2 field is optional and defaults sanely.
+ */
+export const CURRENT_SESSION_VERSION = 2;
 
 /**
  * A saved session holds everything needed to reproduce a drawing offline: the
@@ -29,12 +34,20 @@ export interface SessionData {
   swapped: string[];
   /** The same mirror set for the nested (host) drawing, kept separate from `swapped` above. */
   nestedSwapped: string[];
+  /** Mirror set of the compare pane (v2). */
+  compareSwapped?: string[];
   collapsed: string[];
+  /** Collapsed subtrees of the compare pane (v2). */
+  compareCollapsed?: string[];
   geneColors: Record<number, string>;
+  /** Family colors of the compare pane (v2). */
+  compareGeneColors?: Record<number, string>;
   /** User notes on gene nodes, keyed by node id. */
   annotations?: Record<string, { text: string; color: string }>;
   /** User renames of species/gene labels, keyed by original label text. */
   labelOverrides?: Record<string, string>;
+  /** User renames keyed by NODE ID, renaming one of several same-named labels (v2). */
+  labelOverridesById?: Record<string, string>;
   /** Snapshot of the other, inactive tabs; the fields above are the
    *  active tab. */
   tabs?: SavedTab[];
@@ -47,6 +60,8 @@ export interface SessionData {
   /** Search & filter criteria; absent means the defaults. */
   searchQuery?: string;
   searchRegex?: boolean;
+  /** "Show only matches" flag (v2). */
+  onlyMatches?: boolean;
   eventFilter?: { speciation: boolean; duplication: boolean; loss: boolean; transfer: boolean; leaf: boolean };
   familyFilter?: number[] | null;
   confidenceMin?: number;
@@ -63,15 +78,24 @@ export interface SavedTab {
   nestedXml?: string | null;
   compareName?: string | null;
   compareXml?: string | null;
+  /** Per-tab layout options (v2); absent = app defaults. */
+  layoutOptions?: LayoutOptions;
+  /** Per-tab render/style options (v2). */
+  renderOptions?: RenderOptions;
   swapped: string[];
   nestedSwapped: string[];
+  compareSwapped?: string[];
   collapsed: string[];
+  compareCollapsed?: string[];
   geneColors: Record<number, string>;
+  compareGeneColors?: Record<number, string>;
   annotations?: Record<string, { text: string; color: string }>;
   labelOverrides?: Record<string, string>;
+  labelOverridesById?: Record<string, string>;
   /** Search & filter criteria. */
   searchQuery?: string;
   searchRegex?: boolean;
+  onlyMatches?: boolean;
   eventFilter?: { speciation: boolean; duplication: boolean; loss: boolean; transfer: boolean; leaf: boolean };
   familyFilter?: number[] | null;
   confidenceMin?: number;
@@ -178,6 +202,8 @@ export function sanitizeRenderOptions(v: unknown): RenderOptions {
   out.showEvents = asBool(r.showEvents, defaultRenderOptions.showEvents);
   out.showSupport = asBool(r.showSupport, defaultRenderOptions.showSupport);
   out.speciesGradient = asBool(r.speciesGradient, defaultRenderOptions.speciesGradient);
+  out.showSpeciesCladeNames = asBool(r.showSpeciesCladeNames, defaultRenderOptions.showSpeciesCladeNames);
+  out.fullLabels = asBool(r.fullLabels, defaultRenderOptions.fullLabels);
   // Clamp transfer-bow to the on-screen slider domain [0, 0.5] (Sidebar), so a
   // hand-edited session cannot carry a value the UI can neither show nor adjust:
   // the slider caps at 0.5, so a ceiling of 1 would let the arc bow past it.
@@ -278,14 +304,21 @@ function sanitizeSavedTab(v: unknown): SavedTab | null {
     nestedXml: typeof r.nestedXml === "string" ? r.nestedXml : null,
     compareName: typeof r.compareName === "string" ? r.compareName : null,
     compareXml: typeof r.compareXml === "string" ? r.compareXml : null,
+    layoutOptions: r.layoutOptions !== undefined ? sanitizeLayoutOptions(r.layoutOptions) : undefined,
+    renderOptions: r.renderOptions !== undefined ? sanitizeRenderOptions(r.renderOptions) : undefined,
     swapped: asStringArray(r.swapped),
     nestedSwapped: asStringArray(r.nestedSwapped),
+    compareSwapped: asStringArray(r.compareSwapped),
     collapsed: asStringArray(r.collapsed),
+    compareCollapsed: asStringArray(r.compareCollapsed),
     geneColors: sanitizeGeneColors(r.geneColors),
+    compareGeneColors: sanitizeGeneColors(r.compareGeneColors),
     annotations: sanitizeAnnotations(r.annotations),
     labelOverrides: sanitizeStringRecord(r.labelOverrides),
+    labelOverridesById: sanitizeStringRecord(r.labelOverridesById),
     searchQuery: typeof r.searchQuery === "string" ? r.searchQuery : undefined,
     searchRegex: asBool(r.searchRegex, false),
+    onlyMatches: asBool(r.onlyMatches, false),
     eventFilter: sanitizeEventFilter(r.eventFilter),
     familyFilter: sanitizeFamilyFilter(r.familyFilter),
     confidenceMin: asNumber(r.confidenceMin, 0, 0, 1),
@@ -353,14 +386,19 @@ export function parseSession(text: string): SessionData {
     themeId: obj.themeId === "dark" ? "dark" : obj.themeId === "system" ? "system" : "light",
     swapped: asStringArray(obj.swapped),
     nestedSwapped: asStringArray(obj.nestedSwapped),
+    compareSwapped: asStringArray(obj.compareSwapped),
     collapsed: asStringArray(obj.collapsed),
+    compareCollapsed: asStringArray(obj.compareCollapsed),
     geneColors: sanitizeGeneColors(obj.geneColors),
+    compareGeneColors: sanitizeGeneColors(obj.compareGeneColors),
     annotations: sanitizeAnnotations(obj.annotations),
     labelOverrides: sanitizeStringRecord(obj.labelOverrides),
+    labelOverridesById: sanitizeStringRecord(obj.labelOverridesById),
     tabs: tabs.length > 0 ? tabs : undefined,
     activeTabIndex,
     searchQuery: typeof obj.searchQuery === "string" ? obj.searchQuery : undefined,
     searchRegex: asBool(obj.searchRegex, false),
+    onlyMatches: asBool(obj.onlyMatches, false),
     eventFilter: sanitizeEventFilter(obj.eventFilter),
     familyFilter: sanitizeFamilyFilter(obj.familyFilter),
     confidenceMin: asNumber(obj.confidenceMin, 0, 0, 1),

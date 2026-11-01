@@ -30,6 +30,8 @@ export interface SceneProps {
   highlight?: Set<string> | null;
   /** "Show only matches": nodes outside this set are fully hidden (opacity 0). */
   hideOutside?: Set<string> | null;
+  /** Nodes ring-highlighted (compare disagreements) instead of dimmed. */
+  diffSet?: Set<string> | null;
   interactive?: boolean;
   /** Level of detail; heavily zoomed-out views drop labels/glyphs. */
   detail?: DetailLevel;
@@ -45,8 +47,13 @@ export interface SceneProps {
   onSpeciesClick?: (speciesName: string) => void;
   /** User renames of labels, keyed by original label text. */
   labelOverrides?: Record<string, string>;
-  /** Click a species or gene label to rename it. */
-  onLabelClick?: (originalLabel: string, evt: ReactMouseEvent) => void;
+  /** User renames keyed by NODE ID: renaming one of several same-named labels. */
+  labelOverridesById?: Record<string, string>;
+  /** Click a species or gene label to rename it (node id enables a per-node
+   *  rename instead of rewriting every label carrying the same text). */
+  onLabelClick?: (originalLabel: string, nodeId: string | undefined, evt: ReactMouseEvent) => void;
+  /** Click a transfer arc to inspect it (donor, recipient, family, time). */
+  onTransferClick?: (edge: TransferEdge) => void;
   /** Per gene-tree color overrides, keyed by tree index. */
   geneColors?: Record<number, string>;
   /** User notes to draw on gene nodes, keyed by node id. */
@@ -198,7 +205,10 @@ export function Scene(props: SceneProps) {
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
-      role={ariaLabel ? "img" : undefined}
+      // "group", not "img": an image role flattens the subtree for assistive
+      // tech, hiding the interactive gene buttons inside it. The aria-label
+      // still summarizes the drawing for everyone.
+      role={ariaLabel ? "group" : undefined}
       aria-label={ariaLabel}
       viewBox={viewportMode ? undefined : `0 0 ${proj.width} ${proj.height}`}
       width={viewportMode ? "100%" : proj.width}
@@ -250,6 +260,9 @@ export function Scene(props: SceneProps) {
           options={options}
           highlight={props.highlight}
           hideOutside={props.hideOutside}
+          diffSet={props.diffSet}
+          labelOverridesById={props.labelOverridesById}
+          onTransferClick={props.onTransferClick}
           interactive={props.interactive}
           detail={props.detail}
           eventLabels={props.eventLabels}
@@ -301,7 +314,10 @@ const SceneContent = memo(function SceneContent({
   onGeneKeyDown,
   onSpeciesClick,
   labelOverrides,
+  labelOverridesById,
   onLabelClick,
+  onTransferClick,
+  diffSet = null,
   geneColors,
   annotations = {},
   viewport = null,
@@ -326,6 +342,9 @@ const SceneContent = memo(function SceneContent({
       {options.showSpeciesLabels && showLabels && (
         <g className="species-labels">{renderSpeciesLabels(species.nodes, theme, options, proj, pos, speciesLabelDy, labelOverrides, onLabelClick)}</g>
       )}
+      {options.showSpeciesCladeNames && showLabels && (
+        <g className="species-clade-labels">{renderSpeciesCladeLabels(species.nodes, theme, options, proj, pos, labelOverrides, onLabelClick)}</g>
+      )}
 
       <g className="gene-layer">
         {recon.geneTrees.map((tree) => (
@@ -337,14 +356,14 @@ const SceneContent = memo(function SceneContent({
               onGeneLeave,
               onGeneClick,
               onGeneKeyDown,
-            }, viewport, { word: collapsedWord, leaves: leavesWord, hint: expandHint }, hideOutside)}
-            {options.showGeneLabels && showLabels && renderGeneLabels(tree.nodes, theme, options, proj, pos, highlight, hidden, collapsed, colorOf(tree.index), viewport, hideOutside, labelOverrides, onLabelClick)}
+            }, viewport, { word: collapsedWord, leaves: leavesWord, hint: expandHint }, hideOutside, diffSet)}
+            {options.showGeneLabels && showLabels && renderGeneLabels(tree.nodes, theme, options, proj, pos, highlight, hidden, collapsed, colorOf(tree.index), viewport, hideOutside, labelOverrides, labelOverridesById, onLabelClick)}
           </Fragment>
         ))}
       </g>
 
       <g className="transfer-layer">
-        {renderTransfers(transfers, options, proj, pos, arrowId, highlight, hideOutside, colorOf)}
+        {renderTransfers(transfers, options, proj, pos, arrowId, highlight, hideOutside, colorOf, onTransferClick, eventLabels)}
       </g>
 
       <g className="annotation-layer">
@@ -405,6 +424,18 @@ function renderSpecies(
       ? {
           style: { cursor: "pointer" as const },
           onClick: () => onSpeciesClick(n.name),
+          // Keyboard parity for the mirror gesture: the species tubes were
+          // mouse-only, which stranded keyboard users at a core interaction.
+          tabIndex: 0,
+          role: "button" as const,
+          "aria-label": `${mirrorWord}: ${n.name}`,
+          onKeyDown: (e: React.KeyboardEvent) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              e.stopPropagation();
+              onSpeciesClick(n.name);
+            }
+          },
         }
       : {};
   // root stub (short, straight segment above the root along the growth axis)
@@ -457,7 +488,7 @@ function renderSpeciesLabels(
   pos: Positions,
   dy: number,
   labelOverrides?: Record<string, string>,
-  onLabelClick?: (originalLabel: string, evt: ReactMouseEvent) => void,
+  onLabelClick?: (originalLabel: string, nodeId: string | undefined, evt: ReactMouseEvent) => void,
 ) {
   const leaves = nodes.filter((n) => n.children.length === 0);
   const st = options.speciesLabelStyle;
@@ -484,12 +515,60 @@ function renderSpeciesLabels(
           strokeLinejoin: "round",
           ...(onLabelClick ? { cursor: "pointer" } : {}),
         }}
-        onClick={onLabelClick ? (e) => { e.stopPropagation(); onLabelClick(n.name, e); } : undefined}
+        onClick={onLabelClick ? (e) => { e.stopPropagation(); onLabelClick(n.name, n.id, e); } : undefined}
       >
         {displayName}
       </text>
     );
   });
+}
+
+/** Labels of INTERNAL species clades (phylum/class/... names), shown on demand.
+ *  The clade name carries the node's support value when one was parsed and the
+ *  support toggle is on, so a bootstrap on an internal species is visible. */
+function renderSpeciesCladeLabels(
+  nodes: SpeciesNode[],
+  theme: Theme,
+  options: RenderOptions,
+  proj: Projector,
+  pos: Positions,
+  labelOverrides?: Record<string, string>,
+  onLabelClick?: (originalLabel: string, nodeId: string | undefined, evt: ReactMouseEvent) => void,
+) {
+  const st = { ...options.speciesLabelStyle, size: Math.max(10, options.speciesLabelStyle.size - 1.5) };
+  const font = labelFont(st);
+  const anchor = resolveAnchor(st.align, options.orientation);
+  return nodes
+    .filter((n) => n.children.length > 0)
+    .map((n) => {
+      const sp = spPos(pos, n.id);
+      const p = pj(proj, { x: sp.x, y: sp.y });
+      const base = labelOverrides?.[n.name] ?? n.name;
+      const support = options.showSupport && n.support ? ` (${n.support.value})` : "";
+      if (!base) return null;
+      return (
+        <text
+          key={`spc-${n.id}`}
+          x={p.x}
+          y={p.y}
+          fill={theme.muted}
+          {...font}
+          textAnchor={anchor}
+          dominantBaseline="middle"
+          transform={`rotate(${st.angle} ${p.x} ${p.y})`}
+          style={{
+            paintOrder: "stroke",
+            stroke: theme.background,
+            strokeWidth: 3,
+            strokeLinejoin: "round",
+            ...(onLabelClick ? { cursor: "pointer" } : {}),
+          }}
+          onClick={onLabelClick ? (e) => { e.stopPropagation(); onLabelClick(n.name, n.id, e); } : undefined}
+        >
+          {`${base}${support}`}
+        </text>
+      );
+    });
 }
 
 // --------------------------------------------------------------------------
@@ -658,32 +737,44 @@ function renderGeneGlyphs(
   viewport: CullRect | null,
   collapsedLabels: { word: string; leaves: string; hint: string },
   hideOutside?: Set<string> | null,
+  diffSet?: Set<string> | null,
 ) {
   const s = options.symbolSize;
   // Pure event glyphs (dup/loss/transfer/speciation markers) only at full
   // detail; collapsed wedges and leaf tips always render so structure reads.
   const showEventGlyph = options.showEvents && detail === "full";
-  return nodes
-    .filter(
+  const visible = nodes.filter(
       (g) =>
         !hidden.has(g.id) &&
         !(hideOutside && !hideOutside.has(g.id)) &&
         (showEventGlyph ||
           collapsed.has(g.id) ||
           g.endEvent.type === "leaf"),
-    )
-    .map((g, idx) => {
+  );
+  // Which nodes survive viewport culling is only known while mapping; track it
+  // so the FIRST CULLED-SURVIVING node carries the roving tab stop. Culling
+  // used to be able to remove exactly the one node with tabIndex=0, leaving
+  // keyboard users with no tab stop in the drawing at all.
+  let renderedCount = 0;
+  return visible
+    .map((g) => {
       const op = dimmed(g.id, highlight);
       const isCollapsed = collapsed.has(g.id);
       const c = pj(proj, gnPoint(pos, g));
       if (viewport && !ptVisible(c, viewport)) return null;
+      const tabStop = renderedCount === 0;
+      renderedCount += 1;
       const glyph = isCollapsed
         ? collapsedGlyph(c.x, c.y, proj, color, s)
         : geneGlyph(g.endEvent.type, c.x, c.y, theme, color, s);
       const title = isCollapsed
         ? `${g.name || "clade"}\n${collapsedLabels.word} (${leafCount(g)} ${collapsedLabels.leaves}) - ${collapsedLabels.hint}`
         : tooltipText(g, eventLabels);
-      const conf = g.endEvent.confidence;
+      // Confidence shown next to the node: the terminal event's value first,
+      // then a clade-level support - the same accessor the filter uses, so a
+      // value that can be filtered on is also visible.
+      const conf = g.endEvent.confidence ?? g.support?.value;
+      const isDiff = diffSet?.has(g.id) ?? false;
       return (
         <g
           key={`gg-${g.id}`}
@@ -693,7 +784,7 @@ function renderGeneGlyphs(
           // tabIndex=0 would make a 4,000-node tree a 4,000-stop walk that no
           // keyboard user can traverse; the nodes stay real focusable buttons
           // with their aria-label, they are just reached by arrowing.
-          tabIndex={h.interactive ? (idx === 0 ? 0 : -1) : undefined}
+          tabIndex={h.interactive ? (tabStop ? 0 : -1) : undefined}
           aria-label={h.interactive ? title : undefined}
           opacity={op}
           style={h.interactive ? { cursor: "pointer" } : undefined}
@@ -735,6 +826,20 @@ function renderGeneGlyphs(
             <circle cx={c.x} cy={c.y} r={s + 4} fill="transparent" />
           )}
           {glyph}
+          {isDiff && (
+            // Compare-mode disagreement ring: visible at the same time as the
+            // search dimming, which the old single `focus` channel could not
+            // express (the diff used to REPLACE the search focus).
+            <circle
+              cx={c.x}
+              cy={c.y}
+              r={s + 2.5}
+              fill="none"
+              stroke={theme.event.duplication}
+              strokeWidth={2}
+              opacity={0.9}
+            />
+          )}
           {options.showSupport && conf != null && (
             <text
               x={c.x + s}
@@ -848,7 +953,23 @@ function tooltipText(g: GeneNode, eventLabels: Record<EventType, string>): strin
   const label = eventLabels[ev.type];
   const where = ev.speciesLocation ?? ev.destinationSpecies ?? g.speciesId;
   const name = g.name ? `${g.name}\n` : "";
-  return `${name}${label}${where ? ` @ ${where}` : ""}`;
+  const lines: string[] = [`${name}${label}${where ? ` @ ${where}` : ""}`.trimEnd()];
+  // The scientific evidence a reviewer needs, without opening a panel: time
+  // slice, event confidence, clade support, and every transfer arrival.
+  if (ev.timeSlice != null) lines.push(`timeSlice: ${ev.timeSlice}`);
+  if (ev.confidence != null) lines.push(`confidence: ${ev.confidence}`);
+  else if (g.support) lines.push(`support: ${g.support.value}`);
+  if (g.branchLength != null) lines.push(`branch: ${g.branchLength}`);
+  for (const e of g.events) {
+    if (e.type === "transferBack") {
+      lines.push(
+        `${eventLabels.transferBack}: ${e.speciesLocation ?? "?"} -> ${e.destinationSpecies ?? "?"}` +
+          (e.timeSlice != null ? ` (t=${e.timeSlice})` : "") +
+          (e.confidence != null ? ` [${e.confidence}]` : ""),
+      );
+    }
+  }
+  return lines.join("\n");
 }
 
 function renderGeneLabels(
@@ -864,7 +985,8 @@ function renderGeneLabels(
   viewport: CullRect | null,
   hideOutside?: Set<string> | null,
   labelOverrides?: Record<string, string>,
-  onLabelClick?: (originalLabel: string, evt: ReactMouseEvent) => void,
+  labelOverridesById?: Record<string, string>,
+  onLabelClick?: (originalLabel: string, nodeId: string | undefined, evt: ReactMouseEvent) => void,
 ) {
   const bottom: GeneNode[] = [];
   const internal: GeneNode[] = [];
@@ -885,13 +1007,16 @@ function renderGeneLabels(
     const overrideKey = isLeaf
       ? (g.endEvent.geneName || g.name)
       : g.name;
+    // Rename resolution: a NODE-ID rename (renaming ONE of several same-named
+    // labels) wins over the text-keyed override.
+    const idOverride = labelOverridesById?.[g.id];
     // Apply user override to the base label.
     let displayName: string;
     if (isCollapsed) {
-      const base = overrideKey ? (labelOverrides?.[overrideKey] ?? overrideKey) : "clade";
+      const base = overrideKey ? (idOverride ?? labelOverrides?.[overrideKey] ?? overrideKey) : "clade";
       displayName = `${base} (${leafCount(g)})`;
     } else {
-      displayName = overrideKey ? (labelOverrides?.[overrideKey] ?? overrideKey) : "";
+      displayName = overrideKey ? (idOverride ?? labelOverrides?.[overrideKey] ?? overrideKey) : "";
     }
     if (!displayName) return;
     // Long taxon / gene identifiers - environmental sample names routinely run
@@ -900,7 +1025,10 @@ function renderGeneLabels(
     // neighbouring labels. The glyph's own tooltip and aria-label carry the
     // whole string, so nothing is lost to a hover or a screen reader.
     const LABEL_MAX = 48;
-    if (displayName.length > LABEL_MAX) {
+    // "Full labels" trades tidiness for completeness: publication exports of
+    // long accessions used to lose everything past 48 characters with no
+    // in-figure way to recover it.
+    if (!options.fullLabels && displayName.length > LABEL_MAX) {
       displayName = displayName.slice(0, LABEL_MAX - 1) + "\u2026";
     }
     const st = isBottom ? options.geneTipLabelStyle : options.geneInternalLabelStyle;
@@ -930,7 +1058,7 @@ function renderGeneLabels(
           strokeLinejoin: "round",
           ...(onLabelClick && overrideKey ? { cursor: "pointer" } : {}),
         }}
-        onClick={onLabelClick && overrideKey ? (e) => { e.stopPropagation(); onLabelClick(overrideKey, e); } : undefined}
+        onClick={onLabelClick && overrideKey ? (e) => { e.stopPropagation(); onLabelClick(overrideKey, g.id, e); } : undefined}
       >
         {displayName}
       </text>,
@@ -954,7 +1082,13 @@ function renderTransfers(
   highlight: Set<string> | null,
   hideOutside: Set<string> | null,
   colorOf: (ti: number) => string,
+  onTransferClick?: (edge: TransferEdge) => void,
+  eventLabels?: Record<EventType, string>,
 ) {
+  // Multiple arrivals on one node (or the same donor->recipient pair) used to
+  // draw perfectly overlapping arcs - N statistical events looked like one.
+  // Lateral index offsets spread them apart so each arrival is countable.
+  const pairSeen = new Map<string, number>();
   return transfers.map((t) => {
     // "Show only matches": arcs touching a hidden node are skipped entirely.
     if (hideOutside && (!hideOutside.has(t.from.id) || !hideOutside.has(t.to.id))) return null;
@@ -962,10 +1096,21 @@ function renderTransfers(
     // Use the gene tree color for each transfer, so different families are
     // visually distinguished instead of all being the same color.
     const stroke = colorOf(t.treeIndex);
+    const pairKey = `${t.from.id} ${t.to.id}`;
+    const idx = pairSeen.get(pairKey) ?? 0;
+    pairSeen.set(pairKey, idx + 1);
+    const bow = Math.min(0.5, options.transferBow + idx * 0.09);
+    const donorSp = t.from.speciesId || t.from.endEvent.speciesLocation || "?";
+    const recipSp = t.to.speciesId || t.to.endEvent.destinationSpecies || "?";
+    const arrival = t.to.events.find((e) => e.type === "transferBack");
+    const title =
+      `${eventLabels?.transferBack ?? "Transfer"}: ${donorSp} -> ${recipSp}` +
+      (arrival?.timeSlice != null ? `\ntimeSlice: ${arrival.timeSlice}` : "") +
+      (arrival?.confidence != null ? `\nconfidence: ${arrival.confidence}` : "");
     return (
       <path
         key={t.id}
-        d={transferArc(pj(proj, gnPoint(pos, t.from)), pj(proj, gnPoint(pos, t.to)), options.transferBow)}
+        d={transferArc(pj(proj, gnPoint(pos, t.from)), pj(proj, gnPoint(pos, t.to)), bow)}
         stroke={stroke}
         strokeWidth={2.5}
         strokeDasharray="2 4"
@@ -973,7 +1118,18 @@ function renderTransfers(
         fill="none"
         markerEnd={`url(#${arrowId}-${t.treeIndex})`}
         opacity={op}
-      />
+        style={onTransferClick ? { cursor: "pointer" } : undefined}
+        onClick={
+          onTransferClick
+            ? (e) => {
+                e.stopPropagation();
+                onTransferClick(t);
+              }
+            : undefined
+        }
+      >
+        <title>{title}</title>
+      </path>
     );
   });
 }

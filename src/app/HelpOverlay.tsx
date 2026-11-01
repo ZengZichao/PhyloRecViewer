@@ -29,23 +29,34 @@ export function HelpOverlay() {
 
   if (!open) return null;
 
+  // The complete shortcut map, matching the actual handlers. The old list
+  // omitted Ctrl+F (search), Ctrl+Y (redo), Ctrl+W (close tab), P
+  // (presentation) and Delete (close tab) and mis-described Esc as "clearing
+  // the selection" (it never clears canvas selection — click empty space does).
   const rows: { keys: string[]; label: string }[] = [
     { keys: ["⌘/Ctrl", "O"], label: t.openFile },
-    { keys: ["⌘/Ctrl", "S"], label: t.save },
-    { keys: ["⌘/Ctrl", "E"], label: t.exportLabel },
+    { keys: ["⌘/Ctrl", "S"], label: t.saveSessionAs },
+    { keys: ["⌘/Ctrl", "E"], label: `${t.exportLabel} (PNG)` },
+    { keys: ["⌘/Ctrl", "F"], label: t.panelSearch },
     { keys: ["⌘/Ctrl", "Z"], label: t.undo },
     { keys: ["⌘/Ctrl", "⇧", "Z"], label: t.redo },
+    { keys: ["⌘/Ctrl", "Y"], label: t.redo },
+    { keys: ["⌘/Ctrl", "W"], label: t.closeTabMenu },
     { keys: ["F"], label: t.helpFit },
+    { keys: ["P"], label: t.presentation },
     { keys: ["⌘/Ctrl", "+ / −"], label: t.helpZoomInOut },
+    { keys: ["?"], label: t.helpTitle },
     { keys: ["Esc"], label: t.helpClosePanel },
   ];
 
   // The interaction catalogue: the three modifier-click gestures plus pan/zoom
   // and clearing, so hidden-gesture capabilities are documented in one place.
   const gestures: { keys: string[]; label: string }[] = [
-    { keys: [t.hintClickHighlight], label: `${t.hintHighlightAction} ${t.geneNodes} · ${t.hintMirror}` },
+    { keys: [t.hintClickHighlight], label: `${t.hintHighlightAction} ${t.geneNodes} · ${t.inspectorTitle}` },
     { keys: [t.hintShiftAnnotate], label: t.annoTitle },
     { keys: [t.hintAltCollapse], label: `${t.collapsedClade} ${t.collapse}/${t.expand}` },
+    { keys: [t.hintMirror], label: t.hintMirror },
+    { keys: [t.renameLabel], label: t.renameLabel },
     { keys: ["⟳", "⇠"], label: t.helpZoomInOut },
     { keys: [t.hintClear], label: t.helpClosePanel },
   ];
@@ -61,7 +72,7 @@ export function HelpOverlay() {
       <div className="help-card" ref={dialogRef} onClick={(e) => e.stopPropagation()}>
         <div className="help-head">
           <span className="sidebar-title">{t.helpTitle}</span>
-          <button className="panel-collapse" onClick={() => setOpen(false)} data-tooltip={t.collapse} aria-label={t.collapse}>
+          <button className="panel-collapse" onClick={() => setOpen(false)} data-tooltip={t.close} aria-label={t.close}>
             ✕
           </button>
         </div>

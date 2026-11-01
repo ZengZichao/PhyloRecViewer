@@ -37,6 +37,8 @@ export interface FocusCriteria {
   families: Set<number> | null;
   /** Confidence window [min, max] in 0..1; [0,1] means "do not filter". */
   confidence?: [number, number];
+  /** User annotations, searched alongside node names when provided. */
+  annotations?: Record<string, { text: string; color: string }>;
 }
 
 /** Whether the confidence window is narrowed (i.e. actually filtering). */
@@ -77,6 +79,8 @@ function buildMatcher(query: string, regex: boolean): (s: string) => boolean {
       const re = new RegExp(q, "i");
       return (s) => re.test(s);
     } catch {
+      // Callers surface this state via regexError(); the fallback keeps the
+      // match list usable instead of empty while the error is displayed.
       const lq = q.toLowerCase();
       return (s) => s.toLowerCase().includes(lq);
     }
@@ -93,6 +97,24 @@ function buildMatcher(query: string, regex: boolean): (s: string) => boolean {
   }
   const lq = q.toLowerCase();
   return (s) => s.toLowerCase().includes(lq);
+}
+
+/**
+ * Why an invalid regex fell back to substring matching, for the UI to display
+ * next to the search field. Null when the pattern compiles (or regex mode is
+ * off). An invalid regex used to degrade silently - the user believed their
+ * pattern was active when it never was.
+ */
+export function regexError(query: string): string | null {
+  const q = query.trim();
+  if (!q) return null;
+  try {
+    // Same flags the matcher uses; a pattern valid here is valid there.
+    new RegExp(q, "i");
+    return null;
+  } catch (e) {
+    return (e as Error).message || "Invalid regular expression";
+  }
 }
 
 function nodeMatchesEvents(g: GeneNode, f: EventFilter): boolean {
@@ -112,9 +134,26 @@ function nodeMatchesEvents(g: GeneNode, f: EventFilter): boolean {
   return false;
 }
 
-/** Text a node is searchable by. */
-function nodeTexts(g: GeneNode): string[] {
-  return [g.name, g.endEvent.geneName ?? "", g.speciesId ?? ""].filter(Boolean);
+/** Text a node is searchable by.
+ *
+ * Beyond the node's own names this includes the transfer arrival's donor and
+ * recipient species and the terminal event type, so queries like "transfer",
+ "B" (as a recipient) or "duplication" find the right nodes - a transfer's
+ * donor species often has no gene node of its own to search for.
+ */
+function nodeTexts(
+  g: GeneNode,
+  annotations?: Record<string, { text: string; color: string }>,
+): string[] {
+  const texts = [g.name, g.endEvent.geneName ?? "", g.speciesId ?? "", g.endEvent.type];
+  for (const e of g.events) {
+    if (e.destinationSpecies) texts.push(e.destinationSpecies);
+    if (e.type === "transferBack" && e.speciesLocation) texts.push(e.speciesLocation);
+    if (e.timeSlice != null) texts.push(String(e.timeSlice));
+  }
+  const note = annotations?.[g.id];
+  if (note?.text) texts.push(note.text);
+  return texts.filter(Boolean);
 }
 
 /**
@@ -141,7 +180,7 @@ export function focusMatches(
         const conf = nodeConfidence(g);
         if (conf == null || conf < c.confidence![0] || conf > c.confidence![1]) continue;
       }
-      if (match && !nodeTexts(g).some((s) => match(s))) continue;
+      if (match && !nodeTexts(g, c.annotations).some((s) => match(s))) continue;
       out.push(g);
     }
   }

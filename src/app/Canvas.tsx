@@ -40,6 +40,16 @@ interface Tip {
   canCollapse: boolean;
 }
 
+export interface ViewSync {
+  k: number;
+  x: number;
+  y: number;
+  /** Pane that produced the transform, so a pane never echoes back its own. */
+  from: PaneId;
+  /** Monotonic token; only the newest sync is applied. */
+  nonce: number;
+}
+
 export function Canvas({
   result,
   theme,
@@ -49,8 +59,13 @@ export function Canvas({
   onSpeciesClick,
   onToggleCollapse,
   geneColors,
+  labelOverridesById,
   focus,
+  hideOutside: hideOutsideProp,
+  diffSet,
   locate,
+  syncView,
+  onViewChange,
 }: {
   result: LayoutResult;
   theme: Theme;
@@ -61,10 +76,21 @@ export function Canvas({
   onSpeciesClick?: (name: string) => void;
   onToggleCollapse?: (geneId: string) => void;
   geneColors?: Record<number, string>;
+  /** User renames keyed by node id (per-node rename). */
+  labelOverridesById?: Record<string, string>;
   /** Search/filter focus set: nodes outside it are dimmed. */
   focus?: Set<string> | null;
+  /** Nodes to hide outright ("show only matches"), independent of `focus` so a
+   *  compare pane can dim its diff set AND respect the search hide at once. */
+  hideOutside?: Set<string> | null;
+  /** Nodes highlighted with a ring instead of dimming (compare disagreements). */
+  diffSet?: Set<string> | null;
   /** Center-on-node request (routes by pane). */
   locate?: { geneId: string; nonce: number; pane?: PaneId } | null;
+  /** Incoming transform from the linked pane (compare "Link views"). */
+  syncView?: ViewSync | null;
+  /** Reports this pane's transform so the linked pane can follow. */
+  onViewChange?: (v: ViewSync) => void;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const zoomRef = useRef<ZoomBehavior<HTMLDivElement, unknown> | null>(null);
@@ -78,6 +104,7 @@ export function Canvas({
   const labelOverrides = useStore((s) => s.labelOverrides);
   const setLabelOverride = useStore((s) => s.setLabelOverride);
   const setAnnotating = useStore((s) => s.setAnnotating);
+  const setInspector = useStore((s) => s.setInspector);
   const onlyMatches = useStore((s) => s.onlyMatches);
   // Canvas-level actions (undo/redo + analysis panel toggle) — only shown on
   // the primary pane so split/compare views do not duplicate the controls.
@@ -90,15 +117,40 @@ export function Canvas({
   const openPanel = useStore((s) => s.openPanel);
   const closePanel = useStore((s) => s.closePanel);
   const [view, setView] = useState<View>({ k: 1, x: 0, y: 0 });
+  const viewNonce = useRef(0);
+  const lastAppliedSync = useRef(0);
   const [size, setSize] = useState({ w: 0, h: 0 });
   const [tip, setTip] = useState<Tip | null>(null);
   const [highlight, setHighlight] = useState<Set<string> | null>(null);
   const [annotateMode, setAnnotateMode] = useState(false);
   const [editingLabel, setEditingLabel] = useState<{
     originalLabel: string;
+    nodeId?: string;
     x: number;
     y: number;
   } | null>(null);
+  const setLabelOverrideById = useStore((s) => s.setLabelOverrideById);
+  // How many drawn labels share the clicked text: >1 enables the
+  // "rename ALL same-named labels" choice in the editor (the default rename
+  // targets exactly the clicked node, so renaming one of several paralogs no
+  // longer silently rewrites the others).
+  const sameNameCount = useCallback(
+    (text: string) => {
+      if (!text) return 0;
+      let n = 0;
+      for (const tr of result.reconciliation.geneTrees) {
+        for (const g of tr.nodes) {
+          const label = g.endEvent.type === "leaf" ? g.endEvent.geneName || g.name : g.name;
+          if (label === text) n++;
+        }
+      }
+      for (const sp of result.reconciliation.species.nodes) {
+        if (sp.name === text) n++;
+      }
+      return n;
+    },
+    [result],
+  );
 
   const fit = useCallback(() => {
     const el = containerRef.current;
@@ -143,6 +195,31 @@ export function Canvas({
       sel.on(".zoom", null);
     };
   }, []);
+
+  // Report pan/zoom to the linked pane (compare "Link views"). Fires after
+  // every transform change; the peer applies it with from-guarding.
+  useEffect(() => {
+    if (!onViewChange) return;
+    viewNonce.current += 1;
+    onViewChange({ k: view.k, x: view.x, y: view.y, from: paneId, nonce: viewNonce.current });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [view.k, view.x, view.y]);
+
+  // Apply the linked pane's transform (skipping echoes of our own).
+  const syncRef = useRef(onViewChange);
+  syncRef.current = onViewChange;
+  useEffect(() => {
+    if (!syncView || syncView.from === paneId) return;
+    if (syncView.nonce === lastAppliedSync.current) return;
+    lastAppliedSync.current = syncView.nonce;
+    const el = containerRef.current;
+    const zb = zoomRef.current;
+    if (!el || !zb) return;
+    d3select(el).call(
+      zb.transform,
+      zoomIdentity.translate(syncView.x, syncView.y).scale(syncView.k),
+    );
+  }, [syncView, paneId]);
 
   // Track the container size so the culling viewport can be derived from it.
   useEffect(() => {
@@ -229,7 +306,10 @@ export function Canvas({
       const proj = makeProjector(options.orientation, result.width, result.height);
       const sx = proj.x(gp.x, gp.y);
       const sy = proj.y(gp.x, gp.y);
-      const k = Math.max(view.k, 1);
+      // Keep the CURRENT zoom when it already shows the node; jumping to 100%
+      // used to yank the user out of an overview and lose all context. Only a
+      // very deep zoom-out (<20%) is lifted, so the target is actually visible.
+      const k = Math.max(view.k, 0.2);
       const x = el.clientWidth / 2 - sx * k;
       const y = el.clientHeight / 2 - sy * k;
       d3select(el).call(zb.transform, zoomIdentity.translate(x, y).scale(k));
@@ -272,6 +352,13 @@ export function Canvas({
     [view.k],
   );
 
+  const onTransferClick = useCallback(
+    (edge: { from: { id: string } }) => {
+      setInspector({ kind: "transfer", id: `tr-${edge.from.id}` });
+    },
+    [setInspector],
+  );
+
   const onCanvasClick = (e: ReactMouseEvent) => {
     // d3-zoom suppresses the click that ends a drag, so a real click here is a
     // background click: clear the lineage highlight unless a gene was clicked.
@@ -310,9 +397,10 @@ export function Canvas({
   }, []);
 
   const onLabelClick = useCallback(
-    (originalLabel: string, evt: ReactMouseEvent) => {
+    (originalLabel: string, nodeId: string | undefined, evt: ReactMouseEvent) => {
       setEditingLabel({
         originalLabel,
+        nodeId,
         x: evt.clientX,
         y: evt.clientY,
       });
@@ -338,8 +426,10 @@ export function Canvas({
         return;
       }
       setHighlight(lineageIds(node));
+      // Plain click also opens the inspector: "select a node and read it".
+      setInspector({ kind: "gene", id: node.id });
     },
-    [annotateMode, onToggleCollapse, setAnnotating],
+    [annotateMode, onToggleCollapse, setAnnotating, setInspector],
   );
 
   // Keyboard access to nodes (A11Y): Enter = highlight lineage, Shift+Enter =
@@ -370,8 +460,10 @@ export function Canvas({
   // A click-driven lineage highlight takes precedence over the search/filter
   // focus; clearing the click returns to whatever the filter dims.
   const effectiveHighlight = highlight ?? focus ?? null;
-  // "Show only matches": hide every node outside the focus set entirely.
-  const hideOutside = onlyMatches && focus !== null ? focus : null;
+  // "Show only matches": hide every node outside the focus set entirely. In a
+  // compare pane the caller supplies the hide set directly (the search focus),
+  // because this pane's dimming belongs to the diff, not the search.
+  const hideOutside = hideOutsideProp ?? (onlyMatches && focus !== null ? focus : null);
 
   // Virtualization: on very large trees, derive a projected-space viewport rect
   // (rounded + margined so it only changes in chunks) and let the Scene skip
@@ -422,6 +514,7 @@ export function Canvas({
         options={options}
         highlight={effectiveHighlight}
         hideOutside={hideOutside}
+        diffSet={diffSet ?? null}
         interactive
         detail={detail}
         eventLabels={t.event}
@@ -437,7 +530,9 @@ export function Canvas({
         onGeneKeyDown={onGeneKeyDown}
         onSpeciesClick={onSpeciesClick}
         labelOverrides={labelOverrides}
+        labelOverridesById={labelOverridesById}
         onLabelClick={onLabelClick}
+        onTransferClick={onTransferClick}
         geneColors={geneColors}
         annotations={annotations}
         showBackground={false}
@@ -470,13 +565,21 @@ export function Canvas({
           currentLabel={labelOverrides[editingLabel.originalLabel] ?? editingLabel.originalLabel}
           x={editingLabel.x}
           y={editingLabel.y}
-          onCommit={(value) => {
-            setLabelOverride(editingLabel.originalLabel, value);
+          sameNameCount={editingLabel.nodeId ? sameNameCount(editingLabel.originalLabel) : 0}
+          onCommit={(value, all) => {
+            if (all || !editingLabel.nodeId) setLabelOverride(editingLabel.originalLabel, value);
+            else setLabelOverrideById(editingLabel.nodeId, value);
             setEditingLabel(null);
           }}
           onCancel={() => setEditingLabel(null)}
         />,
         document.body,
+      )}
+
+      {detail === "low" && (
+        <div className="overview-chip" role="status">
+          {t.overviewMode}
+        </div>
       )}
 
       {/* Always-visible interaction legend (bottom-right corner): makes the
@@ -687,6 +790,29 @@ function MiniMap({
   const vw = clamp((cw / view.k) * ms, 2, mapW - vx);
   const vh = clamp((ch / view.k) * ms, 2, mapH - vy);
 
+  // Keyboard operation: the minimap used to be a focusable dead end
+  // (tabIndex=0, no handlers). Arrows pan the viewport, Enter recenters.
+  const onKeyDown = (e: ReactKeyboardEvent<SVGSVGElement>) => {
+    const step = 24 / ms; // content units
+    let dx = 0;
+    let dy = 0;
+    if (e.key === "ArrowLeft") dx = -step;
+    else if (e.key === "ArrowRight") dx = step;
+    else if (e.key === "ArrowUp") dy = -step;
+    else if (e.key === "ArrowDown") dy = step;
+    else if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      onNavRef.current(proj.width / 2, proj.height / 2);
+      return;
+    } else return;
+    e.preventDefault();
+    e.stopPropagation();
+    // Convert the viewport-center delta into a content-space target.
+    const cx = (-view.x / view.k) + (cw / view.k) / 2 + dx;
+    const cy = (-view.y / view.k) + (ch / view.k) / 2 + dy;
+    onNavRef.current(cx, cy);
+  };
+
   return (
     <div className="minimap">
       <svg
@@ -696,6 +822,7 @@ function MiniMap({
         tabIndex={0}
         role="group"
         aria-label={t.minimap}
+        onKeyDown={onKeyDown}
         style={{ display: "block", cursor: "pointer", touchAction: "none" }}
       >
         <rect x={0} y={0} width={mapW} height={mapH} fill={theme.background} />
@@ -722,36 +849,53 @@ function LabelEditor({
   currentLabel,
   x,
   y,
+  sameNameCount,
   onCommit,
   onCancel,
 }: {
   currentLabel: string;
   x: number;
   y: number;
-  onCommit: (value: string) => void;
+  /** How many labels share this text (0 = unknown); >1 shows the scope choice. */
+  sameNameCount: number;
+  onCommit: (value: string, allSameName: boolean) => void;
   onCancel: () => void;
 }) {
+  const t = useT();
   const [value, setValue] = useState(currentLabel);
+  const [all, setAll] = useState(false);
   const done = useRef(false);
   const finish = (commit: boolean) => {
     if (done.current) return;
     done.current = true;
-    if (commit) onCommit(value);
+    if (commit) onCommit(value, all);
     else onCancel();
   };
   return (
-    <input
-      className="label-edit-input"
-      value={value}
-      autoFocus
-      onFocus={(e) => e.target.select()}
-      style={{ position: "fixed", left: x, top: y }}
-      onChange={(e) => setValue(e.target.value)}
-      onKeyDown={(e) => {
-        if (e.key === "Enter") { e.preventDefault(); finish(true); }
-        else if (e.key === "Escape") { e.preventDefault(); finish(false); }
-      }}
-      onBlur={() => finish(true)}
-    />
+    <div className="label-edit-pop" style={{ position: "fixed", left: x, top: y }}>
+      <input
+        className="label-edit-input"
+        value={value}
+        autoFocus
+        onFocus={(e) => e.target.select()}
+        onChange={(e) => setValue(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") { e.preventDefault(); finish(true); }
+          else if (e.key === "Escape") { e.preventDefault(); finish(false); }
+        }}
+        onBlur={() => finish(true)}
+        aria-label={t.renameLabel}
+      />
+      {sameNameCount > 1 && (
+        <label className="label-edit-scope">
+          <input
+            type="checkbox"
+            checked={all}
+            onChange={(e) => setAll(e.target.checked)}
+          />
+          {t.renameAllSameName.replace("{n}", String(sameNameCount))}
+        </label>
+      )}
+    </div>
   );
 }

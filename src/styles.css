@@ -2976,3 +2976,160 @@ margin: 0 var(--space-1);
 .app:fullscreen .top-bar {
   flex-shrink: 0;
 }
+
+/* ---------------------------------------------------------------------------
+ * Review-round additions: compare status bar, node inspector, label editor,
+ * overview chip, presentation mode, tab context menu.
+ * ------------------------------------------------------------------------- */
+
+/* Compare bottom status bar replaces three overlapping absolute overlays. */
+.compare-status {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 12px;
+  background: color-mix(in srgb, var(--panel) 92%, transparent);
+  border-top: 1px solid var(--border);
+  font-size: 12px;
+  z-index: 6;
+  flex-wrap: wrap;
+}
+.compare-status .compare-pct { font-weight: 700; }
+.compare-status .compare-sub { opacity: 0.75; }
+.compare-status .compare-spacer { flex: 1; }
+.compare-status .diff-legend-inline { display: inline-flex; align-items: center; gap: 6px; }
+
+/* Side-by-side split arrangement (opt-in via the ⇔ toggle). */
+.split.split-row { flex-direction: row; }
+.split.split-row .split-pane { min-width: 160px; }
+
+/* Node inspector card. */
+.node-inspector {
+  position: absolute;
+  left: 12px;
+  bottom: 34px;
+  width: 300px;
+  max-height: 46vh;
+  overflow: auto;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.18);
+  padding: 8px 10px;
+  font-size: 12px;
+  z-index: 8;
+}
+.node-inspector .ni-head { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; }
+.node-inspector .ni-head strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.node-inspector .ni-event { color: var(--accent); font-weight: 600; }
+.node-inspector .ni-pane { opacity: 0.6; font-size: 11px; }
+.node-inspector .ni-spacer { flex: 1; }
+.node-inspector button {
+  border: none; background: transparent; cursor: pointer; padding: 2px 4px;
+}
+.node-inspector .ni-rows { margin: 0; }
+.node-inspector .ni-row { display: flex; gap: 8px; padding: 1px 0; }
+.node-inspector .ni-row dt { width: 84px; flex: none; opacity: 0.6; }
+.node-inspector .ni-row dd { margin: 0; word-break: break-all; }
+.node-inspector .ni-note { margin: 6px 0; opacity: 0.85; }
+.node-inspector .ni-actions { display: flex; gap: 6px; margin-top: 6px; }
+
+/* Label editor with rename-scope choice. */
+.label-edit-pop {
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  padding: 6px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.16);
+}
+.label-edit-scope { font-size: 11px; display: flex; align-items: center; gap: 6px; }
+
+/* Overview-mode chip (labels hidden at low zoom). */
+.overview-chip {
+  position: absolute;
+  top: 44px;
+  right: 12px;
+  font-size: 11px;
+  padding: 2px 8px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  opacity: 0.85;
+  z-index: 5;
+  pointer-events: none;
+}
+
+/* Presentation mode: the drawing owns the window. */
+.app.presenting .body { inset: 0; }
+.exit-presentation {
+  position: fixed;
+  top: 10px;
+  right: 12px;
+  z-index: 40;
+  padding: 4px 10px;
+  opacity: 0.7;
+}
+
+/* Tab context menu. */
+.tab-context {
+  position: fixed;
+  z-index: 60;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
+  display: flex;
+  flex-direction: column;
+  min-width: 160px;
+}
+.tab-context button {
+  border: none;
+  background: transparent;
+  text-align: left;
+  padding: 6px 12px;
+  cursor: pointer;
+  font-size: 12px;
+}
+.tab-context button:hover { background: var(--hover, rgba(127, 127, 127, 0.15)); }
+
+/* Export menu extras. */
+.menu-estimate { font-size: 11px; opacity: 0.7; margin-left: 8px; }
+
+/* Toast close button. */
+.toast { display: flex; align-items: center; gap: 10px; }
+.toast .toast-close {
+  border: none; background: transparent; cursor: pointer; color: inherit;
+  font-size: 12px; padding: 0 2px;
+}
+
+/* Multi-file dialog file list. */
+.multi-open-files {
+  list-style: none;
+  margin: 6px 0;
+  padding: 0;
+  max-height: 180px;
+  overflow: auto;
+  font-size: 12px;
+}
+.multi-open-files li { padding: 2px 0; display: flex; gap: 8px; align-items: center; }
+.multi-open-badge {
+  font-size: 10px;
+  border: 1px solid var(--border);
+  padding: 0 6px;
+  opacity: 0.8;
+}
+
+/* Right panel default is a bit wider so the stats toolbar fits at 1440x900. */
+
+/* Keyboard focus for panel separators. */
+.sidebar-resizer:focus-visible {
+  outline: 2px solid var(--accent, #4f8ef7);
+  outline-offset: -2px;
+}
+
+/* Warning badge is a button now. */
+button.warn-badge { cursor: pointer; font: inherit; }

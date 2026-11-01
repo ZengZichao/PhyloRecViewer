@@ -54,31 +54,51 @@ describe("computeStats", () => {
     expect(a?.copies).toBe(2);
   });
 
-  it("serializes to CSV with all three sections", () => {
-    const csv = statsToCsv(stats, {
-      family: "Family",
-      species: "Species",
-      speciation: "Spec",
-      duplication: "Dup",
-      loss: "Loss",
-      branchingOut: "BO",
-      bifurcationOut: "Bio",
-      leafEvent: "Leaf",
-      transfer: "Transfer",
-      donor: "Donor",
-      recipient: "Recipient",
-      count: "Count",
-      copies: "Copies",
-      nodes: "Nodes",
-      nodesSection: "Nodes section",
-      num: "Num",
-      name: "Name",
-      type: "Type",
-      event: "Event",
-      nodeLeaf: "leaf",
-      nodeInternal: "internal",
-    });
-    expect(csv).toContain("Donor,Recipient,Count");
+  it("serializes a locale-independent CSV with all sections and a BOM", () => {
+    const csv = statsToCsv(stats, { sourceFile: "demo.xml", generatedBy: "PhyloRecViewer test" });
+    expect(csv.charCodeAt(0)).toBe(0xfeff); // UTF-8 BOM for Windows Excel
+    expect(csv).toContain("# section: families");
+    expect(csv).toContain("donor,recipient,count");
     expect(csv).toContain("A,B,1");
+    expect(csv).toContain("source_file,demo.xml");
+    // The nodes section carries the event-level evidence columns.
+    expect(csv).toContain("num,name,kind,event,species,family,donors,recipients,time_slice,confidence,branch_length");
+    // Stable English headers: the section names must not follow the UI locale.
+    expect(csv).not.toContain("家族");
+  });
+
+  it("splits gene-loss nodes out of the internal count", () => {
+    const lossXml = `<recPhylo>
+      <spTree><phylogeny><clade><name>R</name><clade><name>A</name></clade></clade></phylogeny></spTree>
+      <recGeneTree><phylogeny rooted="true">
+        <clade><eventsRec><speciation speciesLocation="R"/></eventsRec>
+          <clade><eventsRec><leaf speciesLocation="A" geneName="g"/></eventsRec></clade>
+          <clade><eventsRec><loss speciesLocation="A"/></eventsRec></clade>
+        </clade>
+      </phylogeny></recGeneTree>
+    </recPhylo>`;
+    const s = computeStats(parseRecPhyloXML(lossXml));
+    expect(s.leafCount).toBe(1);
+    expect(s.lossCount).toBe(1);
+    expect(s.internalCount).toBe(1); // the root speciation only
+    const lossNode = s.nodes.find((n) => n.kind === "loss");
+    expect(lossNode?.event).toBe("loss");
+  });
+
+  it("accounts for nodes without a species in an unassigned bucket", () => {
+    const orphanXml = `<recPhylo>
+      <spTree><phylogeny><clade><name>R</name><clade><name>A</name></clade></clade></phylogeny></spTree>
+      <recGeneTree><phylogeny rooted="true">
+        <clade><eventsRec><speciation speciesLocation="R"/></eventsRec>
+          <clade><eventsRec><leaf speciesLocation="A" geneName="g"/></eventsRec></clade>
+          <clade><eventsRec><loss speciesLocation="Ghost"/></eventsRec></clade>
+        </clade>
+      </phylogeny></recGeneTree>
+    </recPhylo>`;
+    const s = computeStats(parseRecPhyloXML(orphanXml));
+    // "Ghost" is not in the species tree, so the loss node lands in unassigned.
+    expect(s.unassigned.nodes).toBe(1);
+    const totalNodes = s.perSpecies.reduce((n, p) => n + p.total, 0) + s.unassigned.nodes;
+    expect(totalNodes).toBe(s.nodes.length);
   });
 });

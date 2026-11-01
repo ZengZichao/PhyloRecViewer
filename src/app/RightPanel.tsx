@@ -2,11 +2,12 @@ import { useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboa
 import { countLabel, useT } from "../i18n";
 import { useStore } from "../state/store";
 import { statsToCsv, type TransferPair } from "../analysis/stats";
-import { reconHasConfidence } from "../analysis/focus";
+import { reconHasConfidence, regexError } from "../analysis/focus";
 import { checkConsistency, type IssueCode } from "../analysis/validate";
-import { computeDiff } from "../analysis/compare";
+import { computeDiff, agreementPct, speciesAgreementPct, type MatchedPair } from "../analysis/compare";
 import { desktopSaveText, isTauri } from "../platform/desktop";
 import { baseName } from "./export-names";
+import { APP_VERSION } from "../version";
 import { networkEdgeWidth, transferArc } from "../render/geometry";
 import { geneColor, themes, type Theme } from "../render/theme";
 import { useCollapsible, useFocusMatches, useStats } from "./hooks";
@@ -38,8 +39,9 @@ export function RightPanel({ width }: { width?: number }) {
   const compare = useStore((s) => s.compare);
   const tabRefs = useRef<(HTMLButtonElement | null)[]>([]);
   const showToast = useStore((s) => s.showToast);
-  if (!open) return null;
-
+  // The active tab can become unavailable (the diff tab after the compare
+  // layer is cleared): fall back to the first tab instead of a blank panel.
+  // Declared BEFORE the early return so hook order stays stable.
   const tabs = [
     { id: "search" as const, label: t.panelSearch },
     { id: "stats" as const, label: t.panelStats },
@@ -48,6 +50,11 @@ export function RightPanel({ width }: { width?: number }) {
     { id: "annotations" as const, label: t.panelAnnotate },
     ...(compare && recon ? [{ id: "diff" as const, label: t.panelDiff }] : []),
   ];
+  const activeTab = tabs.some((x) => x.id === tab) ? tab : tabs[0].id;
+  useEffect(() => {
+    if (open && activeTab !== tab) setTab(activeTab);
+  }, [open, activeTab, tab, setTab]);
+  if (!open) return null;
 
   const onTabKey = (e: ReactKeyboardEvent<HTMLButtonElement>, i: number) => {
     let next = -1;
@@ -81,12 +88,14 @@ export function RightPanel({ width }: { width?: number }) {
           <button
             key={x.id}
             role="tab"
-            aria-selected={tab === x.id}
-            tabIndex={tab === x.id ? 0 : -1}
+            id={`rp-tab-${x.id}`}
+            aria-selected={activeTab === x.id}
+            aria-controls={`rp-tabpanel-${x.id}`}
+            tabIndex={activeTab === x.id ? 0 : -1}
             ref={(el) => {
               tabRefs.current[i] = el;
             }}
-            className={tab === x.id ? "active" : ""}
+            className={activeTab === x.id ? "active" : ""}
             onClick={() => setTab(x.id)}
             onKeyDown={(e) => onTabKey(e, i)}
           >
@@ -94,17 +103,22 @@ export function RightPanel({ width }: { width?: number }) {
           </button>
         ))}
       </div>
-      <div className="right-panel-body">
+      <div
+        className="right-panel-body"
+        role="tabpanel"
+        id={`rp-tabpanel-${activeTab}`}
+        aria-labelledby={`rp-tab-${activeTab}`}
+      >
         {!recon ? (
           <div className="rp-empty">{t.analysisEmpty}</div>
         ) : (
           <>
-            {tab === "search" && <SearchFilterTab />}
-            {tab === "stats" && <StatsTab onToast={showToast} />}
-            {tab === "network" && <NetworkTab />}
-            {tab === "check" && <ChecksTab />}
-            {tab === "annotations" && <AnnotationsTab />}
-            {tab === "diff" && compare && <DiffTab />}
+            {activeTab === "search" && <SearchFilterTab />}
+            {activeTab === "stats" && <StatsTab onToast={showToast} />}
+            {activeTab === "network" && <NetworkTab />}
+            {activeTab === "check" && <ChecksTab />}
+            {activeTab === "annotations" && <AnnotationsTab />}
+            {activeTab === "diff" && compare && <DiffTab />}
           </>
         )}
       </div>
@@ -213,6 +227,14 @@ function SearchFilterTab() {
         <span>{t.searchOnlyMatch}</span>
       </label>
 
+      {regex && regexError(query) && (
+        <p className="rp-issue ex regex-error" role="alert" style={{ color: "var(--danger, #c0392b)", fontSize: 11 }}>
+          {t.regexInvalid}
+          <br />
+          <code>{regexError(query)}</code>
+        </p>
+      )}
+
       {matches !== null && (
         <div className="rp-matchbar">
           <span>
@@ -226,6 +248,43 @@ function SearchFilterTab() {
             {t.nextMatch}
           </button>
         </div>
+      )}
+
+      {list.length > 0 && (
+        <>
+          <h4 className="rp-h4">{t.resultsList}</h4>
+          <div className="rp-results-list" role="listbox" aria-label={t.resultsList} style={{ maxHeight: 200, overflowY: "auto" }}>
+            {list.slice(0, 200).map((g, i) => (
+              <button
+                key={g.id}
+                role="option"
+                aria-selected={i === idx}
+                className={`rp-result-row${i === idx ? " active" : ""}`}
+                onClick={() => {
+                  setIdx(i);
+                  locateGene(g.id);
+                  useStore.getState().setInspector({ kind: "gene", id: g.id });
+                }}
+                style={{
+                  display: "flex", gap: 6, width: "100%", textAlign: "left",
+                  padding: "3px 6px", fontSize: 11, cursor: "pointer",
+                  border: "none", background: i === idx ? "var(--hover, rgba(127,127,127,0.15))" : "transparent",
+                }}
+              >
+                <span style={{ fontWeight: 600, flex: "1 1 auto", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  {g.endEvent.geneName || g.name || g.id}
+                </span>
+                <span style={{ opacity: 0.7 }}>{t.event[g.endEvent.type]}</span>
+                <span style={{ opacity: 0.5, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: "40%" }}>
+                  {g.speciesId}
+                </span>
+              </button>
+            ))}
+            {list.length > 200 && (
+              <p className="rp-empty">{t.topOf.replace("{n}", "200").replace("{total}", String(list.length))}</p>
+            )}
+          </div>
+        </>
       )}
 
       <h4 className="rp-h4">{t.filterEvents}</h4>
@@ -504,28 +563,11 @@ function StatsTab({ onToast }: { onToast: (msg: string, kind?: "success" | "erro
   if (!recon || !stats) return null;
 
   const onExport = async () => {
+    // Locale-independent columns + BOM: the CSV feeds pipelines, not humans.
     const csv = statsToCsv(stats, {
-      family: t.geneFamilies,
-      species: t.species,
-      speciation: t.event.speciation,
-      duplication: t.event.duplication,
-      loss: t.event.loss,
-      branchingOut: t.event.branchingOut,
-      bifurcationOut: t.event.bifurcationOut,
-      leafEvent: t.event.leaf,
-      transfer: t.transferLegend,
-      donor: t.donor,
-      recipient: t.recipient,
-      count: t.countCol,
-      copies: t.copiesCol,
-      nodes: t.nodesCol,
-      nodesSection: t.statsNodes,
-      num: t.colNum,
-      name: t.colName,
-      type: t.colType,
-      event: t.colEvent,
-      nodeLeaf: t.nodeLeaf,
-      nodeInternal: t.nodeInternal,
+      sourceFile: fileName,
+      generatedBy: `PhyloRecViewer ${APP_VERSION}`,
+      generatedAt: new Date().toISOString(),
     });
     const base = baseName(fileName);
     const fname = `${base}-stats.csv`;
@@ -578,6 +620,9 @@ function StatsTab({ onToast }: { onToast: (msg: string, kind?: "success" | "erro
       <div className="rp-totals">
         <Stat label={t.nodesCol} value={stats.nodes.length} accent />
         <Stat label={t.nodeLeaf} value={stats.leafCount} accent />
+        <Stat label={t.event.speciation} value={stats.total.speciation} />
+        <Stat label={t.event.duplication} value={stats.total.duplication} />
+        <Stat label={t.event.loss} value={stats.total.loss} />
         <Stat label={t.nodeInternal} value={stats.internalCount} />
         <Stat label={t.transferLegend} value={stats.total.transfer} />
       </div>
@@ -637,7 +682,11 @@ function StatsTab({ onToast }: { onToast: (msg: string, kind?: "success" | "erro
         storageKey="rpv.rp.trans"
         defaultOpen={false}
         force={force}
-        summary={topTransfers.length === 0 ? t.noTransfers : `${topTransfers.length} ${t.transferLegend}`}
+        summary={
+          topTransfers.length === 0
+            ? t.noTransfers
+            : `${t.topOf.replace("{n}", String(topTransfers.length)).replace("{total}", String(stats.transferMatrix.length))}`
+        }
       >
         {topTransfers.length === 0 ? (
           <p className="rp-empty">{t.noTransfers}</p>
@@ -670,21 +719,22 @@ function StatsTab({ onToast }: { onToast: (msg: string, kind?: "success" | "erro
         force={force}
         summary={
           topSpecies.length > 0
-            ? `${topSpecies.length} ${t.species} · ${topSpecies[0].species} ${topSpecies[0].copies}${t.copiesCol}`
+            ? `${t.topOf.replace("{n}", String(topSpecies.length)).replace("{total}", String(stats.perSpecies.length))} · ${topSpecies[0].species} ${topSpecies[0].copies}${t.copiesCol}`
             : t.noMatches
         }
       >
         <div className="rp-table-wrap"><table className="rp-table">
         <thead>
           <tr>
-            <th>{t.species}</th>
-            <th>{t.copiesCol}</th>
-            <th>{t.event.speciation}</th>
-            <th>{t.event.duplication}</th>
-            <th>{t.event.loss}</th>
-            <th>{t.event.branchingOut}</th>
-            <th>{t.event.bifurcationOut}</th>
-            <th>{t.event.leaf}</th>
+            <th scope="col">{t.species}</th>
+            <th scope="col">{t.copiesCol}</th>
+            <th scope="col">{t.event.speciation}</th>
+            <th scope="col">{t.event.duplication}</th>
+            <th scope="col">{t.event.loss}</th>
+            <th scope="col">{t.event.branchingOut}</th>
+            <th scope="col">{t.event.bifurcationOut}</th>
+            <th scope="col">{t.event.leaf}</th>
+            <th scope="col" title={t.transferLegend}>{t.arrivalsCol}</th>
           </tr>
         </thead>
         <tbody>
@@ -698,8 +748,22 @@ function StatsTab({ onToast }: { onToast: (msg: string, kind?: "success" | "erro
               <td>{s.counts.branchingOut}</td>
               <td>{s.counts.bifurcationOut}</td>
               <td>{s.counts.leaf}</td>
+              <td>{s.counts.transfer}</td>
             </tr>
           ))}
+          {stats.unassigned.nodes > 0 && (
+            <tr>
+              <td className="rp-td-name">{t.unknownSpeciesRow}</td>
+              <td>0</td>
+              <td>{stats.unassigned.counts.speciation}</td>
+              <td>{stats.unassigned.counts.duplication}</td>
+              <td>{stats.unassigned.counts.loss}</td>
+              <td>{stats.unassigned.counts.branchingOut}</td>
+              <td>{stats.unassigned.counts.bifurcationOut}</td>
+              <td>{stats.unassigned.counts.leaf}</td>
+              <td>{stats.unassigned.counts.transfer}</td>
+            </tr>
+          )}
         </tbody>
       </table></div>
       </RpCollapsible>
@@ -727,21 +791,19 @@ function StatsTab({ onToast }: { onToast: (msg: string, kind?: "success" | "erro
             <tr
               key={n.num}
               className={hoverId === n.id ? "rp-row-hover" : ""}
-              onMouseEnter={() => {
-                setHoverId(n.id);
-                if (hoverTimer.current) clearTimeout(hoverTimer.current);
-                hoverTimer.current = setTimeout(() => locateGene(n.id), 300);
+              // Click-to-locate: the 300 ms hover auto-locate used to yank the
+              // canvas around while the user was just READING the table.
+              onMouseEnter={() => setHoverId(n.id)}
+              onMouseLeave={() => setHoverId(null)}
+              onClick={() => {
+                locateGene(n.id);
+                useStore.getState().setInspector({ kind: "gene", id: n.id });
               }}
-              onMouseLeave={() => {
-                setHoverId(null);
-                if (hoverTimer.current) { clearTimeout(hoverTimer.current); hoverTimer.current = null; }
-              }}
-              onClick={() => locateGene(n.id)}
               style={{ cursor: "pointer" }}
             >
               <td>{n.num}</td>
               <td className="rp-td-name">{n.name || "\u2014"}</td>
-              <td>{n.kind === "leaf" ? t.nodeLeaf : t.nodeInternal}</td>
+              <td>{n.kind === "leaf" ? t.nodeLeaf : n.kind === "loss" ? t.nodeLoss : t.nodeInternal}</td>
               <td>{t.event[n.event]}</td>
               <td className="rp-td-name">{n.species || "\u2014"}</td>
               {multiFam && <td className="rp-td-name">{n.familyName}</td>}
@@ -751,7 +813,9 @@ function StatsTab({ onToast }: { onToast: (msg: string, kind?: "success" | "erro
       </table></div>
       {stats.nodes.length > nodeRows.length && (
         <p className="rp-empty">
-          {nodeRows.length} / {stats.nodes.length} {t.geneNodes} · {t.statsNodesLimited}
+          {t.topOf.replace("{n}", String(nodeRows.length)).replace("{total}", String(stats.nodes.length))}
+          {" · "}
+          {t.statsNodesLimited}
         </p>
       )}
       </RpCollapsible>
@@ -765,6 +829,7 @@ function StatsTab({ onToast }: { onToast: (msg: string, kind?: "success" | "erro
 
 function NetworkTab() {
   const resolvedThemeId = useStore((s) => s.resolvedThemeId);
+  const recon = useStore((s) => s.recon);
   const stats = useStats();
   const t = useT();
   if (!stats) return null;
@@ -778,7 +843,19 @@ function NetworkTab() {
   return (
     <div className="rp-section">
       <p className="rp-empty">{t.networkHint}</p>
-      <NetworkView matrix={stats.transferMatrix} theme={themes[resolvedThemeId]} />
+      <p className="rp-note">{t.scopeNote}</p>
+      <NetworkView
+        matrix={stats.transferMatrix}
+        theme={themes[resolvedThemeId]}
+        // Ring order follows the SPECIES TREE traversal, not the transfer
+        // counts: a count-sorted ring rearranged whenever the data changed and
+        // invited reading phylogenetic proximity into pure frequency ranking.
+        order={
+          recon
+            ? recon.species.nodes.map((n) => n.name)
+            : undefined
+        }
+      />
     </div>
   );
 }
@@ -787,7 +864,17 @@ function NetworkTab() {
  * Circular donor -> recipient transfer graph: species on a ring, directed arcs
  * weighted by transfer count. Reveals "hotspot" species at a glance.
  */
-function NetworkView({ matrix, theme }: { matrix: TransferPair[]; theme: Theme }) {
+function NetworkView({
+  matrix,
+  theme,
+  order,
+}: {
+  matrix: TransferPair[];
+  theme: Theme;
+  /** Species-tree DFS order for the ring; species absent from it fall back to
+   *  count order after the known ones. */
+  order?: string[];
+}) {
   const SIZE = 340;
   const cx = SIZE / 2;
   const cy = SIZE / 2;
@@ -799,7 +886,12 @@ function NetworkView({ matrix, theme }: { matrix: TransferPair[]; theme: Theme }
     weight.set(e.from, (weight.get(e.from) ?? 0) + e.count);
     weight.set(e.to, (weight.get(e.to) ?? 0) + e.count);
   }
-  const nodes = [...weight.keys()];
+  let nodes = [...weight.keys()];
+  if (order && order.length > 0) {
+    const known = order.filter((sp) => weight.has(sp));
+    const rest = nodes.filter((sp) => !known.includes(sp));
+    nodes = [...known, ...rest];
+  }
   const n = nodes.length;
   const pos = new Map<string, { x: number; y: number; a: number }>();
   nodes.forEach((sp, i) => {
@@ -898,22 +990,41 @@ function AnnotationsTab() {
   const t = useT();
   const annotations = useStore((s) => s.annotations);
   const recon = useStore((s) => s.recon);
+  const nested = useStore((s) => s.nested);
+  const compare = useStore((s) => s.compare);
   const setAnnotating = useStore((s) => s.setAnnotating);
   const removeAnnotation = useStore((s) => s.removeAnnotation);
   const locateGene = useStore((s) => s.locateGene);
 
-  const nameOf = useMemo(() => {
+  // Names resolve across ALL panes: an annotation on a nested/compare node used
+  // to display its raw node id because only the primary doc was searched.
+  const { nameOf, paneOf } = useMemo(() => {
     const m = new Map<string, string>();
-    if (recon) {
-      for (const tree of recon.geneTrees) {
+    type PaneName = "primary" | "nested" | "compare";
+    const pane = new Map<string, PaneName>();
+    const scan = (
+      r: NonNullable<typeof recon> | null,
+      p: "primary" | "nested" | "compare",
+    ): void => {
+      if (!r) return;
+      for (const tree of r.geneTrees) {
         for (const g of tree.nodes) {
-          m.set(g.id, g.name || g.endEvent.geneName || g.id);
+          if (!m.has(g.id)) {
+            m.set(g.id, g.name || g.endEvent.geneName || g.id);
+            pane.set(g.id, p);
+          }
         }
       }
-    }
-    return m;
-  }, [recon]);
+    };
+    scan(recon, "primary");
+    scan(nested, "nested");
+    scan(compare, "compare");
+    return { nameOf: m, paneOf: pane };
+  }, [recon, nested, compare]);
   if (!recon) return null;
+
+  const paneLabel = (id: string): string =>
+    paneOf.get(id) === "nested" ? t.paneSymbiontHost : paneOf.get(id) === "compare" ? "B" : t.scopePrimary;
 
   const entries = Object.entries(annotations);
   if (entries.length === 0) {
@@ -931,10 +1042,13 @@ function AnnotationsTab() {
           <span className="anno-swatch" style={{ background: ann.color }} aria-hidden="true" />
           <button
             className="anno-body"
-            onClick={() => locateGene(id)}
-            title={t.viewShortcuts}
+            onClick={() => locateGene(id, paneOf.get(id) ?? "primary")}
+            title={t.locateFirst}
           >
-            <div className="anno-name">{nameOf.get(id) ?? id}</div>
+            <div className="anno-name">
+              {nameOf.get(id) ?? id}
+              <span className="ni-pane"> · {paneLabel(id)}</span>
+            </div>
             <div className="anno-text">{ann.text}</div>
           </button>
           <button
@@ -963,73 +1077,118 @@ function AnnotationsTab() {
 // Differences (compare mode)
 // --------------------------------------------------------------------------
 
-/** List of the gene nodes that differ between the two compared files, with
- *  one-click jumps to the correct pane (A -> primary, B -> compare). */
+/** Paired comparison table: one row per matched node with BOTH sides' event,
+ *  species and transfer details, filterable to the differing rows, exportable
+ *  as CSV. The old view listed A and B disagreeing nodes in two separate
+ *  columns of "names only", which made "what actually differs" unreadable. */
 function DiffTab() {
   const t = useT();
   const recon = useStore((s) => s.recon);
   const compare = useStore((s) => s.compare);
   const fileName = useStore((s) => s.fileName);
-  const compareName = useStore((s) => s.compareName);
   const locateGene = useStore((s) => s.locateGene);
+  const showToast = useStore((s) => s.showToast);
+  const [onlyDiff, setOnlyDiff] = useState(true);
   const diff = useMemo(
     () => (recon && compare ? computeDiff(recon, compare) : null),
     [recon, compare],
   );
   if (!recon || !compare || !diff) return null;
 
-  const listOf = (set: Set<string>, r: typeof recon) => {
-    const out: { id: string; name: string; event: string }[] = [];
-    if (!r) return out;
-    for (const tree of r.geneTrees) {
-      for (const g of tree.nodes) {
-        if (set.has(g.id)) {
-          out.push({
-            id: g.id,
-            name: g.name || g.endEvent.geneName || g.id,
-            event: t.event[g.endEvent.type],
-          });
-        }
-      }
-    }
-    return out;
-  };
-  const listA = listOf(diff.disagreeA, recon);
-  const listB = listOf(diff.disagreeB, compare);
+  const pct = agreementPct(diff);
+  const spct = speciesAgreementPct(diff);
+  const rows = diff.pairs.filter((p) => !onlyDiff || !p.agreeEvent || !p.agreeSpecies || !p.agreeTransfer);
+  const CAP = 300;
+  const shown = rows.slice(0, CAP);
 
-  const renderList = (
-    items: { id: string; name: string; event: string }[],
-    pane: "primary" | "compare",
-  ) => {
-    if (items.length === 0) {
-      return <p className="rp-empty">✓</p>;
+  const statusOf = (p: MatchedPair): string => {
+    const parts: string[] = [];
+    if (!p.agreeEvent) parts.push(t.colEvent);
+    if (!p.agreeSpecies) parts.push(t.inspSpecies);
+    if (!p.agreeTransfer) parts.push(t.transferLegend);
+    return parts.length > 0 ? parts.join("+") : "\u2713";
+  };
+
+  const exportCsv = () => {
+    const lines = ["name,family,event_a,event_b,species_a,species_b,donor_a,donor_b,recipient_a,recipient_b,time_slice_a,time_slice_b,agree_event,agree_species,agree_transfer"];
+    for (const p of diff.pairs) {
+      const cell = (v: string | number | boolean | null) => {
+        const strV = String(v ?? "");
+        return /[",\n]/.test(strV) ? `"${strV.replace(/"/g, '""')}"` : strV;
+      };
+      lines.push([
+        cell(p.name), cell(p.family), cell(p.eventA), cell(p.eventB),
+        cell(p.speciesA), cell(p.speciesB), cell(p.donorA ?? ""), cell(p.donorB ?? ""),
+        cell(p.recipientA ?? ""), cell(p.recipientB ?? ""),
+        cell(p.timeSliceA ?? ""), cell(p.timeSliceB ?? ""),
+        cell(p.agreeEvent), cell(p.agreeSpecies), cell(p.agreeTransfer),
+      ].join(","));
     }
-    return (
-      <div className="rp-diff-list">
-        {items.map((it) => (
-          <button
-            key={pane + it.id}
-            className="rp-diff-item"
-            onClick={() => locateGene(it.id, pane)}
-            title={t.viewShortcuts}
-          >
-            <span className="rp-diff-name">{it.name}</span>
-            <span className="rp-diff-event">{it.event}</span>
-          </button>
-        ))}
-      </div>
-    );
+    const csv = "\uFEFF" + lines.join("\n");
+    const fname = `${baseName(fileName)}-diff.csv`;
+    if (isTauri()) {
+      void desktopSaveText(fname, csv, "csv").then(() => showToast(`${t.exportedToast}: ${fname}`, "success"));
+    } else {
+      triggerCsvDownload(fname, csv);
+      showToast(`${t.exportedToast}: ${fname}`, "success");
+    }
   };
 
   return (
     <div className="rp-section">
       <p className="rp-empty">
-        {t.diffLegend} · {diff.compared} {t.geneNodes}
+        {pct === null ? "N/A" : `${pct}% ${t.agree}`}
+        {spct !== null && ` · ${t.speciesAgreeShort.replace("{p}", String(spct))}`}
+        {" · "}
+        {t.diffMatched.replace("{n}", String(diff.compared))}
+        {" · "}
+        {t.diffOnlyA.replace("{n}", String(diff.onlyA))}
+        {" · "}
+        {t.diffOnlyB.replace("{n}", String(diff.onlyB))}
       </p>
-      <h4 className="rp-h4">{fileName ?? "A"}</h4>
-      {renderList(listA, "primary")}
-      <h4 className="rp-h4">{compareName ?? "B"}</h4>
-      {renderList(listB, "compare")}
+      <div className="rp-toolbar">
+        <button className="btn ghost" aria-pressed={onlyDiff} onClick={() => setOnlyDiff((v) => !v)}>
+          {t.diffOnlyDiff}
+        </button>
+        <span className="rp-spacer" />
+        <button className="btn" onClick={exportCsv}>
+          {t.exportDiffCsv}
+        </button>
+      </div>
+      <div className="rp-table-wrap"><table className="rp-table">
+        <thead>
+          <tr>
+            <th scope="col">{t.colName}</th>
+            <th scope="col">{t.colEvent} (A)</th>
+            <th scope="col">{t.colEvent} (B)</th>
+            <th scope="col">{t.inspSpecies} (A)</th>
+            <th scope="col">{t.inspSpecies} (B)</th>
+            <th scope="col">{t.diffColStatus}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {shown.map((p) => (
+            <tr
+              key={`${p.aId}-${p.bId}`}
+              style={{ cursor: "pointer" }}
+              onClick={() => {
+                locateGene(p.aId, "primary");
+                useStore.getState().setInspector({ kind: "gene", id: p.aId });
+              }}
+            >
+              <td className="rp-td-name">{p.name}</td>
+              <td style={{ fontWeight: p.agreeEvent ? 400 : 700 }}>{t.event[p.eventA as keyof typeof t.event] ?? p.eventA}</td>
+              <td style={{ fontWeight: p.agreeEvent ? 400 : 700 }}>{t.event[p.eventB as keyof typeof t.event] ?? p.eventB}</td>
+              <td>{p.speciesA || "\u2014"}</td>
+              <td>{p.speciesB || "\u2014"}</td>
+              <td>{statusOf(p)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table></div>
+      {rows.length > shown.length && (
+        <p className="rp-empty">{t.topOf.replace("{n}", String(shown.length)).replace("{total}", String(rows.length))}</p>
+      )}
     </div>
   );
 }
@@ -1041,13 +1200,17 @@ function DiffTab() {
 function ChecksTab() {
   const t = useT();
   const recon = useStore((s) => s.recon);
+  const docWarnings = useStore((s) => s.warnings);
+  const nestedWarnings = useStore((s) => s.nestedWarnings);
+  const compareWarnings = useStore((s) => s.compareWarnings);
+  const nestedName = useStore((s) => s.nestedName);
+  const compareName = useStore((s) => s.compareName);
+  const fileName = useStore((s) => s.fileName);
+  const showToast = useStore((s) => s.showToast);
   const issues = useMemo(() => (recon ? checkConsistency(recon) : []), [recon]);
   if (!recon) return null;
 
   const byCode = new Map(issues.map((iss) => [iss.code, iss]));
-  // Show every check as a row (passed = tick, failed = count + problem +
-  // examples) so the panel stays informative even when everything passes and
-  // the user can see exactly what was verified.
   const checks: { code: IssueCode; name: string; problem: string }[] = [
     { code: "unknownSpecies", name: t.checkNameUnknownSpecies, problem: t.checkUnknownSpecies },
     { code: "duplicateSpecies", name: t.checkNameDuplicateSpecies, problem: t.checkDuplicateSpecies },
@@ -1060,27 +1223,88 @@ function ChecksTab() {
     { code: "terminalEventWithChildren", name: t.checkNameTerminalEventWithChildren, problem: t.checkTerminalEventWithChildren },
     { code: "nonBinaryNode", name: t.checkNameNonBinaryNode, problem: t.checkNonBinaryNode },
     { code: "transferBackwardsInTime", name: t.checkNameTransferBackwardsInTime, problem: t.checkTransferBackwardsInTime },
+    { code: "sameSpeciesTransfer", name: t.checkNameSameSpeciesTransfer, problem: t.checkSameSpeciesTransfer },
+    { code: "transferTimeUnknown", name: t.checkNameTransferTimeUnknown, problem: t.checkTransferTimeUnknown },
+    { code: "confidenceScaleSuspect", name: t.checkNameConfidenceScaleSuspect, problem: t.checkConfidenceScaleSuspect },
+    { code: "negativeBranchLength", name: t.checkNameNegativeBranchLength, problem: t.checkNegativeBranchLength },
+    { code: "verticalEdgeAcrossClades", name: t.checkNameVerticalEdgeAcrossClades, problem: t.checkVerticalEdgeAcrossClades },
   ];
+
+  const levelLabel = (lv: string): string =>
+    lv === "error" ? t.levelError : lv === "warning" ? t.levelWarning : t.levelInfo;
+
+  // "All checks passed" next to unresolved parser warnings used to promise a
+  // clean bill of health the data did not have: the parse warnings now live
+  // in the same panel, above the structural checks.
+  const warningGroups: { title: string; items: string[] }[] = [
+    { title: t.parseWarnings, items: docWarnings },
+    { title: `${t.nestedWarningsLabel}${nestedName ? ` (${nestedName})` : ""}`, items: nestedWarnings },
+    { title: `${t.compareWarningsLabel}${compareName ? ` (${compareName})` : ""}`, items: compareWarnings },
+  ].filter((g) => g.items.length > 0);
+
+  const exportQc = () => {
+    const cell = (v: string) => (/[",\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v);
+    const lines: string[] = ["level,code,count,examples,node_ids"];
+    for (const iss of issues) {
+      lines.push(
+        [cell(iss.level), cell(iss.code), String(iss.count), cell(iss.examples.join("; ")), cell(iss.nodeIds.join("; "))].join(","),
+      );
+    }
+    for (const g of warningGroups) {
+      for (const w of g.items) {
+        lines.push([cell("warning"), cell("parseWarning"), "1", cell(w), ""].join(","));
+      }
+    }
+    const csv = "\uFEFF" + lines.join("\n");
+    const fname = `${baseName(fileName)}-qc.csv`;
+    if (isTauri()) {
+      void desktopSaveText(fname, csv, "csv").then(() => showToast(`${t.exportedToast}: ${fname}`, "success"));
+    } else {
+      triggerCsvDownload(fname, csv);
+      showToast(`${t.exportedToast}: ${fname}`, "success");
+    }
+  };
 
   return (
     <div className="rp-section">
       <p className="rp-checks-intro">
         {t.checksIntro}{" "}
-        {issues.length === 0 ? (
-          <span className="rp-checks-pass">✓ {t.checkAllGood}</span>
+        {issues.length === 0 && warningGroups.length === 0 ? (
+          <span className="rp-checks-pass">\u2713 {t.checkAllGood}</span>
         ) : (
           <span className="rp-checks-fail">
             {issues.length} / {checks.length} {t.checksWithIssues}
+            {docWarnings.length + nestedWarnings.length + compareWarnings.length > 0 && " + parser warnings"}
           </span>
         )}
       </p>
+      <div className="rp-toolbar">
+        <button className="btn" onClick={exportQc}>{t.exportReport}</button>
+      </div>
+
+      {warningGroups.map((g) => (
+        <RpCollapsible
+          key={g.title}
+          title={`${g.title} (${g.items.length})`}
+          storageKey={`rpv.rp.warn-${g.title}`}
+          defaultOpen={g.items.length <= 5}
+        >
+          <ul className="rp-issue-ex" style={{ margin: 0, paddingLeft: 18 }}>
+            {g.items.slice(0, 50).map((w, i) => (
+              <li key={i}>{w}</li>
+            ))}
+            {g.items.length > 50 && <li>\u2026 +{g.items.length - 50}</li>}
+          </ul>
+        </RpCollapsible>
+      ))}
+
       {checks.map((c) => {
         const iss = byCode.get(c.code);
         if (!iss) {
           return (
             <div key={c.code} className="rp-issue pass">
               <div className="rp-issue-head">
-                <span className="rp-check-tick">✓</span>
+                <span className="rp-check-tick">\u2713</span>
                 <span>{c.name}</span>
               </div>
             </div>
@@ -1091,10 +1315,26 @@ function ChecksTab() {
             <div className="rp-issue-head">
               <span className="rp-issue-count">{iss.count}</span>
               <span>{c.problem}</span>
+              <span className="ni-pane">{levelLabel(iss.level)}</span>
             </div>
             {iss.examples.length > 0 && (
               <div className="rp-issue-ex">
-                {iss.examples.join(", ")}
+                {iss.nodeIds.length > 0 ? (
+                  // The first flagged node is one click away: the examples used
+                  // to be dead text, so "known problems" never became "found".
+                  <button
+                    className="btn ghost"
+                    style={{ fontSize: 11, padding: "1px 6px" }}
+                    onClick={() => {
+                      useStore.getState().setInspector({ kind: "gene", id: iss.nodeIds[0] });
+                      useStore.getState().locateGene(iss.nodeIds[0]);
+                    }}
+                  >
+                    {t.locateFirst}: {iss.examples[0]}
+                  </button>
+                ) : (
+                  iss.examples.join(", ")
+                )}
                 {iss.count > iss.examples.length ? " \u2026" : ""}
               </div>
             )}

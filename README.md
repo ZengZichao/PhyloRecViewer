@@ -13,9 +13,9 @@ Beautiful, offline, interactive **recPhyloXML / NHX** phylogenetic-reconciliatio
 
 - **Format support**: recPhyloXML and NHX/Newick parsing (probed by content; unknown input falls back to recPhyloXML), multi-file merge. NHX import reconstructs the species tree from `S=` annotations — reliable for self-contained files, but horizontal transfers that are unmarked in the input cannot be distinguished, so prefer recPhyloXML for results that contain HGT
 - **Visualization**: species + gene-tree reconciliation drawing, four orientations, tidy/rectangular layouts
-- **Nested view**: three-level nesting (gene → symbiont → host) and side-by-side compare
+- **Nested view**: three-level nesting (gene → symbiont → host), plus a compare view whose panes stack vertically by default with a side-by-side toggle
 - **Analysis**: search / filter / statistics / consistency checks, transfer network
-- **Export**: SVG / PNG / PDF / interactive HTML / NHX; session save & restore with workspace-wide autosave across all open tabs. NHX export is lossless when re-read by this app but uses an extended dialect — external Newick readers may drop losses and transfers, so use recPhyloXML for a fully lossless, self-describing round-trip
+- **Export**: SVG / PNG / PDF / interactive HTML / NHX; session save & restore with workspace-wide autosave across all open tabs. The headless CLI additionally exports **recPhyloXML** — the fully lossless, self-describing round-trip. NHX is an extended dialect: it now carries every transfer arrival, timeSlice, confidence, support and branch lengths, but still loses the species tree itself, species branch lengths, gene-tree names and species never sampled by any gene tree
 - **Platform**: bilingual (中文 / English), light & dark themes; runs fully offline
 - **Open source**: MIT license; installers for macOS, Windows, and Linux
 
@@ -71,6 +71,8 @@ npm run lint          # eslint . --max-warnings 0
 npm test              # vitest
 npm run coverage      # vitest with a coverage report
 npm run check:tracked # every imported file is committed (see CONTRIBUTING.md)
+npm run cli           # headless export from a saved session (.rpvsession.json):
+                      # stats CSV, checks JSON, SVG / HTML / recPhyloXML / NHX
 ```
 
 `npm run measure` exercises the real parser → layout → renderer path and writes
@@ -80,8 +82,10 @@ cannot rot silently.
 ## Usage
 
 1. Launch PhyloRecViewer.
-2. Open a `.recphyloxml`, `.recphylo`, `.xml`, `.phyloxml`, `.nhx`, `.nwk`, or
-   `.newick` file via **File → Open**, drag & drop, or OS file association.
+2. Open a `.recphyloxml` / `.recphylo` / `.xml` / `.phyloxml` file (the app reads
+   **recPhyloXML content**; plain PhyloXML trees without a `<recPhylo>` root are
+   not reconciliations and are refused) or a `.nhx` / `.nwk` / `.newick` gene
+   tree via **File → Open**, drag & drop, or OS file association.
 3. Use the left panel to adjust layout, style, and labels.
 4. Use the right panel for search, statistics, transfer network, and consistency checks.
 5. Export to SVG / PNG / PDF / HTML via the **Export** menu.
@@ -107,7 +111,7 @@ src/
 ├── layout/     # Six-pass layout pipeline
 ├── analysis/   # Statistics, comparison, validation
 ├── render/     # Pure SVG renderer
-├── export/     # SVG/PNG/PDF/HTML/NHX export
+├── export/     # SVG/PNG/PDF/HTML/recPhyloXML/NHX export
 ├── state/      # Zustand store, undo/redo
 ├── app/        # React components
 ├── samples/    # Bundled sample reconciliations
@@ -118,7 +122,7 @@ src/
 
 If you use PhyloRecViewer in your research, please cite the archived release:
 
-> Zeng, Z., & Wang, Y. (2026). *PhyloRecViewer* (v0.1.1) [Computer software]. Zenodo. https://doi.org/10.5281/zenodo.23053317
+> Zeng, Z., & Wang, Y. (2026). *PhyloRecViewer* (v0.2.0) [Computer software]. Zenodo. https://doi.org/10.5281/zenodo.23053317
 
 That DOI is the archive's **concept** DOI: it resolves to whichever version of the
 deposit is current. Each archived version also has its own immutable **version**

@@ -60,10 +60,29 @@ export function usePinned(storageKey: string) {
 // contentEditable) is applied consistently so no shortcut fires while typing.
 // ---------------------------------------------------------------------------
 
+/**
+ * Input types that consume typed characters / need protection from global
+ * shortcuts. Range, checkbox, radio, color, button etc. do NOT take text, so
+ * a global shortcut (Ctrl+Z, F, ?) pressed right after using a slider or a
+ * toggle must still work - the old guard treated every <input> as text and
+ * silently killed the shortcuts until focus moved away.
+ */
+const NON_TEXT_INPUT_TYPES = new Set([
+  "range", "checkbox", "radio", "button", "submit", "reset",
+  "color", "file", "image",
+]);
+
 /** True if the event originated inside a text input, textarea, or contenteditable. */
 export function isTextInput(e: KeyboardEvent): boolean {
   const el = e.target as HTMLElement | null;
-  return !!el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.isContentEditable);
+  if (!el) return false;
+  if (el.isContentEditable) return true;
+  if (el.tagName === "TEXTAREA") return true;
+  if (el.tagName === "SELECT") return true;
+  if (el.tagName === "INPUT") {
+    return !NON_TEXT_INPUT_TYPES.has((el as HTMLInputElement).type);
+  }
+  return false;
 }
 
 /**
@@ -205,6 +224,7 @@ export function useFocusMatchesFor(
   const familyFilter = useStore((s) => s.familyFilter);
   const confidenceMin = useStore((s) => s.confidenceMin);
   const confidenceMax = useStore((s) => s.confidenceMax);
+  const annotations = useStore((s) => s.annotations);
 
   const families = useMemo(
     () => scopeFamilyFilter(familyFilter, familyScope, recon),
@@ -220,9 +240,10 @@ export function useFocusMatchesFor(
             events: eventFilter,
             families,
             confidence: [confidenceMin, confidenceMax],
+            annotations,
           })
         : null,
-    [recon, query, regex, eventFilter, families, confidenceMin, confidenceMax],
+    [recon, query, regex, eventFilter, families, confidenceMin, confidenceMax, annotations],
   );
 
   const idSet = useMemo(() => focusIdSet(matches), [matches]);

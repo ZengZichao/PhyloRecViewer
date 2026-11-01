@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useT } from "../i18n";
 import { setOnboarded } from "../state/prefs";
 import { useFocusTrap } from "./hooks";
@@ -47,7 +47,11 @@ export function Onboarding({ visible, onClose }: { visible: boolean; onClose: ()
     }));
   }, [t]);
 
-  const stepsList = steps();
+  // STABLE across renders: steps() returned a fresh array each render, which
+  // changed `measure`'s identity every render, re-ran the measure effect, and
+  // setBox() a fresh object — an infinite render loop as soon as the tour was
+  // actually shown (the first-launch auto-show exposed it).
+  const stepsList = useMemo(() => steps(), [steps]);
   const finish = useCallback(() => {
     setOnboarded(true);
     onClose();
@@ -71,7 +75,14 @@ export function Onboarding({ visible, onClose }: { visible: boolean; onClose: ()
       return;
     }
     const r = el.getBoundingClientRect();
-    setBox({ x: r.left - 6, y: r.top - 6, w: r.width + 12, h: r.height + 12 });
+    // Only commit when the geometry actually changed, so identical
+    // measurements (same rect, new object) cannot re-trigger the effect.
+    setBox((prev) =>
+      prev && prev.x === r.left - 6 && prev.y === r.top - 6 &&
+      prev.w === r.width + 12 && prev.h === r.height + 12
+        ? prev
+        : { x: r.left - 6, y: r.top - 6, w: r.width + 12, h: r.height + 12 },
+    );
   }, [stepsList, step]);
 
   useEffect(() => {

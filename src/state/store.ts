@@ -6,7 +6,10 @@ import {
 import { optimizeCrossings } from "../layout/optimize";
 import type { Reconciliation } from "../model/types";
 import { ALL_EVENTS, type EventFilter } from "../analysis/focus";
-import { parseMerged, parseReconciliation } from "../parser/formats";
+import { detectEncodingProblem, parseMerged, parseReconciliation, detectFormat } from "../parser/formats";
+import { parseSpeciesTree } from "../parser/speciesTree";
+import { parseNhxReconciliation } from "../parser/nhx";
+import { documentNamespace } from "../model/stableId";
 import {
   defaultRenderOptions,
   defaultLabelAngle,
@@ -31,13 +34,23 @@ export type RightPanelTab =
 export interface HistorySnapshot {
   swapped: Set<string>;
   nestedSwapped: Set<string>;
+  /** Mirror/collapse state of the COMPARE pane, kept separate so editing one
+   *  pane's arrangement never silently rearranges the other. */
+  compareSwapped: Set<string>;
   collapsed: Set<string>;
+  compareCollapsed: Set<string>;
   geneColors: Record<number, string>;
+  /** Per-tree colors of the COMPARE pane (the same index means a different
+   *  family there, so sharing colors with the primary pane mislabels it). */
+  compareGeneColors: Record<number, string>;
   annotations: Record<string, GeneAnnotation>;
   layoutOptions: LayoutOptions;
   renderOptions: RenderOptions;
   /** User renames of species/gene labels, keyed by original label text. */
   labelOverrides: Record<string, string>;
+  /** User renames keyed by NODE ID: renaming one of several same-named labels
+   *  targets exactly that node instead of every label carrying the text. */
+  labelOverridesById: Record<string, string>;
   /** Full document state; present only on undo-able open/load operations so a
    *  wrongly opened file can be undone back to the previous document. */
   doc?: HistoryDoc | null;
@@ -56,10 +69,12 @@ export interface HistoryDoc {
   nestedName: string | null;
   nestedXml: string | null;
   nestedError: string | null;
+  nestedWarnings: string[];
   compare: Reconciliation | null;
   compareName: string | null;
   compareXml: string | null;
   compareError: string | null;
+  compareWarnings: string[];
   sampleId: string | null;
 }
 
@@ -86,6 +101,11 @@ export interface ToastData {
 export type PaneId = "primary" | "nested" | "compare";
 
 const HISTORY_LIMIT = 100;
+
+/** Shared open-size limit (bytes). The Tauri shell enforces the same value in
+ *  lib.rs; the browser path enforces it here. */
+export const MAX_FILE_BYTES = 64 * 1024 * 1024;
+export const MAX_FILE_MIB = 64;
 
 /** How long a toast stays up, and how long a heavy task is willing to wait for
  *  an animation frame it may never get. */
@@ -141,12 +161,16 @@ interface AppState {
   nestedName: string | null;
   nestedXml: string | null;
   nestedError: string | null;
+  /** Parse warnings of the nested layer (kept, not dropped). */
+  nestedWarnings: string[];
 
   /** Optional alternative reconciliation of the SAME family, for comparison. */
   compare: Reconciliation | null;
   compareName: string | null;
   compareXml: string | null;
   compareError: string | null;
+  /** Parse warnings of the compare layer (kept, not dropped). */
+  compareWarnings: string[];
 
   layoutOptions: LayoutOptions;
   renderOptions: RenderOptions;
@@ -162,22 +186,32 @@ interface AppState {
   /** Same, but for the nested (host) drawing - kept separate so identically
    *  named species in the two files never mirror each other by accident. */
   nestedSwapped: Set<string>;
+  /** Same, but for the compare pane (isolated from the primary document). */
+  compareSwapped: Set<string>;
   /** Gene nodes (by id) whose subtree is collapsed. */
   collapsed: Set<string>;
+  /** Collapsed subtrees of the compare pane (isolated from the primary). */
+  compareCollapsed: Set<string>;
   /** Per gene-tree color overrides, keyed by tree index. */
   geneColors: Record<number, string>;
+  /** Per-tree color overrides of the COMPARE pane. */
+  compareGeneColors: Record<number, string>;
   /** User notes attached to gene nodes, keyed by node id. */
   annotations: Record<string, GeneAnnotation>;
   /** User renames of species/gene labels, keyed by original label text. */
   labelOverrides: Record<string, string>;
+  /** User renames keyed by node id (renaming ONE of several same-named labels). */
+  labelOverridesById: Record<string, string>;
   /** The gene node currently being annotated (drives the editor popover). */
   annotating: { id: string; name: string } | null;
   /** Show the legend, both on the canvas and in exported images. */
   showLegend: boolean;
   /** Show the minimap navigator overlay on the canvas. */
   minimap: boolean;
-/** Export PNG DPI (minimum 600). Higher = more pixels per inch. */
-pngDpi: number;
+  /** Sync zoom/pan/edits between the two compare panes. */
+  compareLinked: boolean;
+  /** Export PNG DPI. */
+  pngDpi: number;
   /** Id of the bundled sample currently loaded (null when a real file is open). */
   sampleId: string | null;
 
@@ -204,10 +238,10 @@ pngDpi: number;
   /** Docked analysis panel: open state and active tab. */
   rightPanelOpen: boolean;
   rightPanelTab: RightPanelTab;
-  /** Search & filter criteria (drive node dimming across the drawing). */
   searchQuery: string;
   searchRegex: boolean;
-  /** Hide every non-matching node (opacity 0) instead of just dimming it. */
+  /** Hide every non-matching node (opacity 0) instead of just dimming it.
+   *  Per-document; the flat field mirrors the active tab's value. */
   onlyMatches: boolean;
   eventFilter: EventFilter;
   /** Gene-tree indices to keep; null = all families shown. */
@@ -218,6 +252,28 @@ pngDpi: number;
   /** A request to center a canvas on a node (nonce triggers it; pane routes it
    *  to the primary / nested / compare canvas). */
   locate: { geneId: string; nonce: number; pane?: PaneId } | null;
+
+  /** Monotonic edit counter of the active document (dirty-baseline half). */
+  editSeq: number;
+  /** Edit counter at the last clean baseline of the active document. */
+  savedSeq: number;
+
+  /** Wall-clock time of the last successful autosave (null = never / unknown). */
+  autosaveAt: number | null;
+  /** True while the last autosave attempt failed (quota, private mode). */
+  autosaveFailed: boolean;
+  /** A crash snapshot exists from a previous session: the startup prompt lets
+   *  the user restore it or start blank instead of silently resuming. */
+  pendingRestore: { savedAt: number | null } | null;
+
+  /** Node/transfer shown in the floating Inspector (null = closed). */
+  inspector: { kind: "gene" | "transfer"; id: string } | null;
+  setInspector: (v: { kind: "gene" | "transfer"; id: string } | null) => void;
+
+  /** Externally provided species tree (Newick), used when opening NHX gene
+   *  trees whose internal nodes lack S= annotations. */
+  externalSpeciesTree: { name: string; text: string } | null;
+  setExternalSpeciesTree: (v: { name: string; text: string } | null) => void;
 
   /** Short-lived status message shown as a toast (singleton, App-level). */
   toast: ToastData | null;
@@ -265,15 +321,23 @@ pngDpi: number;
    *  clade sends - and then every clade carrying that name mirrors. */
   toggleSwap: (species: string) => void;
   toggleNestedSwap: (species: string) => void;
-  optimizeSwaps: () => void;
+  /** Mirror one species clade in the COMPARE pane (isolated from the primary). */
+  toggleCompareSwap: (species: string) => void;
+  optimizeSwaps: (scope?: "primary" | "both") => void;
   clearSwaps: () => void;
   toggleCollapse: (geneId: string) => void;
+  /** Collapse one subtree in the COMPARE pane (isolated from the primary). */
+  toggleCompareCollapse: (geneId: string) => void;
   setGeneColor: (treeIndex: number, color: string) => void;
+  /** Set a family color in the COMPARE pane. */
+  setCompareGeneColor: (treeIndex: number, color: string) => void;
   setAnnotating: (sel: { id: string; name: string } | null) => void;
   setAnnotation: (id: string, text: string, color: string) => void;
   removeAnnotation: (id: string) => void;
   /** Rename a single species or gene label (key = original label text). */
   setLabelOverride: (key: string, value: string) => void;
+  /** Rename ONE node (by stable id) without touching same-named labels. */
+  setLabelOverrideById: (nodeId: string, value: string) => void;
   /** Batch find-and-replace across species and/or gene labels (regex supported). */
   batchReplaceLabels: (
     find: string,
@@ -283,6 +347,14 @@ pngDpi: number;
   ) => void;
   /** Clear all label overrides. */
   clearLabelOverrides: () => void;
+  /** Re-baseline the dirty counter after a clean load or session save. */
+  markDocClean: () => void;
+  /** Copy the active tab's layout/render options to every other tab. */
+  applyOptionsToAllTabs: () => void;
+  /** Toggle zoom/pan/edit sync between the compare panes. */
+  setCompareLinked: (on: boolean) => void;
+  /** Rename a tab's display title (merged documents especially). */
+  renameTab: (id: string, title: string) => void;
   setShowLegend: (on: boolean) => void;
   setMinimap: (on: boolean) => void;
   setPngDpi: (n: number) => void;
@@ -314,10 +386,17 @@ pngDpi: number;
     themeId?: ThemePref;
     swapped?: string[];
     nestedSwapped?: string[];
+    compareSwapped?: string[];
     collapsed?: string[];
+    compareCollapsed?: string[];
     geneColors?: Record<number, string>;
+    compareGeneColors?: Record<number, string>;
     annotations?: Record<string, GeneAnnotation>;
     labelOverrides?: Record<string, string>;
+    labelOverridesById?: Record<string, string>;
+    onlyMatches?: boolean;
+    /** Mark the document clean after applying (session/restore baselines). */
+    clean?: boolean;
     /** When false, the tab's undo/redo history is preserved. Defaults to true so
      *  session/autosave restore starts from a clean history. A user who merely
      *  resets view options should pass false. */
@@ -329,12 +408,16 @@ function snapshot(s: AppState): HistorySnapshot {
   return {
     swapped: s.swapped,
     nestedSwapped: s.nestedSwapped,
+    compareSwapped: s.compareSwapped,
     collapsed: s.collapsed,
+    compareCollapsed: s.compareCollapsed,
     geneColors: s.geneColors,
+    compareGeneColors: s.compareGeneColors,
     annotations: s.annotations,
     layoutOptions: s.layoutOptions,
     renderOptions: s.renderOptions,
     labelOverrides: s.labelOverrides,
+    labelOverridesById: s.labelOverridesById,
   };
 }
 
@@ -351,10 +434,12 @@ function docSnapshot(s: AppState): HistoryDoc {
     nestedName: s.nestedName,
     nestedXml: s.nestedXml,
     nestedError: s.nestedError,
+    nestedWarnings: s.nestedWarnings,
     compare: s.compare,
     compareName: s.compareName,
     compareXml: s.compareXml,
     compareError: s.compareError,
+    compareWarnings: s.compareWarnings,
     sampleId: s.sampleId,
   };
 }
@@ -374,27 +459,33 @@ function docFromSlice(d: DocState): HistoryDoc {
     nestedName: d.nestedName,
     nestedXml: d.nestedXml,
     nestedError: d.nestedError,
+    nestedWarnings: d.nestedWarnings,
     compare: d.compare,
     compareName: d.compareName,
     compareXml: d.compareXml,
     compareError: d.compareError,
+    compareWarnings: d.compareWarnings,
     sampleId: d.sampleId,
   };
 }
 
 /** Editable+document snapshot of a stashed tab, for that tab's own undo stack. */
-function entryFromSlice(s: AppState, d: DocState): HistorySnapshot {
+function entryFromSlice(d: DocState): HistorySnapshot {
   return {
     swapped: d.swapped,
     nestedSwapped: d.nestedSwapped,
+    compareSwapped: d.compareSwapped,
     collapsed: d.collapsed,
+    compareCollapsed: d.compareCollapsed,
     geneColors: d.geneColors,
+    compareGeneColors: d.compareGeneColors,
     annotations: d.annotations,
-    // Layout/style options are shared across tabs, so the tab inherits the
-    // options it would be drawn with right now.
-    layoutOptions: s.layoutOptions,
-    renderOptions: s.renderOptions,
+    // Layout/style options belong to the document, so a background tab keeps
+    // its own.
+    layoutOptions: d.layoutOptions,
+    renderOptions: d.renderOptions,
     labelOverrides: d.labelOverrides,
+    labelOverridesById: d.labelOverridesById,
     doc: docFromSlice(d),
   };
 }
@@ -412,10 +503,20 @@ function loadDoc(files: { name: string; text: string }[]): DocLoad {
   try {
     const merged = files.length > 1;
     const first = files[0];
-    const recon = merged
-      ? parseMerged(files)
-      : parseReconciliation(first?.text ?? "", first?.name ?? "document");
-    const title = merged ? `${files.length} files` : first?.name ?? null;
+    // A separately provided species tree takes over for NHX gene trees whose
+    // internal nodes lack S= (the leaf-only annotation style real tools emit).
+    const ext = useStore.getState().externalSpeciesTree;
+    let recon: Reconciliation;
+    if (!merged && first && ext && detectFormat(first.text, first.name) === "nhx") {
+      const ns = documentNamespace(first.name, first.text);
+      const species = parseSpeciesTree(ext.text);
+      recon = parseNhxReconciliation(first.text, ns, species);
+    } else {
+      recon = merged
+        ? parseMerged(files)
+        : parseReconciliation(first?.text ?? "", first?.name ?? "document");
+    }
+    const title = merged ? `${files.length} families · ${first?.name ?? ""}`.trim() : first?.name ?? null;
     // Apply the user's saved "default view" to every newly opened document so
     // layout/style preferences take effect immediately. Session/autosave
     // restore calls `applyViewState` afterwards to override with its own.
@@ -436,31 +537,42 @@ function loadDoc(files: { name: string; text: string }[]): DocLoad {
         nestedName: null,
         nestedXml: null,
         nestedError: null,
+        nestedWarnings: [],
         compare: null,
         compareName: null,
         compareXml: null,
         compareError: null,
+        compareWarnings: [],
+        // Layout/style options belong to this document.
         layoutOptions: dv.layoutOptions,
         renderOptions: dv.renderOptions,
         swapped: new Set<string>(),
         nestedSwapped: new Set<string>(),
+        compareSwapped: new Set<string>(),
         collapsed: new Set<string>(),
+        compareCollapsed: new Set<string>(),
         geneColors: {},
+        compareGeneColors: {},
         annotations: {},
         annotating: null,
         // Label renames belong to the old document: keeping them would let the
         // old file's overrides rename same-text labels in the new file.
         labelOverrides: {},
+        labelOverridesById: {},
         // The document is parsed, so there is no stashed snapshot left to build.
         lazyDoc: null,
         searchQuery: "",
         searchRegex: false,
+        onlyMatches: false,
         eventFilter: { ...ALL_EVENTS },
         familyFilter: null,
         confidenceMin: 0,
         confidenceMax: 1,
         locate: null,
         sampleId: null,
+        // A freshly parsed document starts from a clean baseline.
+        editSeq: 0,
+        savedSeq: 0,
       },
     };
   } catch (e) {
@@ -484,20 +596,23 @@ function commit(
   s: AppState,
   kind: "layout" | "render" | "edit" | "open" = "edit",
   doc?: HistoryDoc | null,
-): Pick<AppState, "past" | "future"> {
+): Pick<AppState, "past" | "future" | "editSeq"> {
   const now = Date.now();
   const snap = snapshot(s);
   if (doc) snap.doc = doc;
+  // Every commit is a user-visible edit: bump the counter so the dirty
+  // baseline (savedSeq) diverges and the tab's dirty dot appears.
+  const editSeq = (s.editSeq ?? 0) + 1;
   if (kind !== "edit" && lastCommit && lastCommit.kind === kind && now - lastCommit.at < 600) {
     // Rapid consecutive commits of the same kind merge into ONE history step.
     // Keep the FIRST snapshot of the run (already on top of `past`) so undo
     // returns to the value before the drag started, not to the second-to-last
     // intermediate value.
     lastCommit = { kind, at: now };
-    return { past: s.past, future: [] };
+    return { past: s.past, future: [], editSeq };
   }
   lastCommit = { kind, at: now };
-  return { past: [...s.past, snap].slice(-HISTORY_LIMIT), future: [] };
+  return { past: [...s.past, snap].slice(-HISTORY_LIMIT), future: [], editSeq };
 }
 
 /** Restore the editable slice fields of a snapshot. */
@@ -505,22 +620,30 @@ function editFieldsFrom(snap: HistorySnapshot): Pick<
   AppState,
   | "swapped"
   | "nestedSwapped"
+  | "compareSwapped"
   | "collapsed"
+  | "compareCollapsed"
   | "geneColors"
+  | "compareGeneColors"
   | "annotations"
   | "layoutOptions"
   | "renderOptions"
   | "labelOverrides"
+  | "labelOverridesById"
 > {
   return {
     swapped: snap.swapped,
     nestedSwapped: snap.nestedSwapped,
+    compareSwapped: snap.compareSwapped,
     collapsed: snap.collapsed,
+    compareCollapsed: snap.compareCollapsed,
     geneColors: snap.geneColors,
+    compareGeneColors: snap.compareGeneColors,
     annotations: snap.annotations,
     layoutOptions: snap.layoutOptions,
     renderOptions: snap.renderOptions,
     labelOverrides: snap.labelOverrides,
+    labelOverridesById: snap.labelOverridesById,
   };
 }
 
@@ -537,10 +660,12 @@ function docFieldsFrom(snap: HistorySnapshot): Pick<
   | "nestedName"
   | "nestedXml"
   | "nestedError"
+  | "nestedWarnings"
   | "compare"
   | "compareName"
   | "compareXml"
   | "compareError"
+  | "compareWarnings"
   | "sampleId"
   | "lazyDoc"
 > {
@@ -556,10 +681,12 @@ function docFieldsFrom(snap: HistorySnapshot): Pick<
     nestedName: d?.nestedName ?? null,
     nestedXml: d?.nestedXml ?? null,
     nestedError: d?.nestedError ?? null,
+    nestedWarnings: d?.nestedWarnings ?? [],
     compare: d?.compare ?? null,
     compareName: d?.compareName ?? null,
     compareXml: d?.compareXml ?? null,
     compareError: d?.compareError ?? null,
+    compareWarnings: d?.compareWarnings ?? [],
     sampleId: d?.sampleId ?? null,
     // Undoing an open never restores an unparsed snapshot.
     lazyDoc: null,
@@ -572,8 +699,9 @@ export interface TabMeta {
   title: string;
 }
 
-/** The per-document ("tab") slice. Global prefs - theme, locale, layout/render
- *  options, panel open state - live outside this and are shared across tabs. */
+/** The per-document ("tab") slice. Theme, locale and panel open state are
+ *  global; layout/render options are PER TAB (see the fields below), so
+ *  adjusting one document's layer height no longer rearranges the others. */
 export interface DocState {
   xml: string | null;
   fileName: string | null;
@@ -585,16 +713,29 @@ export interface DocState {
   nestedName: string | null;
   nestedXml: string | null;
   nestedError: string | null;
+  /** Parse warnings of the nested layer - dropped in earlier versions, which
+   *  made serious problems in the second file invisible. */
+  nestedWarnings: string[];
   compare: Reconciliation | null;
   compareName: string | null;
   compareXml: string | null;
   compareError: string | null;
+  /** Parse warnings of the compare layer (same rationale as nestedWarnings). */
+  compareWarnings: string[];
+  /** Layout options of THIS document (per-tab, not global). */
+  layoutOptions: LayoutOptions;
+  /** Render/style options of THIS document. */
+  renderOptions: RenderOptions;
   swapped: Set<string>;
   nestedSwapped: Set<string>;
+  compareSwapped: Set<string>;
   collapsed: Set<string>;
+  compareCollapsed: Set<string>;
   geneColors: Record<number, string>;
+  compareGeneColors: Record<number, string>;
   annotations: Record<string, GeneAnnotation>;
   labelOverrides: Record<string, string>;
+  labelOverridesById: Record<string, string>;
   annotating: { id: string; name: string } | null;
   /** Raw snapshot of a document that has not been parsed yet: set for
    *  tabs restored from a session / crash snapshot, cleared when the tab is
@@ -603,6 +744,9 @@ export interface DocState {
   sampleId: string | null;
   searchQuery: string;
   searchRegex: boolean;
+  /** Hide every non-matching node instead of dimming it. Per document: a
+   *  global flag used to leak into freshly opened tabs. */
+  onlyMatches: boolean;
   eventFilter: EventFilter;
   familyFilter: Set<number> | null;
   confidenceMin: number;
@@ -610,6 +754,11 @@ export interface DocState {
   locate: { geneId: string; nonce: number; pane?: PaneId } | null;
   past: HistorySnapshot[];
   future: HistorySnapshot[];
+  /** Monotonic counter of user edits to this document. */
+  editSeq: number;
+  /** Value of editSeq at the last clean baseline (load / restore / session
+   *  save). The dirty dot shows exactly when editSeq !== savedSeq. */
+  savedSeq: number;
 }
 
 let tabSeq = 1;
@@ -628,15 +777,19 @@ function defaultViewOptions(): { layoutOptions: LayoutOptions; renderOptions: Re
 
 /** A fresh, empty document. */
 function blankDoc(): DocState {
+  const dv = defaultViewOptions();
   return {
     xml: null, fileName: null, sourceFiles: null, recon: null, error: null, warnings: [],
-    nested: null, nestedName: null, nestedXml: null, nestedError: null,
-    compare: null, compareName: null, compareXml: null, compareError: null,
-    swapped: new Set<string>(), nestedSwapped: new Set<string>(),
-    collapsed: new Set<string>(), geneColors: {}, annotations: {},
-    labelOverrides: {}, annotating: null, lazyDoc: null, sampleId: null, searchQuery: "", searchRegex: false,
+    nested: null, nestedName: null, nestedXml: null, nestedError: null, nestedWarnings: [],
+    compare: null, compareName: null, compareXml: null, compareError: null, compareWarnings: [],
+    layoutOptions: dv.layoutOptions, renderOptions: dv.renderOptions,
+    swapped: new Set<string>(), nestedSwapped: new Set<string>(), compareSwapped: new Set<string>(),
+    collapsed: new Set<string>(), compareCollapsed: new Set<string>(),
+    geneColors: {}, compareGeneColors: {}, annotations: {},
+    labelOverrides: {}, labelOverridesById: {}, annotating: null, lazyDoc: null, sampleId: null,
+    searchQuery: "", searchRegex: false, onlyMatches: false,
     eventFilter: { ...ALL_EVENTS }, familyFilter: null, confidenceMin: 0, confidenceMax: 1, locate: null,
-    past: [], future: [],
+    past: [], future: [], editSeq: 0, savedSeq: 0,
   };
 }
 
@@ -644,30 +797,31 @@ function blankDoc(): DocState {
 function extractDoc(s: AppState): DocState {
   return {
     xml: s.xml, fileName: s.fileName, sourceFiles: s.sourceFiles, recon: s.recon, error: s.error, warnings: s.warnings,
-    nested: s.nested, nestedName: s.nestedName, nestedXml: s.nestedXml, nestedError: s.nestedError,
-    compare: s.compare, compareName: s.compareName, compareXml: s.compareXml, compareError: s.compareError,
-    swapped: s.swapped, nestedSwapped: s.nestedSwapped, collapsed: s.collapsed,
-    geneColors: s.geneColors, annotations: s.annotations, labelOverrides: s.labelOverrides, annotating: s.annotating,
+    nested: s.nested, nestedName: s.nestedName, nestedXml: s.nestedXml, nestedError: s.nestedError, nestedWarnings: s.nestedWarnings,
+    compare: s.compare, compareName: s.compareName, compareXml: s.compareXml, compareError: s.compareError, compareWarnings: s.compareWarnings,
+    layoutOptions: s.layoutOptions, renderOptions: s.renderOptions,
+    swapped: s.swapped, nestedSwapped: s.nestedSwapped, compareSwapped: s.compareSwapped,
+    collapsed: s.collapsed, compareCollapsed: s.compareCollapsed,
+    geneColors: s.geneColors, compareGeneColors: s.compareGeneColors,
+    annotations: s.annotations, labelOverrides: s.labelOverrides, labelOverridesById: s.labelOverridesById,
+    annotating: s.annotating,
     lazyDoc: s.lazyDoc,
-    sampleId: s.sampleId, searchQuery: s.searchQuery, searchRegex: s.searchRegex,
+    sampleId: s.sampleId, searchQuery: s.searchQuery, searchRegex: s.searchRegex, onlyMatches: s.onlyMatches,
     eventFilter: s.eventFilter, familyFilter: s.familyFilter,
     confidenceMin: s.confidenceMin, confidenceMax: s.confidenceMax, locate: s.locate,
-    past: s.past, future: s.future,
+    past: s.past, future: s.future, editSeq: s.editSeq, savedSeq: s.savedSeq,
   };
 }
 
-/** True when a document holds user work that has not been exported/saved to a
- *  session file: annotations, swaps, collapses, color edits, or overlay levels. */
-export function isDocDirty(d: Pick<DocState, "annotations" | "swapped" | "collapsed" | "geneColors" | "nested" | "compare" | "labelOverrides">): boolean {
-  return (
-    Object.keys(d.annotations).length > 0 ||
-    d.swapped.size > 0 ||
-    d.collapsed.size > 0 ||
-    Object.keys(d.geneColors).length > 0 ||
-    Object.keys(d.labelOverrides ?? {}).length > 0 ||
-    d.nested !== null ||
-    d.compare !== null
-  );
+/**
+ * Dirty baseline: a document is dirty exactly when its edit counter has moved
+ * since the last clean baseline (load, restore, session save). The previous
+ * isDocDirty inspected the CONTENT of a fixed field list - which meant saving
+ * did not clear the dot, restored documents were born dirty, and layout/style
+ * edits never counted. A counter fixes all three at once.
+ */
+export function isDocDirty(d: Pick<DocState, "editSeq" | "savedSeq">): boolean {
+  return (d.editSeq ?? 0) !== (d.savedSeq ?? 0);
 }
 
 export const useStore = create<AppState>((set, get) => ({
@@ -681,10 +835,12 @@ export const useStore = create<AppState>((set, get) => ({
   nestedName: null,
   nestedXml: null,
   nestedError: null,
+  nestedWarnings: [],
   compare: null,
   compareName: null,
   compareXml: null,
   compareError: null,
+  compareWarnings: [],
   layoutOptions: { ...defaultLayoutOptions },
   renderOptions: { ...defaultRenderOptions },
   themeId: "system",
@@ -693,22 +849,37 @@ export const useStore = create<AppState>((set, get) => ({
     window.matchMedia?.("(prefers-color-scheme: dark)")?.matches
       ? "dark"
       : "light",
+  // Default-language rule: a ZH locale starts Chinese, everything else starts
+  // English. The old rule defaulted every non-English locale (fr, de, ja, ...)
+  // to Chinese, which is the first thing an international user saw.
   locale:
     typeof navigator !== "undefined" &&
-    (navigator.language?.startsWith("en") ?? false)
-      ? "en"
-      : "zh",
+    (navigator.language ?? "").toLowerCase().startsWith("zh")
+      ? "zh"
+      : "en",
   swapped: new Set<string>(),
   nestedSwapped: new Set<string>(),
+  compareSwapped: new Set<string>(),
   collapsed: new Set<string>(),
+  compareCollapsed: new Set<string>(),
   geneColors: {},
+  compareGeneColors: {},
   annotations: {},
   labelOverrides: {},
+  labelOverridesById: {},
   annotating: null,
   showLegend: true,
   minimap: true,
-  pngDpi: 600,
+  compareLinked: false,
+  pngDpi: 300,
   sampleId: null,
+  editSeq: 0,
+  savedSeq: 0,
+  autosaveAt: null,
+  autosaveFailed: false,
+  pendingRestore: null,
+  inspector: null,
+  externalSpeciesTree: null,
   tabs: [{ id: "tab-1", title: "" }],
   activeTabId: "tab-1",
   docs: {},
@@ -807,10 +978,14 @@ export const useStore = create<AppState>((set, get) => ({
         nestedName: fileName,
         nestedXml: xml,
         nestedError: null,
+        nestedWarnings: nested.warnings,
         compare: null,
         compareName: null,
         compareXml: null,
         compareError: null,
+        compareWarnings: [],
+        // The compare layer is gone; a diff tab would render an empty panel.
+        rightPanelTab: st.rightPanelTab === "diff" ? "search" : st.rightPanelTab,
         ...commit(st, "edit", docSnapshot(st)),
       }));
       if (hadCompare) {
@@ -823,6 +998,7 @@ export const useStore = create<AppState>((set, get) => ({
         nestedName: fileName,
         nestedXml: null,
         nestedError: friendlyParseError(e),
+        nestedWarnings: [],
         ...commit(st, "edit", docSnapshot(st)),
       }));
     }
@@ -839,6 +1015,7 @@ export const useStore = create<AppState>((set, get) => ({
       nestedName: null,
       nestedXml: null,
       nestedError: null,
+      nestedWarnings: [],
       ...commit(st, "edit", docSnapshot(st)),
     }));
   },
@@ -856,10 +1033,12 @@ export const useStore = create<AppState>((set, get) => ({
         compareName: fileName,
         compareXml: xml,
         compareError: null,
+        compareWarnings: compare.warnings,
         nested: null,
         nestedName: null,
         nestedXml: null,
         nestedError: null,
+        nestedWarnings: [],
         ...commit(st, "edit", docSnapshot(st)),
       }));
       if (hadNested) {
@@ -872,6 +1051,7 @@ export const useStore = create<AppState>((set, get) => ({
         compareName: fileName,
         compareXml: null,
         compareError: friendlyParseError(e),
+        compareWarnings: [],
         ...commit(st, "edit", docSnapshot(st)),
       }));
     }
@@ -885,6 +1065,7 @@ export const useStore = create<AppState>((set, get) => ({
       compareName: null,
       compareXml: null,
       compareError: null,
+      compareWarnings: [],
       // If the right panel was showing the diff tab, fall back to search so
       // the user doesn't see a blank panel with no compare document loaded.
       rightPanelTab: s.rightPanelTab === "diff" ? "search" : s.rightPanelTab,
@@ -901,6 +1082,8 @@ export const useStore = create<AppState>((set, get) => ({
         docs: { ...s.docs, [s.activeTabId]: extractDoc(s) },
         tabs: [...s.tabs, { id, title: "" }],
         activeTabId: id,
+        // A blank document has no compare layer; the diff tab would be blank.
+        rightPanelTab: s.rightPanelTab === "diff" ? "search" : s.rightPanelTab,
       };
     }),
 
@@ -965,7 +1148,7 @@ export const useStore = create<AppState>((set, get) => ({
       return;
     }
     set({ pendingMulti: null, pendingMultiTabId: null });
-    focusTab(tabId);
+    focusTabOrFresh(tabId);
     get().loadMany(files);
     // Say out loud what happened to the files: a merge is never silent. The two
     // locale templates live here because the store layer does not import the
@@ -986,8 +1169,11 @@ export const useStore = create<AppState>((set, get) => ({
     }
     set({ pendingMulti: null, pendingMultiTabId: null });
     // Creating one tab per file is relative to the front tab, so bring the tab
-    // the drop was aimed at back to the front first.
-    focusTab(tabId);
+    // the drop was aimed at back to the front first. When that tab was closed
+    // while the dialog was open, fall back to a FRESH tab: focusing is a no-op
+    // then, and loading into the frontmost tab would overwrite a document the
+    // user opened in the meantime.
+    focusTabOrFresh(tabId);
     // Open each file in its own tab (first one reuses a disposable tab).
     files.forEach((f, i) => {
       if (i > 0) get().newTab();
@@ -1001,10 +1187,25 @@ export const useStore = create<AppState>((set, get) => ({
 
   openFiles: async (files) => {
     if (files.length === 0) return;
+    // Same limit as the desktop shell's native open path (lib.rs): without it,
+    // a file the menu refuses could still be dropped onto the window and freeze
+    // the tab reading + parsing multi-hundred-MB text.
+    const oversized = files.filter((f) => (f.size ?? 0) > MAX_FILE_BYTES);
+    if (oversized.length > 0) {
+      const st = get();
+      st.showToast(
+        st.locale === "zh"
+          ? `文件超过 ${MAX_FILE_MIB} MiB 上限：${oversized.map((f) => f.name).join("、")}`
+          : `File(s) exceed the ${MAX_FILE_MIB} MiB limit: ${oversized.map((f) => f.name).join(", ")}`,
+        "error",
+      );
+      if (oversized.length === files.length) return;
+    }
+    const accepted = files.filter((f) => (f.size ?? 0) <= MAX_FILE_BYTES);
     // Decide WHERE the document goes before reading anything: `f.text()` is
     // async, and the tab that is frontmost when the read finishes may be one
     // the user created meanwhile.
-    const multi = files.length > 1;
+    const multi = accepted.length > 1;
     const tabId = claimTabForLoad(get());
     inflightTabs.add(tabId);
     beginLoading();
@@ -1014,7 +1215,15 @@ export const useStore = create<AppState>((set, get) => ({
     await nextFrame();
     try {
       const parsed = await Promise.all(
-        files.map(async (f) => ({ name: f.name, text: await f.text() })),
+        accepted.map(async (f) => {
+          const text = await f.text();
+          // A UTF-16 or ISO-8859-1 file "reads" successfully via File.text()
+          // but decodes to garbage or mojibake; say so before the parser gets
+          // blame for a decoding problem it cannot see.
+          const enc = detectEncodingProblem(text);
+          if (enc) throw new Error(`${f.name}: ${enc}`);
+          return { name: f.name, text };
+        }),
       );
       if (multi) {
         // Merge-vs-tabs needs an answer, so show the dialog on the tab the drop
@@ -1052,10 +1261,20 @@ export const useStore = create<AppState>((set, get) => ({
       ...commit(s),
     })),
 
-  optimizeSwaps: () =>
+  toggleCompareSwap: (species) =>
+    set((s) => ({
+      // The compare pane has its OWN mirror set: mirroring a branch in B must
+      // not rearrange A (the two documents may not even share the topology).
+      compareSwapped: toggleSwapKeys(s.compareSwapped, s.compare, species),
+      ...commit(s),
+    })),
+
+  optimizeSwaps: (scope = "primary") =>
     set((s) => ({
       swapped: s.recon ? optimizeCrossings(s.recon) : s.swapped,
-      nestedSwapped: s.nested ? optimizeCrossings(s.nested) : s.nestedSwapped,
+      // The nested/compare panes follow their own mirror sets; a heuristic
+      // pass on the primary drawing no longer silently rearranges them.
+      nestedSwapped: scope === "both" && s.nested ? optimizeCrossings(s.nested) : s.nestedSwapped,
       ...commit(s),
     })),
 
@@ -1063,6 +1282,7 @@ export const useStore = create<AppState>((set, get) => ({
     set((s) => ({
       swapped: new Set<string>(),
       nestedSwapped: new Set<string>(),
+      compareSwapped: new Set<string>(),
       ...commit(s),
     })),
 
@@ -1074,8 +1294,22 @@ export const useStore = create<AppState>((set, get) => ({
       return { collapsed: next, ...commit(s) };
     }),
 
+  toggleCompareCollapse: (geneId) =>
+    set((s) => {
+      const next = new Set(s.compareCollapsed);
+      if (next.has(geneId)) next.delete(geneId);
+      else next.add(geneId);
+      return { compareCollapsed: next, ...commit(s) };
+    }),
+
   setGeneColor: (treeIndex, color) =>
     set((s) => ({ geneColors: { ...s.geneColors, [treeIndex]: color }, ...commit(s) })),
+
+  setCompareGeneColor: (treeIndex, color) =>
+    set((s) => ({
+      compareGeneColors: { ...s.compareGeneColors, [treeIndex]: color },
+      ...commit(s),
+    })),
 
   setAnnotating: (sel) => set({ annotating: sel }),
   setAnnotation: (id, text, color) =>
@@ -1140,7 +1374,38 @@ export const useStore = create<AppState>((set, get) => ({
       return { labelOverrides: next, ...commit(s) };
     }),
   clearLabelOverrides: () =>
-    set((s) => ({ labelOverrides: {}, ...commit(s) })),
+    set((s) => ({ labelOverrides: {}, labelOverridesById: {}, ...commit(s) })),
+
+  setLabelOverrideById: (nodeId, value) =>
+    set((s) => {
+      const had = Object.prototype.hasOwnProperty.call(s.labelOverridesById, nodeId);
+      const wanted = !!value;
+      if (wanted === had && (!had || s.labelOverridesById[nodeId] === value)) return {};
+      const next = { ...s.labelOverridesById };
+      if (wanted) next[nodeId] = value;
+      else delete next[nodeId];
+      return { labelOverridesById: next, ...commit(s) };
+    }),
+
+  markDocClean: () =>
+    set((s) => ({ savedSeq: s.editSeq })),
+
+  applyOptionsToAllTabs: () =>
+    set((s) => {
+      const docs: Record<string, DocState> = {};
+      for (const [id, d] of Object.entries(s.docs)) {
+        docs[id] = { ...d, layoutOptions: s.layoutOptions, renderOptions: s.renderOptions };
+      }
+      return { docs };
+    }),
+
+  setCompareLinked: (on) => set({ compareLinked: on }),
+
+  renameTab: (id, title) =>
+    set((s) => ({
+      tabs: s.tabs.map((tb) => (tb.id === id ? { ...tb, title } : tb)),
+      ...(id === s.activeTabId ? { fileName: title } : {}),
+    })),
 
   setShowLegend: (on) => {
     set({ showLegend: on });
@@ -1153,12 +1418,18 @@ export const useStore = create<AppState>((set, get) => ({
     savePrefs({ ...prefs, minimap: on });
   },
   setPngDpi: (n) => {
-    const dpi = Math.max(600, n);
+    // 300 DPI is the publication default; the floor allows screen-resolution
+    // exports (72) too. The old floor of 600 forced every quick figure to be
+    // huge and pushed large drawings into the canvas-limit downgrade.
+    const dpi = Math.max(72, Math.round(n));
     set({ pngDpi: dpi });
     const prefs = loadPrefs();
     savePrefs({ ...prefs, pngDpi: dpi });
   },
   setSampleId: (id) => set({ sampleId: id }),
+
+  setInspector: (v) => set({ inspector: v }),
+  setExternalSpeciesTree: (v) => set({ externalSpeciesTree: v }),
 
   showToast: (msg, kind = "success") => {
     const id = ++toastSeq;
@@ -1206,6 +1477,9 @@ export const useStore = create<AppState>((set, get) => ({
     set({
       searchQuery: "",
       searchRegex: false,
+      // "Show only matches" is part of the filter state: leaving it on made
+      // the tree stay hidden after Clear, with the checkbox greyed out.
+      onlyMatches: false,
       eventFilter: { ...ALL_EVENTS },
       familyFilter: null,
       confidenceMin: 0,
@@ -1285,10 +1559,18 @@ export const useStore = create<AppState>((set, get) => ({
           : (v.themeId as "light" | "dark") ?? s.resolvedThemeId,
       swapped: v.swapped ? new Set(v.swapped) : s.swapped,
       nestedSwapped: v.nestedSwapped ? new Set(v.nestedSwapped) : s.nestedSwapped,
+      compareSwapped: v.compareSwapped ? new Set(v.compareSwapped) : s.compareSwapped,
       collapsed: v.collapsed ? new Set(v.collapsed) : s.collapsed,
+      compareCollapsed: v.compareCollapsed ? new Set(v.compareCollapsed) : s.compareCollapsed,
       geneColors: v.geneColors ?? s.geneColors,
+      compareGeneColors: v.compareGeneColors ?? s.compareGeneColors,
       annotations: v.annotations ?? s.annotations,
       labelOverrides: v.labelOverrides ?? s.labelOverrides,
+      labelOverridesById: v.labelOverridesById ?? s.labelOverridesById,
+      onlyMatches: v.onlyMatches ?? s.onlyMatches,
+      // A restore IS the clean baseline unless the caller says otherwise:
+      // restored documents used to be born with a dirty dot.
+      ...(v.clean ? { savedSeq: s.editSeq } : {}),
       };
     }),
 
@@ -1380,10 +1662,12 @@ const inflightTabs = new Set<string>();
  *  the (async) file read, so the document can never end up in a tab the user
  *  created meanwhile - nor in none at all. */
 function claimTabForLoad(s: AppState): string {
-  // Reuse the current tab when it is blank or only showing a bundled sample;
-  // otherwise open a fresh tab so existing work is kept. A tab another read is
-  // already heading for is not up for reuse.
-  const disposable = (!s.recon && !s.error) || s.sampleId !== null;
+  // Reuse the current tab when it is blank or only showing a bundled sample
+  // that the user has NOT edited; otherwise open a fresh tab so existing work
+  // is kept. A tab another read is already heading for is not up for reuse.
+  const disposable =
+    ((!s.recon && !s.error) || s.sampleId !== null) &&
+    !isDocDirty({ editSeq: s.editSeq, savedSeq: s.savedSeq });
   if (disposable && !inflightTabs.has(s.activeTabId)) return s.activeTabId;
   s.newTab();
   return useStore.getState().activeTabId;
@@ -1394,6 +1678,22 @@ function focusTab(tabId: string | null): void {
   const s = useStore.getState();
   if (!tabId || tabId === s.activeTabId) return;
   if (s.tabs.some((t) => t.id === tabId)) s.switchTab(tabId);
+}
+
+/**
+ * Bring `tabId` back to the front, or open a FRESH tab when it no longer
+ * exists. Plain `focusTab` is a no-op for a closed tab, which made
+ * confirmMerge write the merged document into whatever tab the user had open
+ * in the meantime - overwriting unrelated work.
+ */
+function focusTabOrFresh(tabId: string | null): void {
+  const s = useStore.getState();
+  if (tabId && s.tabs.some((t) => t.id === tabId)) {
+    focusTab(tabId);
+    return;
+  }
+  // Target gone: a fresh tab guarantees the load cannot clobber anything.
+  if (s.recon || s.error) s.newTab();
 }
 
 /** Write already-read files into one specific tab, which may well be in the
@@ -1414,7 +1714,7 @@ function writeFilesToTab(tabId: string, files: { name: string; text: string }[])
   }
   const doc = s.docs[tabId] ?? blankDoc();
   const load = loadDoc(files);
-  const entry = entryFromSlice(s, doc);
+  const entry = entryFromSlice(doc);
   useStore.setState((st) => ({
     docs: {
       ...st.docs,

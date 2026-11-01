@@ -30,6 +30,8 @@ export interface ExportPane {
   hideOutside?: Set<string> | null;
   /** User label renames, so an exported figure carries the on-screen names. */
   labelOverrides?: Record<string, string>;
+  /** Per-NODE renames (renaming one of several same-named labels). */
+  labelOverridesById?: Record<string, string>;
   /** Optional pane label, drawn above the pane when there is more than one. */
   title?: string;
   /** Per-pane legend. Panes in a nested/compare split describe DIFFERENT
@@ -44,6 +46,12 @@ export interface ExportDoc {
   eventLabels?: Record<EventType, string>;
   legend?: ExportLegendConfig | null;
   panes: ExportPane[];
+  /** Background fill; null = transparent. Defaults to the theme background. */
+  background?: string | null;
+  /** Provenance block (app version, source, options) written into the SVG
+   *  <metadata> and the HTML hidden section, so a figure can be traced back
+   *  to the data and parameters that produced it. */
+  provenance?: Record<string, string>;
 }
 
 const SVG_NS = "http://www.w3.org/2000/svg";
@@ -53,8 +61,8 @@ const TITLE_H = 24;
 const LEGEND_GAP = 24;
 
 /** Floor and default of the PNG DPI (dots per inch) a user can ask for. */
-export const MIN_PNG_DPI = 600;
-export const DEFAULT_PNG_DPI = 600;
+export const MIN_PNG_DPI = 72;
+export const DEFAULT_PNG_DPI = 300;
 
 /** Screen reference DPI: one CSS pixel is one ninety-sixth of an inch. */
 const SCREEN_DPI = 96;
@@ -260,6 +268,7 @@ function renderPaneMarkup(doc: ExportDoc, pane: ExportPane): string {
       highlight: pane.highlight ?? null,
       hideOutside: pane.hideOutside ?? null,
       labelOverrides: pane.labelOverrides,
+      labelOverridesById: pane.labelOverridesById,
       interactive: false,
       detail: "full",
       showBackground: true,
@@ -370,7 +379,17 @@ export function buildDocSvg(doc: ExportDoc): { svg: string; width: number; heigh
   root.setAttribute("height", String(height));
   root.setAttribute("viewBox", `0 0 ${width} ${height}`);
   root.appendChild(defs);
-  root.appendChild(mk(xdoc, "rect", { x: 0, y: 0, width, height, fill: doc.theme.background }));
+  // Background: theme fill by default, overridable (white) or removable
+  // (transparent) for journals that want to place the figure on their own page.
+  if (doc.background !== null) {
+    root.appendChild(mk(xdoc, "rect", { x: 0, y: 0, width, height, fill: doc.background ?? doc.theme.background }));
+  }
+  if (doc.provenance && Object.keys(doc.provenance).length > 0) {
+    const meta = xdoc.createElementNS(SVG_NS, "metadata");
+    meta.setAttribute("id", "PhyloRecViewer-provenance");
+    meta.textContent = JSON.stringify(doc.provenance, null, 2);
+    root.appendChild(meta);
+  }
   if (sharedLegendGroup) {
     sharedLegendGroup.setAttribute("transform", `translate(${PAD}, ${PAD})`);
     root.appendChild(sharedLegendGroup);
@@ -466,6 +485,45 @@ async function rasterize(
   return { canvas, scale: s };
 }
 
+/**
+ * Insert a pHYs chunk (physical pixel density) into a PNG byte stream, so the
+ * exported file carries its real DPI instead of a bare 72-px-per-inch guess.
+ * The "DPI" canvas setting is a scale factor; without pHYs, layout software
+ * imported the PNG at the wrong physical size.
+ */
+export async function pngWithDpi(blob: Blob, dpi: number): Promise<Blob> {
+  // jsdom (unit tests) and some older engines expose a Blob without
+  // arrayBuffer(); pHYs is an enhancement, so degrade to the untouched blob.
+  if (typeof blob.arrayBuffer !== "function") return blob;
+  const buf = new Uint8Array(await blob.arrayBuffer());
+  const ppm = Math.round(dpi / 0.0254); // pixels per metre
+  const be32 = (v: number): number[] => [(v >>> 24) & 255, (v >>> 16) & 255, (v >>> 8) & 255, v & 255];
+  // pHYs payload: 9 bytes (ppm x, ppm y, unit=1 metre).
+  const payload = [...be32(ppm), ...be32(ppm), 1];
+  const chunk: number[] = [...be32(payload.length), 0x70, 0x48, 0x59, 0x73, ...payload];
+  // CRC32 over type+payload.
+  let table: number[] | null = null;
+  if (!table) {
+    table = [];
+    for (let n = 0; n < 256; n++) {
+      let c = n;
+      for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
+      table[n] = c >>> 0;
+    }
+  }
+  let crc = 0xffffffff;
+  for (const b of chunk.slice(4)) crc = table[(crc ^ b) & 255] ^ (crc >>> 8);
+  crc = (crc ^ 0xffffffff) >>> 0;
+  chunk.push(...be32(crc));
+  // Insert right after IHDR (the first chunk, bytes 8..8+25).
+  const ihdrEnd = 8 + 8 + 13 + 4; // signature + len/type + data + crc
+  const out = new Uint8Array(buf.length + chunk.length);
+  out.set(buf.subarray(0, ihdrEnd), 0);
+  out.set(new Uint8Array(chunk), ihdrEnd);
+  out.set(buf.subarray(ihdrEnd), ihdrEnd + chunk.length);
+  return new Blob([out], { type: "image/png" });
+}
+
 /** The PNG blob together with the raster scale that actually took effect
  *  (≤ dpiToScale(dpi)) after canvas-limit clamping, so the UI can flag a
  *  resolution the file quietly did not reach. */
@@ -474,10 +532,13 @@ export async function renderPngBlob(
   dpi = DEFAULT_PNG_DPI,
 ): Promise<{ blob: Blob; scale: number }> {
   const { svg, width, height } = buildDocSvg(doc);
-  const { canvas, scale } = await rasterize(svg, width, height, doc.theme.background, dpiToScale(dpi));
+  const { canvas, scale } = await rasterize(svg, width, height, doc.background ?? doc.theme.background, dpiToScale(dpi));
   const blob = await new Promise<Blob | null>((res) => canvas.toBlob(res, "image/png"));
   if (!blob) throw new Error("Failed to encode PNG");
-  return { blob, scale };
+  // Stamp the real density into the file (canvas-limit clamping may have
+  // reduced the requested DPI; the effective value is what lands in pHYs).
+  const effectiveDpi = Math.round(scale * 96);
+  return { blob: await pngWithDpi(blob, effectiveDpi), scale };
 }
 
 /** Download a PNG and hand the effective raster scale (≤ dpiToScale(dpi)),
@@ -591,16 +652,32 @@ export function sceneToInteractiveHtml(doc: ExportDoc, title: string): string {
   const safeTitle = title.replace(/[&<>"']/g, (c) =>
     c === "&" ? "&amp;" : c === "<" ? "&lt;" : c === ">" ? "&gt;" : c === '"' ? "&quot;" : "&#39;",
   );
+  const prov = doc.provenance ?? null;
+  const safeProv = prov
+    ? JSON.stringify(prov).replace(/[&<>]/g, (c) => (c === "&" ? "&amp;" : c === "<" ? "&lt;" : "&gt;"))
+    : "";
   const script =
     "(function(){var wrap=document.getElementById('wrap'),stage=document.getElementById('stage');" +
     "var W=" + width + ",H=" + height + ";var s=1,x=0,y=0;" +
     "function apply(){stage.style.transform='translate('+x+'px,'+y+'px) scale('+s+')';}" +
     "function fit(){var r=wrap.getBoundingClientRect();s=(Math.min(r.width/W,r.height/H)*0.95)||1;if(!isFinite(s)||s<=0)s=1;x=(r.width-W*s)/2;y=(r.height-H*s)/2;apply();}" +
+    // Pointer Events: one handler path for mouse, touch and stylus, so the
+    // exported page is usable on tablets (mouse-only events used to ignore it).
     "var d=false,px=0,py=0;" +
-    "wrap.addEventListener('mousedown',function(e){d=true;px=e.clientX;py=e.clientY;});" +
-    "window.addEventListener('mousemove',function(e){if(!d)return;x+=e.clientX-px;y+=e.clientY-py;px=e.clientX;py=e.clientY;apply();});" +
-    "window.addEventListener('mouseup',function(){d=false;});" +
+    "wrap.addEventListener('pointerdown',function(e){d=true;px=e.clientX;py=e.clientY;try{wrap.setPointerCapture(e.pointerId);}catch(_){}});" +
+    "window.addEventListener('pointermove',function(e){if(!d)return;x+=e.clientX-px;y+=e.clientY-py;px=e.clientX;py=e.clientY;apply();});" +
+    "window.addEventListener('pointerup',function(){d=false;});" +
     "wrap.addEventListener('wheel',function(e){e.preventDefault();var r=wrap.getBoundingClientRect();var mx=e.clientX-r.left,my=e.clientY-r.top;var f=e.deltaY<0?1.1:1/1.1;var ns=Math.max(0.02,Math.min(20,s*f));x=mx-(mx-x)*(ns/s);y=my-(my-y)*(ns/s);s=ns;apply();},{passive:false});" +
+    // Keyboard: +/- zoom around the centre, arrows pan, 0/Enter refits.
+    "window.addEventListener('keydown',function(e){" +
+    "if(e.key==='+'||e.key==='='){s*=1.2;apply();}" +
+    "else if(e.key==='-'||e.key==='_'){s/=1.2;apply();}" +
+    "else if(e.key==='ArrowLeft'){x+=40;apply();}" +
+    "else if(e.key==='ArrowRight'){x-=40;apply();}" +
+    "else if(e.key==='ArrowUp'){y+=40;apply();}" +
+    "else if(e.key==='ArrowDown'){y-=40;apply();}" +
+    "else if(e.key==='0'||e.key==='Enter'){fit();}" +
+    "});" +
     "document.getElementById('zin').onclick=function(){s*=1.2;apply();};" +
     "document.getElementById('zout').onclick=function(){s/=1.2;apply();};" +
     "document.getElementById('fit').onclick=fit;fit();window.addEventListener('resize',fit);})();";
@@ -615,8 +692,15 @@ export function sceneToInteractiveHtml(doc: ExportDoc, title: string): string {
     "padding:6px;border-radius:0}" +
     "#ctrl button{width:30px;height:30px;border:none;border-radius:0;font-size:15px;font-weight:700;cursor:pointer}" +
     "</style></head><body>" +
-    "<div id=\"wrap\"><div id=\"stage\">" + inlineSvg + "</div></div>" +
-    "<div id=\"ctrl\"><button id=\"zin\">+</button><button id=\"zout\">-</button><button id=\"fit\">\u2922</button></div>" +
+    "<div id=\"wrap\" tabindex=\"0\"><div id=\"stage\">" + inlineSvg + "</div></div>" +
+    // Buttons carry real names now: a bare +/−/⤢ glyph is unreadable to a
+    // screen reader, and the page documents its keyboard controls.
+    "<div id=\"ctrl\">" +
+    "<button id=\"zin\" aria-label=\"Zoom in (also + / =)\">+</button>" +
+    "<button id=\"zout\" aria-label=\"Zoom out (also -)\">−</button>" +
+    "<button id=\"fit\" aria-label=\"Fit to window (also 0 or Enter)\">\u2922</button>" +
+    "</div>" +
+    (prov ? "<div id=\"provenance\" hidden>" + safeProv + "</div>" : "") +
     "<script>" + script + "</script></body></html>"
   );
 }

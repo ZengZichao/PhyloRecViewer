@@ -84,14 +84,17 @@ describe("consistency issue counting", () => {
     expect(issue?.examples).toEqual(["MARS"]);
   });
 
-  it("reports a same-species transfer as one backwards-in-time issue", () => {
+  it("reports a same-species transfer under its own code, not as backwards-in-time", () => {
     const recon = doc(`<clade><name>bo</name><eventsRec><branchingOut speciesLocation="A"/></eventsRec>
         <clade><eventsRec><leaf speciesLocation="A" geneName="keep"/></eventsRec></clade>
         <clade><eventsRec><transferBack destinationSpecies="A"/><leaf speciesLocation="A" geneName="self"/></eventsRec></clade>
       </clade>`);
-    const issue = find(recon, "transferBackwardsInTime");
+    // Same-species gene flow is a model question, not a time-direction error
+    // (review: the two were previously conflated under transferBackwardsInTime).
+    const issue = find(recon, "sameSpeciesTransfer");
     expect(issue).toBeDefined();
     expect(issue?.count).toBe(1);
+    expect(find(recon, "transferBackwardsInTime")).toBeUndefined();
   });
 
   it("checks every transfer arrival of a node, not only the first", () => {
