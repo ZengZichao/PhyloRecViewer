@@ -192,8 +192,8 @@ is "WebKitGTK 4.1+" rather than a bundled runtime.
 No third-party claim attaches to any of these; they are written by the authors and
 are covered by the MIT licence with the rest of the repository:
 
-* the six demonstration reconciliations in `src/samples/`
-  (`showcase`, `all-events`, the two `nested-*` levels of the 3-level demo, and the
+* the five demonstration reconciliations in `src/samples/`
+  (`showcase`, the two `nested-*` levels of the 3-level demo, and the
   `compare-tool-a` / `compare-tool-b` pair);
 * `src/parser/__fixtures__/conformant-minimal.recphyloxml` (2,380 bytes), whose own
   header comment records that it is a hand-written minimal schema-conformant

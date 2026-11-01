@@ -372,6 +372,8 @@ interface AppState {
   clearFamilyFilter: () => void;
   clearSearchFilter: () => void;
   locateGene: (geneId: string, pane?: PaneId) => void;
+  /** Drop the locate outline (a background click means "not that node"). */
+  clearLocate: () => void;
   undo: () => void;
   redo: () => void;
   setLayout: (patch: Partial<LayoutOptions>) => void;
@@ -1487,6 +1489,7 @@ export const useStore = create<AppState>((set, get) => ({
     }),
   locateGene: (geneId, pane) =>
     set((s) => ({ locate: { geneId, nonce: (s.locate?.nonce ?? 0) + 1, pane } })),
+  clearLocate: () => set({ locate: null }),
 
   undo: () =>
     set((s) => {

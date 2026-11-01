@@ -263,6 +263,13 @@ function unplacedKey(g: GeneNode, treeIndex: number): string {
  * packed inside the uniform tube width, which is never widened for them.
  * `geneGap` is the desired lane spacing, clamped into the tube's inner width
  * and floored at MIN_LANE_SPACING (see the note on that constant above).
+ *
+ * A DUPLICATION is a branching point in its own right, not a marker on the
+ * species fork below it: its x is centered between its children's lateral
+ * (lane) offsets so the two child lineages open symmetrically AT the
+ * duplication glyph (the divergence itself is drawn by `routedGeneEdge`).
+ * Its packed lane still counts toward the species' `laneCount` (heatmap),
+ * it just no longer offsets the node sideways.
  */
 export function computeGeneX(
   recon: Reconciliation,
@@ -274,6 +281,23 @@ export function computeGeneX(
 ): void {
   const pad = 4;
   const inner = Math.max(0, opts.speciesThickness / 2 - pad);
+
+  /**
+   * Lateral (lane) offset a node has inside its own host tube - the same
+   * offset `computeGeneX` assigns below. Children of a duplication use it to
+   * decide where the fork should be centered.
+   */
+  const laneDx = (g: GeneNode): number => {
+    const s = species.byName.get(g.speciesId);
+    if (!s) return 0;
+    const lc = spPos(pos, s.id).laneCount;
+    if (lc <= 1) return 0;
+    const spacing = Math.max(
+      MIN_LANE_SPACING,
+      Math.min(opts.geneGap, (2 * inner) / (lc - 1)),
+    );
+    return (gnPos(pos, g.id).lane - (lc - 1) / 2) * spacing;
+  };
 
   // Nodes whose speciesLocation resolves to nothing have no tube to sit in, and
   // inheriting the parent's exact point would stack every such sibling on one
@@ -306,6 +330,21 @@ export function computeGeneX(
         continue;
       }
       const cx = tubeCenterX(s, gp.y, curved, pos);
+      if (g.endEvent.type === "duplication") {
+        // Center the fork between its copies' lanes so the two child lineages
+        // open symmetrically at the duplication glyph (see the doc comment).
+        const kids = g.children.filter(
+          (c) => !hidden.has(c.id) && species.byName.has(c.speciesId),
+        );
+        if (kids.length > 0) {
+          let sum = 0;
+          for (const k of kids) sum += laneDx(k);
+          gp.x = cx + sum / kids.length;
+          continue;
+        }
+        // A collapsed duplication (all children hidden) keeps the plain
+        // lane placement below so stacked branch events stay distinguishable.
+      }
       const laneCount = spPos(pos, s.id).laneCount;
       if (laneCount <= 1) {
         gp.x = cx;

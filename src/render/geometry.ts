@@ -201,6 +201,16 @@ export function networkEdgeWidth(count: number): number {
 // --------------------------------------------------------------------------
 
 /**
+ * Fraction of a branch's vertical run over which a duplication's child edge
+ * finishes swinging away from the tube centerline (the diverging stub that
+ * makes the two copies visibly split AT the duplication glyph), and the
+ * fraction over which the divergence closes back onto the centerline before
+ * the next species fork. See {@link routedGeneEdge}.
+ */
+const DUP_OPEN_FRAC = 0.4;
+const DUP_CLOSE_FRAC = 0.4;
+
+/**
  * Route a gene edge along the species tubes.
  *
  * Every gene node sits on its host branch's tube centerline (see
@@ -211,6 +221,18 @@ export function networkEdgeWidth(count: number): number {
  * would cut across the fork whenever the two bends happen at different
  * heights (in-branch duplications, transfers, losses; any level height or
  * species spacing).
+ *
+ * EXCEPT when the parent is a DUPLICATION: a duplication is a branching point
+ * in its own right, so its two child edges must visibly diverge from the
+ * duplication's own position, not from the species fork below it (a lone
+ * duplication would otherwise share one vertical run with its sibling and
+ * read as a speciation). Each child edge therefore opens laterally inside the
+ * parent's branch - toward the child's own lane (same-species child) or toward
+ * the child's downstream species tube (cross-species child) - and, for
+ * cross-species children, closes back onto the centerline by the end of the
+ * FIRST downstream branch, so every deeper species fork is still visited
+ * exactly and no edge leaves its tube (the offsets stay inside the tube's
+ * inner half-width).
  *
  * Coordinates are canonical (root up, leaves down); the caller projects them.
  * Returns the canonical start point plus the segment list, or null when the
@@ -249,18 +271,43 @@ export function routedGeneEdge(
   const end: Pt = { x: cp.x, y: cp.y };
   const segs: EdgeSeg[] = [];
 
+  // X of the tube centerline of branch (S -> C) at canonical y. Mirrors
+  // `tubeCenterX` in layout/geneEmbed.ts, which placed the gene nodes on it.
+  const centerXAt = (S: SpeciesNode | null, C: SpeciesNode, y: number): number => {
+    const cP = spPos(pos, C.id);
+    if (!S) return cP.x;
+    const sP = spPos(pos, S.id);
+    if (cP.y - sP.y <= EDGE_EPS) return cP.x;
+    if (!curved) return y <= sP.y ? sP.x : cP.x;
+    const t = cubicTForY(sP.y, cP.y, y);
+    const a = (1 - t) ** 3 + 3 * (1 - t) ** 2 * t;
+    const b = 3 * (1 - t) * t * t + t ** 3;
+    return sP.x * a + cP.x * b;
+  };
+
   // Append the part of branch (S -> C) between canonical ys yFrom -> yTo.
-  // The emitted geometry is exactly the tube centerline restricted to that
-  // span, so the gene edge stays on the tube for ANY level height / species
-  // gap. The direction matters: the root stub hosts in-branch genes ABOVE the
+  // The emitted geometry is the tube centerline restricted to that span,
+  // shifted laterally by an offset blended linearly from `offFrom` (at yFrom)
+  // to `offTo` (at yTo), so the gene edge stays on the tube for ANY level
+  // height / species gap while a duplication can diverge inside it.
+  // The direction matters: the root stub hosts in-branch genes ABOVE the
   // root fork, so a same-species edge can run upward.
-  const emitAlong = (S: SpeciesNode | null, C: SpeciesNode, yFrom: number, yTo: number): void => {
+  const emitAlong = (
+    S: SpeciesNode | null,
+    C: SpeciesNode,
+    yFrom: number,
+    yTo: number,
+    offFrom = 0,
+    offTo = offFrom,
+  ): void => {
     if (Math.abs(yTo - yFrom) <= EDGE_EPS) return;
+    const oAt = (y: number): number =>
+      offFrom + ((offTo - offFrom) * (y - yFrom)) / (yTo - yFrom);
     const cP = spPos(pos, C.id);
     if (!S || cP.y - spPos(pos, S.id).y <= EDGE_EPS) {
       // Root stub (straight vertical at the root's x), or a degenerate
       // zero-length branch (the tube collapses to the child's x).
-      segs.push({ kind: "L", to: { x: cP.x, y: yTo } });
+      segs.push({ kind: "L", to: { x: cP.x + offTo, y: yTo } });
       return;
     }
     const sP = spPos(pos, S.id);
@@ -268,9 +315,9 @@ export function routedGeneEdge(
       // Elbow tube: horizontal along the parent's y, then a vertical drop at
       // the child's x. Above the turn the tube is that drop itself.
       if (Math.min(yFrom, yTo) <= sP.y + EDGE_EPS) {
-        segs.push({ kind: "L", to: { x: cP.x, y: sP.y } });
+        segs.push({ kind: "L", to: { x: cP.x + oAt(sP.y), y: sP.y } });
       }
-      segs.push({ kind: "L", to: { x: cP.x, y: yTo } });
+      segs.push({ kind: "L", to: { x: cP.x + oAt(yTo), y: yTo } });
       return;
     }
     const yLo = Math.min(yFrom, yTo);
@@ -288,13 +335,44 @@ export function routedGeneEdge(
       t0,
       t1,
     );
+    // Shift the slice onto the blended offset lane, point by point in y.
+    const sh = (p: Pt): Pt => ({ x: p.x + oAt(p.y), y: p.y });
+    const s0 = sh(q0);
+    const s1 = sh(q1);
+    const s2 = sh(q2);
+    const s3 = sh(q3);
     // The slice is ordered yLo -> yHi; flip it when the edge runs upward.
     segs.push(
       yFrom <= yTo
-        ? { kind: "C", c1: q1, c2: q2, to: q3 }
-        : { kind: "C", c1: q2, c2: q1, to: q0 },
+        ? { kind: "C", c1: s1, c2: s2, to: s3 }
+        : { kind: "C", c1: s2, c2: s1, to: s0 },
     );
   };
+
+  // ---- duplication fork geometry -------------------------------------------
+  // A duplication is the branching point of its two child lineages: give this
+  // child edge a lateral identity inside the parent's branch so the siblings
+  // visibly split at the duplication itself.
+  const forkY = spPos(pos, sg.id).y;
+  const inBranchParent = gp.y < forkY - EDGE_EPS;
+  const dupFork = g.endEvent.type === "duplication" && (chain.length === 0 || inBranchParent);
+  let dupOff = 0;
+  if (dupFork && chain.length > 0) {
+    // Cross-species child: swing toward the child's downstream species tube;
+    // fall back to the child's ordinal among the siblings when the tubes are
+    // vertically stacked (no lateral difference to read the side off).
+    const down = chain[chain.length - 1] as SpeciesNode;
+    const dx = spPos(pos, down.id).x - spPos(pos, sg.id).x;
+    let side = dx > EDGE_EPS ? 1 : dx < -EDGE_EPS ? -1 : 0;
+    if (side === 0) {
+      const ordinal = g.children.indexOf(c);
+      const mid = (g.children.length - 1) / 2;
+      side = ordinal < mid ? -1 : ordinal > mid ? 1 : ordinal === 0 ? -1 : 1;
+    }
+    const half = spPos(pos, sg.id).width / 2;
+    const inner = Math.max(0, half - 4);
+    dupOff = side * Math.min(inner, Math.max(3, half * 0.5));
+  }
 
   if (chain.length === 0) {
     // Two genes parked at the same fork in different lanes share the species
@@ -306,19 +384,53 @@ export function routedGeneEdge(
     // Same species: both ends lie on that species' incoming branch (or the
     // root stub); run directly from the parent gene's y to the child's - the
     // root stub hosts in-branch genes above the fork, so this can run upward.
-    emitAlong(sg.parent ?? null, sg, gp.y, cp.y);
+    if (dupFork) {
+      // Open from the duplication's own lane offset to the child's lane
+      // offset within the first DUP_OPEN_FRAC of the run, then drop straight
+      // down that lane: the sibling edges differ AT the square instead of
+      // sharing one centerline run and hopping apart at the tip baseline.
+      const o0 = gp.x - centerXAt(sg.parent ?? null, sg, gp.y);
+      const o1 = cp.x - centerXAt(sg.parent ?? null, sg, cp.y);
+      const yMid = gp.y + (cp.y - gp.y) * DUP_OPEN_FRAC;
+      emitAlong(sg.parent ?? null, sg, gp.y, yMid, o0, o1);
+      emitAlong(sg.parent ?? null, sg, yMid, cp.y, o1, o1);
+    } else {
+      emitAlong(sg.parent ?? null, sg, gp.y, cp.y);
+    }
   } else {
     // An in-branch parent gene sits on ITS species' incoming branch: descend
     // along that branch to the fork first.
-    const forkY = spPos(pos, sg.id).y;
-    if (gp.y < forkY - EDGE_EPS) emitAlong(sg.parent ?? null, sg, gp.y, forkY);
+    if (inBranchParent) {
+      if (dupFork) {
+        // Diverge from the duplication inside this branch, then hold the
+        // lane until the fork: the split is visibly ABOVE the species fork.
+        const o0 = gp.x - centerXAt(sg.parent ?? null, sg, gp.y);
+        const yMid = gp.y + (forkY - gp.y) * DUP_OPEN_FRAC;
+        emitAlong(sg.parent ?? null, sg, gp.y, yMid, o0, dupOff);
+        emitAlong(sg.parent ?? null, sg, yMid, forkY, dupOff, dupOff);
+      } else {
+        emitAlong(sg.parent ?? null, sg, gp.y, forkY);
+      }
+    }
     // Then follow every species branch on the path; the last one only runs
-    // down to the child gene's own y.
+    // down to the child gene's own y. The FIRST downstream branch of a
+    // duplication edge carries the divergence and closes back onto the
+    // centerline (last DUP_CLOSE_FRAC of the branch), so every deeper fork
+    // is still visited exactly.
     let prev = sg;
     for (let i = chain.length - 1; i >= 0; i--) {
       const node = chain[i] as SpeciesNode;
       const endY = i === 0 ? cp.y : spPos(pos, node.id).y;
-      emitAlong(prev, node, spPos(pos, prev.id).y, endY);
+      const from =
+        dupFork && inBranchParent && i === chain.length - 1 ? dupOff : 0;
+      const startY = spPos(pos, prev.id).y;
+      if (from !== 0 && Math.abs(endY - startY) > EDGE_EPS) {
+        const closeY = startY + (endY - startY) * (1 - DUP_CLOSE_FRAC);
+        emitAlong(prev, node, startY, closeY, from, from);
+        emitAlong(prev, node, closeY, endY, from, 0);
+      } else {
+        emitAlong(prev, node, startY, endY, from, 0);
+      }
       prev = node;
     }
   }

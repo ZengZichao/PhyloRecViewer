@@ -1,6 +1,5 @@
 import type { StringDictKey } from "../i18n";
 import showcaseRaw from "./showcase.recphyloxml?raw";
-import allEvents from "./all-events.recphyloxml?raw";
 import nestedGeneSymbiont from "./nested-gene-symbiont.recphyloxml?raw";
 import nestedSymbiontHost from "./nested-symbiont-host.recphyloxml?raw";
 import compareToolA from "./compare-tool-a.recphyloxml?raw";
@@ -29,11 +28,6 @@ export const samples: Sample[] = [
     id: "showcase",
     labelKey: "sampleShowcase",
     xml: showcaseRaw,
-  },
-  {
-    id: "all-events",
-    labelKey: "sampleAllEvents",
-    xml: allEvents,
   },
   {
     id: "compare",

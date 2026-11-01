@@ -365,7 +365,16 @@ export function Canvas({
     const t = e.target as Element;
     if (t.closest && t.closest(".gene-layer")) return;
     setHighlight(null);
+    useStore.getState().clearLocate();
   };
+
+  // The located node keeps an outline until the user locates or clicks
+  // elsewhere: pan-to-it alone left search hits and QC findings unfindable.
+  const locateSet = useMemo(() => {
+    if (!locate) return null;
+    const routed = locate.pane ? locate.pane === paneId : paneId === "primary";
+    return routed ? new Set([locate.geneId]) : null;
+  }, [locate, paneId]);
 
   const onGeneEnter = useCallback(
     (node: GeneNode, evt: ReactMouseEvent) => {
@@ -515,6 +524,7 @@ export function Canvas({
         highlight={effectiveHighlight}
         hideOutside={hideOutside}
         diffSet={diffSet ?? null}
+        locateSet={locateSet}
         interactive
         detail={detail}
         eventLabels={t.event}
@@ -603,8 +613,10 @@ export function Canvas({
       )}
 
       {/* Unified canvas control cluster (top-left): zoom out, zoom level,
-          zoom in, fit-to-view, undo/redo, annotate, fullscreen, and — on the
-          primary pane only — the analysis panel toggle. */}
+          zoom in, fit-to-view, undo/redo, annotate, fullscreen, the analysis
+          panel toggle. Every pane gets the full set — undo/redo and the panel
+          act on the document, not on one level, so hiding them on the nested
+          and compare panes only made those views feel inert. */}
       <div className="float-toolbar">
         <button data-tooltip={`${t.zoomOut} · ⌘-`} aria-label={t.zoomOut} onClick={() => zoomBy(1 / 1.2)}>
           −
@@ -617,26 +629,22 @@ export function Canvas({
         <button data-tooltip={`${t.fit} · F`} aria-label={t.fit} onClick={fit}>
           ⤢
         </button>
-        {paneId === "primary" && (
-          <>
-            <button
-              data-tooltip={`${t.undo} · ⌘Z`}
-              aria-label={t.undo}
-              disabled={!canUndo}
-              onClick={undo}
-            >
-              ↶
-            </button>
-            <button
-              data-tooltip={`${t.redo} · ⌘⇧Z`}
-              aria-label={t.redo}
-              disabled={!canRedo}
-              onClick={redo}
-            >
-              ↷
-            </button>
-          </>
-        )}
+        <button
+          data-tooltip={`${t.undo} · ⌘Z`}
+          aria-label={t.undo}
+          disabled={!canUndo}
+          onClick={undo}
+        >
+          ↶
+        </button>
+        <button
+          data-tooltip={`${t.redo} · ⌘⇧Z`}
+          aria-label={t.redo}
+          disabled={!canRedo}
+          onClick={redo}
+        >
+          ↷
+        </button>
         <div className="ft-divider" />
         <button
           className={annotateMode ? "active" : ""}
@@ -647,18 +655,16 @@ export function Canvas({
         >
           ✎
         </button>
-        {paneId === "primary" && (
-          <button
-            className={rightPanelOpen ? "active" : ""}
-            data-tooltip={t.analyze}
-            aria-label={t.analyze}
-            aria-pressed={rightPanelOpen}
-            disabled={!result}
-            onClick={() => (rightPanelOpen ? closePanel() : openPanel(rightPanelTab))}
-          >
-            ◧
-          </button>
-        )}
+        <button
+          className={rightPanelOpen ? "active" : ""}
+          data-tooltip={t.analyze}
+          aria-label={t.analyze}
+          aria-pressed={rightPanelOpen}
+          disabled={!result}
+          onClick={() => (rightPanelOpen ? closePanel() : openPanel(rightPanelTab))}
+        >
+          ◧
+        </button>
       </div>
     </div>
   );

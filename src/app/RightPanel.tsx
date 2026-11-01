@@ -3,7 +3,7 @@ import { countLabel, useT } from "../i18n";
 import { useStore } from "../state/store";
 import { statsToCsv, type TransferPair } from "../analysis/stats";
 import { reconHasConfidence, regexError } from "../analysis/focus";
-import { checkConsistency, type IssueCode } from "../analysis/validate";
+import { checkConsistency, type ConsistencyIssue, type IssueCode } from "../analysis/validate";
 import { computeDiff, agreementPct, speciesAgreementPct, type MatchedPair } from "../analysis/compare";
 import { desktopSaveText, isTauri } from "../platform/desktop";
 import { baseName } from "./export-names";
@@ -1200,6 +1200,8 @@ function DiffTab() {
 function ChecksTab() {
   const t = useT();
   const recon = useStore((s) => s.recon);
+  const nested = useStore((s) => s.nested);
+  const compare = useStore((s) => s.compare);
   const docWarnings = useStore((s) => s.warnings);
   const nestedWarnings = useStore((s) => s.nestedWarnings);
   const compareWarnings = useStore((s) => s.compareWarnings);
@@ -1208,6 +1210,8 @@ function ChecksTab() {
   const fileName = useStore((s) => s.fileName);
   const showToast = useStore((s) => s.showToast);
   const issues = useMemo(() => (recon ? checkConsistency(recon) : []), [recon]);
+  const nestedIssues = useMemo(() => (nested ? checkConsistency(nested) : null), [nested]);
+  const compareIssues = useMemo(() => (compare ? checkConsistency(compare) : null), [compare]);
   if (!recon) return null;
 
   const byCode = new Map(issues.map((iss) => [iss.code, iss]));
@@ -1242,17 +1246,44 @@ function ChecksTab() {
     { title: `${t.compareWarningsLabel}${compareName ? ` (${compareName})` : ""}`, items: compareWarnings },
   ].filter((g) => g.items.length > 0);
 
+  // Every reconciliation level that is loaded, so the exported report covers
+  // them all: `issues` above is only the primary document, which left the
+  // nested (symbiont -> host) layer unchecked.
+  const trees: { name: string; issues: ConsistencyIssue[] }[] = [
+    { name: t.paneGeneSymbiont, issues },
+    ...(nestedIssues
+      ? [{ name: `${t.paneSymbiontHost}${nestedName ? ` (${nestedName})` : ""}`, issues: nestedIssues }]
+      : []),
+    ...(compareIssues
+      ? [{ name: compareName ? `${t.comparePrefix} ${compareName}` : t.comparePrefix, issues: compareIssues }]
+      : []),
+  ];
+
   const exportQc = () => {
     const cell = (v: string) => (/[",\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v);
-    const lines: string[] = ["level,code,count,examples,node_ids"];
-    for (const iss of issues) {
-      lines.push(
-        [cell(iss.level), cell(iss.code), String(iss.count), cell(iss.examples.join("; ")), cell(iss.nodeIds.join("; "))].join(","),
-      );
+    const lines: string[] = ["tree,level,code,count,examples,node_ids"];
+    // A row per check rather than per fired issue: a clean document used to
+    // export a header-only CSV, which read as a broken report instead of a
+    // passing one. The same catalogue the tab renders keeps both in agreement.
+    for (const tr of trees) {
+      const codeToIssue = new Map(tr.issues.map((iss) => [iss.code, iss]));
+      for (const c of checks) {
+        const iss = codeToIssue.get(c.code);
+        lines.push(
+          [
+            cell(tr.name),
+            cell(iss ? iss.level : "pass"),
+            cell(c.code),
+            String(iss?.count ?? 0),
+            cell(iss ? iss.examples.join("; ") : ""),
+            cell(iss ? iss.nodeIds.join("; ") : ""),
+          ].join(","),
+        );
+      }
     }
     for (const g of warningGroups) {
       for (const w of g.items) {
-        lines.push([cell("warning"), cell("parseWarning"), "1", cell(w), ""].join(","));
+        lines.push([cell(g.title), cell("warning"), cell("parseWarning"), "1", cell(w), ""].join(","));
       }
     }
     const csv = "\uFEFF" + lines.join("\n");
@@ -1270,7 +1301,7 @@ function ChecksTab() {
       <p className="rp-checks-intro">
         {t.checksIntro}{" "}
         {issues.length === 0 && warningGroups.length === 0 ? (
-          <span className="rp-checks-pass">\u2713 {t.checkAllGood}</span>
+          <span className="rp-checks-pass">{"\u2713"} {t.checkAllGood}</span>
         ) : (
           <span className="rp-checks-fail">
             {issues.length} / {checks.length} {t.checksWithIssues}
@@ -1293,7 +1324,7 @@ function ChecksTab() {
             {g.items.slice(0, 50).map((w, i) => (
               <li key={i}>{w}</li>
             ))}
-            {g.items.length > 50 && <li>\u2026 +{g.items.length - 50}</li>}
+            {g.items.length > 50 && <li>{"\u2026"} +{g.items.length - 50}</li>}
           </ul>
         </RpCollapsible>
       ))}
@@ -1304,7 +1335,7 @@ function ChecksTab() {
           return (
             <div key={c.code} className="rp-issue pass">
               <div className="rp-issue-head">
-                <span className="rp-check-tick">\u2713</span>
+                <span className="rp-check-tick">{"\u2713"}</span>
                 <span>{c.name}</span>
               </div>
             </div>

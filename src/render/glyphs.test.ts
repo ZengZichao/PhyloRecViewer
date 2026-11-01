@@ -1,12 +1,65 @@
 import { describe, expect, it } from "vitest";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import allEvents from "../samples/all-events.recphyloxml?raw";
 import { parseRecPhyloXML } from "../parser/recphyloxml";
 import { layout, defaultLayoutOptions } from "../layout";
 import { defaultRenderOptions } from "./options";
 import { lightTheme } from "./theme";
 import { Scene } from "./Scene";
+
+/**
+ * Fixture exercising EVERY event type (formerly the bundled `all-events`
+ * sample, removed from the sample catalog but kept here as test data).
+ */
+const allEvents = `<?xml version="1.0" encoding="UTF-8"?>
+<recPhylo>
+  <spTree>
+    <phylogeny rooted="true">
+      <clade>
+        <name>R</name>
+        <clade><name>A</name></clade>
+        <clade><name>B</name></clade>
+      </clade>
+    </phylogeny>
+  </spTree>
+  <recGeneTree>
+    <phylogeny rooted="true">
+      <clade>
+        <name>r</name>
+        <eventsRec><speciation speciesLocation="R"/></eventsRec>
+        <clade>
+          <name>dup</name>
+          <eventsRec><duplication speciesLocation="R"/></eventsRec>
+          <clade><eventsRec><leaf speciesLocation="A" geneName="x1"/></eventsRec></clade>
+          <clade><eventsRec><loss speciesLocation="B"/></eventsRec></clade>
+        </clade>
+        <clade>
+          <name>sp2</name>
+          <eventsRec><speciation speciesLocation="R"/></eventsRec>
+          <clade>
+            <name>bo</name>
+            <eventsRec><branchingOut speciesLocation="A"/></eventsRec>
+            <clade><eventsRec><leaf speciesLocation="A" geneName="keep"/></eventsRec></clade>
+            <clade>
+              <eventsRec><transferBack destinationSpecies="B"/><leaf speciesLocation="B" geneName="arr1"/></eventsRec>
+            </clade>
+          </clade>
+          <clade>
+            <name>bco</name>
+            <eventsRec><bifurcationOut speciesLocation="B"/></eventsRec>
+            <clade>
+              <eventsRec><transferBack destinationSpecies="A"/><leaf speciesLocation="A" geneName="arr2"/></eventsRec>
+            </clade>
+            <clade>
+              <eventsRec><transferBack destinationSpecies="A"/><leaf speciesLocation="A" geneName="arr3"/></eventsRec>
+            </clade>
+          </clade>
+        </clade>
+      </clade>
+    </phylogeny>
+  </recGeneTree>
+</recPhylo>
+`;
 
 /**
  * The app's central design claim is that event identity is carried by
@@ -31,7 +84,7 @@ function render(detail: "full" | "medium" | "low" = "full"): string {
   );
 }
 
-/** Event mix of the bundled all-events sample, asserted so the geometry
+/** Event mix of the all-events fixture, asserted so the geometry
  *  expectations below cannot silently become vacuous. */
 const EVENTS = parseRecPhyloXML(allEvents, "all-events").geneTrees[0].nodes.reduce(
   (acc, n) => ((acc[n.endEvent.type] = (acc[n.endEvent.type] ?? 0) + 1), acc),

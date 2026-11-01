@@ -43,7 +43,7 @@ export function Legend({
   return (
     <div
       className={`legend${horizontal ? " horizontal" : ""}`}
-      aria-label={`${t.events}: ${t.event.speciation}, ${t.event.duplication}, ${t.event.loss}, ${t.transferLegend}, ${t.event.branchingOut}, ${t.event.bifurcationOut}, ${t.collapsedClade}, ${t.event.leaf}; ${t.geneFamilies}: ${recon.geneTrees.map((gt) => gt.name || `${t.geneTree} ${gt.index + 1}`).join(", ")}`}
+      aria-label={`${t.events}: ${t.event.speciation}, ${t.event.duplication}, ${t.event.loss}, ${t.transferLegend}, ${t.event.transferBack}, ${t.event.branchingOut}, ${t.event.bifurcationOut}, ${t.collapsedClade}, ${t.event.leaf}, ${t.legendLocate}; ${t.geneFamilies}: ${recon.geneTrees.map((gt) => gt.name || `${t.geneTree} ${gt.index + 1}`).join(", ")}`}
     >
       <button
         className="legend-dir"
@@ -53,7 +53,7 @@ export function Legend({
       >
         {horizontal ? "\u22EE" : "\u22EF"}
       </button>
-      <div className="legend-group">
+      <div className="legend-group events">
         <div className="legend-title">{t.events}</div>
         <LegendItem label={t.event.speciation}>
           {/* Scene.geneGlyph draws speciation and extant genes in the GENE
@@ -80,6 +80,15 @@ export function Legend({
             <path d={`M${s - 4},${c - 2} L${s - 1},${c} L${s - 4},${c + 2} Z`} fill={geneColors[0] ?? geneColor(theme, 0)} />
           </g>
         </LegendItem>
+        {/* The recipient end of a transfer is the arrowhead landing on a gene
+            lineage, not the arc itself — readers need both ends keyed. */}
+        <LegendItem label={t.event.transferBack}>
+          <g>
+            <line x1={1} y1={c} x2={s - 5} y2={c} stroke={geneColors[0] ?? geneColor(theme, 0)} strokeWidth={1.6} strokeDasharray="1 3" />
+            <path d={`M${s - 8},${c - 3} L${s - 2},${c} L${s - 8},${c + 3} Z`} fill={geneColors[0] ?? geneColor(theme, 0)} />
+            <circle cx={s - 1} cy={c} r={1.6} fill={geneColors[0] ?? geneColor(theme, 0)} />
+          </g>
+        </LegendItem>
         <LegendItem label={t.event.bifurcationOut}>
           <path d={`M${c},${c - 3} L${c + 3},${c} L${c},${c + 3} L${c - 3},${c} Z`} fill={theme.event.bifurcationOut} />
         </LegendItem>
@@ -101,6 +110,10 @@ export function Legend({
         </LegendItem>
         <LegendItem label={t.event.leaf}>
           <circle cx={c} cy={c} r={3.5} fill={geneColors[0] ?? geneColor(theme, 0)} />
+        </LegendItem>
+        {/* The outline a search hit or a data-check "locate" leaves behind. */}
+        <LegendItem label={t.legendLocate}>
+          <circle cx={c} cy={c} r={4.5} fill="none" stroke="var(--locate)" strokeWidth={2} />
         </LegendItem>
       </div>
 

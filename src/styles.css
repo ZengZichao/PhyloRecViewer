@@ -57,6 +57,15 @@
   --fw-regular: 400;
   --toolbar-h: 36px;
   --sidebar-w: 360px;
+  /* Empty-state hub: one shared width for the action buttons and one for the
+     sample choices, so every rounded rectangle in a group is identical and the
+     group itself stays centered instead of left-aligned at its widest member. */
+  --hub-btn-w: min(152px, calc((100vw - 64px) / 3));
+  --hub-sample-w: min(460px, calc(100vw - 48px));
+  --settings-btn-w: min(132px, calc((100vw - 96px) / 4));
+  /* Outline color for a located node: a hue no event glyph or family palette
+     entry uses, so the ring cannot be mistaken for data. */
+  --locate: #a21caf;
   color-scheme: light;
 }
 
@@ -1317,10 +1326,29 @@ body {
 }
 
 /* export menu: PNG resolution buttons */
+/* Option chips inside a dropdown: an even grid of identically sized chips, so
+   a section such as PNG resolution or export format never reads as a ragged
+   row of left-aligned text items. */
 .menu-scale {
-  display: flex;
+  /* grid-auto-flow: column gives every chip in the row the same width whatever
+     the row's item count is; auto-fit with a 0 minimum would instead invent
+     extra tracks. */
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
   gap: 4px;
-  padding: 2px 10px 4px;
+  padding: 2px 10px 6px;
+}
+.menu-dpi-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 10px 6px;
+}
+.menu-estimate {
+  font-size: 11px;
+  color: var(--muted);
+  white-space: nowrap;
 }
 .menu-scale-btn {
   flex: 1;
@@ -1332,6 +1360,10 @@ body {
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .menu-scale-btn:hover {
   border-color: var(--accent);
@@ -1340,6 +1372,29 @@ body {
   border-color: var(--accent);
   background: var(--accent-weak);
   color: var(--accent);
+}
+/* Radio options laid out as chips rather than as a list of left-aligned menu
+   rows, so a row of four DPI options reads as one even control group. */
+.menu-scale .menu-item {
+  justify-content: center;
+  border: 1px solid var(--border);
+  background: var(--panel-2);
+  color: var(--text);
+  padding: 4px 6px;
+  font-size: 12px;
+  font-weight: 600;
+  gap: 2px;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.menu-scale .menu-item[aria-checked="true"] {
+  border-color: var(--accent);
+  background: var(--accent-weak);
+  color: var(--accent);
+}
+.menu-scale .menu-item .menu-check {
+  width: 10px;
 }
 
 /* indented sub-controls for per-role label typography */
@@ -1469,6 +1524,27 @@ body {
 }
 
 /* ---------- legend ---------- */
+/* Outline drawn on the node a search hit or QC "locate" jumped to (Scene's
+   locate layer). It pulses so the eye catches it after the pan settles. */
+.locate-ring {
+  animation: rpv-locate 1.5s ease-in-out infinite;
+}
+@keyframes rpv-locate {
+  0%,
+  100% {
+    stroke-width: 3;
+    opacity: 1;
+  }
+  50% {
+    stroke-width: 5;
+    opacity: 0.55;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .locate-ring {
+    animation: none;
+  }
+}
 .legend {
   position: absolute;
   left: var(--space-4);
@@ -1539,7 +1615,7 @@ body {
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  max-width: 520px;
+  max-width: 580px;
   padding-right: 30px;
 }
 .legend.horizontal .legend-group {
@@ -1548,6 +1624,27 @@ body {
   align-items: center;
   column-gap: 14px;
   row-gap: 4px;
+}
+/* The event key has ten entries, so it flows as an even 5-column grid (two
+   full rows) instead of a wrapped flex row, which left the last row short. */
+.legend.horizontal .legend-group.events {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  align-items: center;
+  column-gap: 12px;
+  row-gap: 4px;
+  width: 100%;
+}
+.legend.horizontal .legend-group.events .legend-title {
+  grid-column: 1 / -1;
+}
+.legend.horizontal .legend-group.events .legend-item {
+  min-width: 0;
+}
+.legend.horizontal .legend-group.events .legend-item span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .legend.horizontal .legend-title {
   flex: 0 0 100%;
@@ -2272,10 +2369,19 @@ body {
   letter-spacing: -0.5px;
 }
 .empty-actions {
-  display: flex;
+  /* Equal-width buttons on one centered row: a flex row of auto-width buttons
+     made each one as wide as its own label, so the three never lined up. */
+  display: grid;
+  grid-template-columns: repeat(3, var(--hub-btn-w));
   gap: 8px;
   margin-top: 14px;
   justify-content: center;
+}
+.empty-actions .btn {
+  width: var(--hub-btn-w);
+  justify-content: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .empty-samples {
   margin-top: 24px;
@@ -2291,33 +2397,55 @@ body {
   margin-bottom: 10px;
   text-align: center;
 }
-/* Three samples in a vertical column, left-aligned within the group, but the
-   group itself is centered in the canvas. */
+/* Samples stack in one centered column of identical-width buttons. Auto-width
+   would size each to its own label (plus its badge), which is why the three
+   rounded rectangles used to end at different x positions. */
 .empty-sample-list {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: var(--hub-sample-w);
   gap: var(--space-2);
-  align-items: flex-start;
+  justify-content: center;
 }
 .empty-sample-btn {
+  width: var(--hub-sample-w);
   text-align: left;
-  min-width: 340px;
   justify-content: flex-start;
+  min-width: 0;
+}
+.empty-sample-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .empty-sample-arrow {
   color: var(--muted);
   margin-right: var(--space-2);
   flex-shrink: 0;
 }
-.empty-drag {
-  margin-top: 24px;
-  font-size: 12.5px;
+.empty-body {
+  font-size: var(--fs-body);
+  color: var(--text-2);
+  margin: 0;
 }
-.empty-hint {
-  margin: 10px auto 0;
-  max-width: 520px;
-  text-align: center;
-  line-height: 1.55;
+.empty-formats {
+  margin: 0;
+  font-size: var(--fs-note);
+  color: var(--muted);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  letter-spacing: 0.02em;
+}
+/* The three-step workflow strip, spaced evenly on one line under the buttons. */
+.empty-steps {
+  display: flex;
+  gap: var(--space-4);
+  justify-content: center;
+  margin-top: var(--space-4);
+  font-size: var(--fs-note);
+  color: var(--muted);
+}
+.empty-steps span {
+  white-space: nowrap;
 }
 
 /* loading overlay (async file read / parse) */
@@ -2839,10 +2967,23 @@ margin: 0 var(--space-1);
   overflow-y: auto;
 }
 .settings-row {
-  display: flex;
-  flex-wrap: wrap;
+  /* One grid of identically sized buttons per section: auto-width buttons made
+     each row ragged (浅色主题/深色主题/跟随系统 and the DPI chips all differed).
+     A fixed track width rather than 1fr, so a section with one button does not
+     stretch it across the whole dialog. */
+  display: grid;
+  grid-template-columns: repeat(auto-fit, var(--settings-btn-w));
+  justify-content: center;
   gap: var(--space-2);
   margin: var(--space-2) 0 var(--space-4);
+}
+.settings-row .btn {
+  width: var(--settings-btn-w);
+  min-width: 0;
+  justify-content: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .settings-row .btn.active {
   border-color: var(--accent);

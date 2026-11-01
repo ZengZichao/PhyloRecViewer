@@ -5,6 +5,7 @@ import { ErrorBoundary } from "./app/ErrorBoundary";
 import { friendlyParseError, useStore } from "./state/store";
 import { loadPrefs } from "./state/prefs";
 import { isTauri } from "./platform/desktop";
+import { installPreloadRecovery } from "./platform/preloadRecovery";
 import { themes } from "./render/theme";
 import "./styles.css";
 
@@ -74,6 +75,11 @@ window.addEventListener("error", (ev) => {
   else if (ev.message) reportAsyncError(new Error(ev.message));
 });
 window.addEventListener("unhandledrejection", (ev) => reportAsyncError(ev.reason));
+
+// A lazy chunk that 404s after a deploy is recoverable by reloading, so it must
+// not be reported as a crash; registered before the first render so an export
+// clicked later in the session is already covered.
+installPreloadRecovery();
 
 const root = document.getElementById("root");
 if (root) {

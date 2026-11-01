@@ -87,8 +87,8 @@ function keyOf(g: GeneNode): string {
   // Unnamed internal node: match by descendant leaf set (topology) so NHX trees,
   // whose internals are unnamed, take part in the comparison.
   if (g.children.length > 0) return `T:${leafSetKey(g)}`;
-  // Unnamed AND childless - the shape of a recPhyloXML <loss/> (see
-  // samples/all-events.recphyloxml). A name-derived key would be "" here, which
+  // Unnamed AND childless - the shape of a recPhyloXML `<loss/>` written without
+  // a `<name>`. A name-derived key would be "" here, which
   // leaves the node out of both matching and the `union` denominator, so two
   // reconciliations that disagree only on which species a loss happened in
   // would score 100% agreement. Key it on the event identity instead.

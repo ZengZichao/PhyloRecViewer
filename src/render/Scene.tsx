@@ -1,4 +1,4 @@
-import { Fragment, memo, useId, type KeyboardEvent as ReactKeyboardEvent, type MouseEvent as ReactMouseEvent } from "react";
+import { Fragment, memo, useId, type KeyboardEvent as ReactKeyboardEvent, type MouseEvent as ReactMouseEvent, type ReactNode } from "react";
 import type {
   EventType,
   GeneNode,
@@ -32,6 +32,10 @@ export interface SceneProps {
   hideOutside?: Set<string> | null;
   /** Nodes ring-highlighted (compare disagreements) instead of dimmed. */
   diffSet?: Set<string> | null;
+  /** The node(s) the user just located (search match, QC "locate first").
+   *  Dimming everything else does not make one node findable, so these get a
+   *  bold outline drawn on top of the drawing. */
+  locateSet?: Set<string> | null;
   interactive?: boolean;
   /** Level of detail; heavily zoomed-out views drop labels/glyphs. */
   detail?: DetailLevel;
@@ -261,6 +265,7 @@ export function Scene(props: SceneProps) {
           highlight={props.highlight}
           hideOutside={props.hideOutside}
           diffSet={props.diffSet}
+          locateSet={props.locateSet}
           labelOverridesById={props.labelOverridesById}
           onTransferClick={props.onTransferClick}
           interactive={props.interactive}
@@ -318,6 +323,7 @@ const SceneContent = memo(function SceneContent({
   onLabelClick,
   onTransferClick,
   diffSet = null,
+  locateSet = null,
   geneColors,
   annotations = {},
   viewport = null,
@@ -369,9 +375,53 @@ const SceneContent = memo(function SceneContent({
       <g className="annotation-layer">
         {renderAnnotations(annotations, pos, proj, hidden, options.symbolSize, hideOutside)}
       </g>
+
+      {locateSet && locateSet.size > 0 && (
+        <g className="locate-layer">
+          {renderLocate(locateSet, pos, proj, hidden, options.symbolSize)}
+        </g>
+      )}
     </>
   );
 });
+
+/**
+ * Outline for the node a locate request targeted. The id is looked up in the
+ * gene map first and then the species map, so a located node is ringed
+ * whatever kind it is, and the ring needs only a position — which is why it
+ * still shows at detail levels that hide the glyphs and labels themselves.
+ */
+function renderLocate(
+  ids: Set<string>,
+  pos: Positions,
+  proj: Projector,
+  hidden: Set<string>,
+  symbolSize: number,
+): ReactNode[] {
+  const out: ReactNode[] = [];
+  const r = symbolSize + 7;
+  for (const id of ids) {
+    if (hidden.has(id)) continue;
+    const p = pos.gene.get(id) ?? pos.species.get(id);
+    if (!p) continue;
+    const q = pj(proj, { x: p.x, y: p.y });
+    out.push(
+      <g key={`locate-${id}`} pointerEvents="none">
+        <circle cx={q.x} cy={q.y} r={r + 5} fill="var(--locate)" fillOpacity={0.14} />
+        <circle
+          className="locate-ring"
+          cx={q.x}
+          cy={q.y}
+          r={r}
+          fill="none"
+          stroke="var(--locate)"
+          strokeWidth={3}
+        />
+      </g>,
+    );
+  }
+  return out;
+}
 
 /** Gradient direction (objectBoundingBox) aligned with the growth axis. */
 function gradientVector(o: Orientation): { x1: number; y1: number; x2: number; y2: number } {

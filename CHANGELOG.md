@@ -7,6 +7,75 @@ archived version carries its own immutable **version DOI** — v0.1.0 is
 `10.5281/zenodo.23053318`; the version DOI of each later release is recorded
 here once its deposit is published.
 
+## [Unreleased]
+
+A round of fixes against the published site, covering the empty-state hub, the
+analysis panel, located-node visibility, duplication rendering and PDF export.
+
+### Added
+
+- **Stale-build chunk recovery** (`src/platform/preloadRecovery.ts`): a
+  `vite:preloadError` listener reloads the page once per session when a
+  lazily-imported chunk cannot be fetched, so a tab left open across a deploy
+  lands back on one consistent build generation instead of degrading. Installed
+  from the entry module rather than an inline `<script>`, because the desktop
+  build's CSP allows no `script-src 'unsafe-inline'`.
+
+### Changed
+
+- **Located nodes get an outline, not just a pan** (`src/render/Scene.tsx`,
+  `src/app/Canvas.tsx`): clicking a 匹配结果 row, a 定位第一处 finding or any
+  other locate target now draws a bold ring on the node in the canvas, because
+  dimming everything else left the located node unfindable. A background click
+  clears it. The legend gained a key for it.
+- **Empty-state hub** (`src/app/EmptyState.tsx`, `src/styles.css`): the sample
+  choices and the action buttons are now equal-width, centered groups, and the
+  open-a-file instructions were condensed into one line plus a compact
+  three-step strip (the drag instruction used to appear twice).
+- **Settings is a menu-bar destination** (`src/app/MenuBar.tsx`): 设置 sits
+  beside 视图 instead of being buried at the bottom of its dropdown, and its
+  option rows are one uniform grid.
+- **Export menu layout** (`src/app/MenuBar.tsx`): formats, clipboard actions,
+  DPI options and background choices are grouped into even chip rows instead of
+  a mix of full-width menu rows and ragged inline controls.
+- **Legend event key** (`src/app/Legend.tsx`): ten marks, laid out as two even
+  rows of five in horizontal mode instead of a wrapped 6 + 4.
+- **Every split pane carries the editing toolbar** (`src/app/Canvas.tsx`):
+  undo, redo and the analysis-panel toggle are no longer restricted to the
+  primary pane, so the lower level of a nested or compare view is not inert.
+- The `all-events` bundled sample was removed from the catalog; its XML is kept
+  as an inline test fixture so the every-event-type routing and glyph coverage
+  is unchanged.
+
+### Fixed
+
+- **Data-check rows printed a literal `\u2713`** (`src/app/RightPanel.tsx`):
+  backslash escapes are a JavaScript string-literal feature and are not decoded
+  in JSX text children, so the tick rendered as six characters. Same class of
+  bug fixed for the `\u2026` overflow marker.
+- **QC report CSV was header-only for a clean document**
+  (`src/app/RightPanel.tsx`): the report emitted one row per *fired* issue, so
+  a document that passes every check exported nothing. It now writes one row
+  per check for every loaded reconciliation level (a new `tree` column), which
+  also means the nested level is finally checked at all.
+- **PDF export failed with "Failed to fetch dynamically imported module"**
+  (`src/export/exporters.ts`): both PDF paths awaited the same lazily-fetched
+  jsPDF chunk, so a chunk renamed by a later deploy made the vector->raster
+  fallback reject on the identical missing file and the export died outright
+  instead of degrading. jsPDF is now a static import (the raster fallback needs
+  zero network requests, and no `jspdf` chunk is emitted at all) and the
+  svg2pdf.js converter is fetched through a guarded loader that reports
+  unavailability rather than throwing.
+- **A duplication did not render as a branch point**
+  (`src/layout/geneEmbed.ts`, `src/render/geometry.ts`): the two copies of a
+  duplication only separated at the species fork below it — or at the tip
+  baseline — so 对比示例 result B looked identical to result A despite calling
+  both nodes duplications, and the nested sample's copies split at the leaves.
+  The duplication node is now centered between its copies' lanes and each child
+  edge diverges from the duplication glyph itself, while every point still
+  stays inside its host species tube (the property the tube-routing fix
+  `7f645f8` introduced is preserved).
+
 ## 0.2.0 (2026-11-01)
 
 A large review round: comparison, export, session/autosave and analysis

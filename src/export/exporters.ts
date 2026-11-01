@@ -1,5 +1,33 @@
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
+// jsPDF is a STATIC import, deliberately, and that is the fix for issue #11.
+//
+// A lazy `await import()` makes Vite emit the dependency as its own lazily-fetched
+// chunk (it was `assets/jspdf.es.min-<hash>.js`) whose name hashes the build's
+// content, so every rebuild renames it. On a sub-path GitHub Pages deployment a
+// browser can then be running an older build's entry chunk that records a hash the
+// server no longer serves, and the fetch rejects with "Failed to fetch dynamically
+// imported module". Both PDF paths used to await that same chunk, so the
+// vector->raster fallback failed on the very same missing file and the export died
+// outright instead of degrading. With jsPDF in the entry chunk the fallback is
+// completely fetch-free, so a PDF export now always produces a PDF.
+//
+// svg2pdf.js deliberately stays lazy (see loadVectorConverter). Importing it
+// eagerly is not an option at either entry point of this module: the package has no
+// `exports` map, so outside a browser it resolves to its UMD `main`, and Node/tsx -
+// which is how `npm run cli` and `npm run measure` load these exporters through
+// scripts/cli.ts - evaluates that UMD as ESM with no `exports`/`module`, sending it
+// down its global fallback branch, which reads `globalThis.jspdf.jsPDF` and throws
+// "Cannot read properties of undefined (reading 'jsPDF')". A named static import
+// fails to link there for the same reason. The browser build and the jsdom test run
+// are both unaffected, so this is purely the headless-CLI contract.
+// If the lazily-fetched converter chunk is ever missing, loadVectorConverter
+// returns null and the raster fallback writes a genuine PDF with the statically
+// available jsPDF - at a documented, visible quality loss rather than a failed
+// export. A stale-cache miss of exactly this kind is what
+// src/platform/preloadRecovery.ts reloads the page to avoid, so the vector path
+// is normally restored rather than silently downgraded for the session.
+import { jsPDF } from "jspdf";
 import type { LayoutResult } from "../layout";
 import { Scene } from "../render/Scene";
 import type { RenderOptions } from "../render/options";
@@ -549,10 +577,34 @@ export async function exportPng(doc: ExportDoc, filename: string, dpi = DEFAULT_
   return { scale };
 }
 
+/** The svg2pdf.js converter function. */
+type VectorConverter = (typeof import("svg2pdf.js"))["svg2pdf"];
+
+/**
+ * Load the vector converter, or null when it cannot be had.
+ *
+ * Kept lazy on purpose (see the import note at the top of this file), and NOT
+ * memoized on failure: a browser that cannot fetch the chunk right now - issue #11's
+ * superseded hash, or a network that is down - may be able to later, and pinning the
+ * failure would silently condemn every remaining export in the session to a raster
+ * PDF. A successful import costs nothing to repeat, because the ES module map caches
+ * it, so only the failure path pays for the retry.
+ */
+async function loadVectorConverter(): Promise<VectorConverter | null> {
+  try {
+    return (await import("svg2pdf.js")).svg2pdf;
+  } catch {
+    return null;
+  }
+}
+
 /** A true-vector PDF through svg2pdf.js. Throws when the engine cannot convert. */
-async function vectorPdfBlob(svg: string, width: number, height: number): Promise<Blob> {
-  const { jsPDF } = await import("jspdf");
-  await import("svg2pdf.js");
+async function vectorPdfBlob(
+  svg: string,
+  width: number,
+  height: number,
+  convert: VectorConverter,
+): Promise<Blob> {
   const el = new DOMParser().parseFromString(svg, "image/svg+xml")
     .documentElement as unknown as SVGSVGElement;
   el.style.position = "absolute";
@@ -570,9 +622,7 @@ async function vectorPdfBlob(svg: string, width: number, height: number): Promis
       unit: "pt",
       format: [ptW, ptH],
     });
-    await (pdf as unknown as {
-      svg: (e: Element, o: object) => Promise<unknown>;
-    }).svg(el, { x: 0, y: 0, width: ptW, height: ptH });
+    await convert(el, pdf, { x: 0, y: 0, width: ptW, height: ptH });
     return pdf.output("blob");
   } finally {
     el.remove();
@@ -592,7 +642,6 @@ async function rasterPdfBlob(
   const scale = dpiToScale(DEFAULT_PNG_DPI);
   const { canvas, scale: applied } = await rasterize(svg, width, height, bg, scale);
   const dataUrl = canvas.toDataURL("image/png");
-  const { jsPDF } = await import("jspdf");
   // The same px -> pt conversion as the vector path, so a fallback PDF matches the
   // on-screen / SVG / PNG size.
   const ptW = (width * 72) / 96;
@@ -610,7 +659,8 @@ async function rasterPdfBlob(
  *  say out loud when the vector path failed and/or the raster DPI was clamped. */
 export interface PdfResult {
   blob: Blob;
-  /** Set when the vector converter threw, meaning the file is a raster PDF. */
+  /** Set when the file is a raster PDF, either because the lazily-loaded vector
+   *  converter could not be fetched at all or because the conversion threw. */
   rasterized: boolean;
   /** The raster scale that took effect (≤ dpiToScale(DEFAULT_PNG_DPI)); null for a vector file. */
   scale: number | null;
@@ -619,20 +669,29 @@ export interface PdfResult {
 /**
  * PDF export. Writes a true *vector* PDF through svg2pdf.js, and falls back to a
  * high-resolution raster PDF - which the browser renders with full CJK support -
- * only when the vector converter throws, so an export never fails outright. That
- * throw alone is what triggers the fallback: it is NOT a CJK- or gradient-specific
- * detector, and a very large drawing can still have its raster DPI clamped.
+ * whenever the vector route is unavailable, so an export never fails outright. A
+ * missing converter chunk and a converter that throws are the same event to this
+ * function: it is NOT a CJK- or gradient-specific detector, and a very large drawing
+ * can still have its raster DPI clamped.
  * SVG export is vector by construction, with no rasterization step at all.
+ *
+ * The fallback itself needs no network request: jsPDF is a static import (see the
+ * note at the top of this file), which is precisely what stops a missing svg2pdf.js
+ * chunk from turning into the failed export of issue #11.
  */
 export async function renderPdfBlob(doc: ExportDoc): Promise<PdfResult> {
   const { svg, width, height } = buildDocSvg(doc);
-  try {
-    return { blob: await vectorPdfBlob(svg, width, height), rasterized: false, scale: null };
-  } catch {
-    // A robust high-DPI raster PDF is the answer when vector conversion fails.
-    const { blob, scale } = await rasterPdfBlob(svg, width, height, doc.theme.background);
-    return { blob, rasterized: true, scale };
+  const convert = await loadVectorConverter();
+  if (convert) {
+    try {
+      return { blob: await vectorPdfBlob(svg, width, height, convert), rasterized: false, scale: null };
+    } catch {
+      // Vector conversion failed; fall through to the raster PDF below.
+    }
   }
+  // A robust high-DPI raster PDF is the answer when the vector path is not available.
+  const { blob, scale } = await rasterPdfBlob(svg, width, height, doc.theme.background);
+  return { blob, rasterized: true, scale };
 }
 
 export async function exportPdf(doc: ExportDoc, filename: string): Promise<PdfResult> {

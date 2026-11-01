@@ -158,7 +158,7 @@ crates.io 索引，无法只靠已提交内容离线生成。分发二进制前�
 
 以下文件没有任何第三方权利主张，它们与仓库其余部分一样受 MIT 许可证覆盖：
 
-* `src/samples/` 下的六份演示调和结果（`showcase`、`all-events`、三层演示的
+* `src/samples/` 下的五份演示调和结果（`showcase`、三层演示的
   `nested-*` 一对，以及 `compare-tool-a` / `compare-tool-b` 一对）；
 * `src/parser/__fixtures__/conformant-minimal.recphyloxml`（2,380 字节），其自带的头部
   注释就说明这是一份手写的、严格符合模式的最小文档，用于钉住解析器读取

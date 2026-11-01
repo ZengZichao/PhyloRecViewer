@@ -53,9 +53,9 @@ export function EmptyState() {
         <AppLogo size={88} />
       </div>
       <h2 className="empty-app-name">Phylo<span className="brand-mark">Rec</span>Viewer</h2>
-      <p className="muted">{t.emptyBody}</p>
-      <p className="muted">
-        ① {t.panelStats} · {t.dataHealth} &nbsp;&nbsp;② {t.panelDiff} &nbsp;&nbsp;③ {t.exportLabel} (SVG / PDF / {t.exportRecPhylo.replace(/（.*/, "")})
+      <p className="empty-body">{t.emptyBody}</p>
+      <p className="empty-formats" aria-hidden="true">
+        recPhyloXML · PhyloXML · Newick · NHX
       </p>
 
       <div className="empty-actions">
@@ -101,7 +101,7 @@ export function EmptyState() {
                 onClick={() => loadSample(s)}
               >
                 <span className="empty-sample-arrow" aria-hidden="true">▸</span>
-                {t[s.labelKey]}
+                <span className="empty-sample-name">{t[s.labelKey]}</span>
                 {badge && <span className="multi-open-badge">{badge}</span>}
               </button>
             );
@@ -109,7 +109,11 @@ export function EmptyState() {
         </div>
       </div>
 
-      <p className="empty-drag muted">{t.emptyDragHint}</p>
+      <div className="empty-steps" aria-hidden="true">
+        <span>① {t.panelStats}</span>
+        <span>② {t.panelDiff}</span>
+        <span>③ {t.exportLabel}</span>
+      </div>
     </div>
   );
 }

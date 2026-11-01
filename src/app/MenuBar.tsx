@@ -718,24 +718,28 @@ export function MenuBar({
           {(close) => (
             <>
               <div className="menu-label">{t.exportImage}</div>
-              <button className="menu-item" onClick={() => { close(); void doExport("png"); }}>
-                PNG
-              </button>
-              <button className="menu-item" onClick={() => { close(); void doExport("svg"); }}>
-                SVG
-              </button>
-              <button className="menu-item" onClick={() => { close(); void doExport("pdf"); }}>
-                PDF
-              </button>
-              <button className="menu-item" onClick={() => { close(); void exportHtml(); }}>
-                HTML
-              </button>
-              <button className="menu-item" onClick={() => { close(); void copyToClipboard("svg"); }}>
-                {t.copySvg}
-              </button>
-              <button className="menu-item" onClick={() => { close(); void copyToClipboard("png"); }}>
-                {t.copyPng}
-              </button>
+              <div className="menu-scale">
+                <button className="menu-scale-btn" onClick={() => { close(); void doExport("png"); }}>
+                  PNG
+                </button>
+                <button className="menu-scale-btn" onClick={() => { close(); void doExport("svg"); }}>
+                  SVG
+                </button>
+                <button className="menu-scale-btn" onClick={() => { close(); void doExport("pdf"); }}>
+                  PDF
+                </button>
+                <button className="menu-scale-btn" onClick={() => { close(); void exportHtml(); }}>
+                  HTML
+                </button>
+              </div>
+              <div className="menu-scale">
+                <button className="menu-scale-btn" onClick={() => { close(); void copyToClipboard("svg"); }}>
+                  {t.copySvg}
+                </button>
+                <button className="menu-scale-btn" onClick={() => { close(); void copyToClipboard("png"); }}>
+                  {t.copyPng}
+                </button>
+              </div>
               <div className="menu-divider" />
               <div className="menu-label">{t.pngResolution}</div>
               <div className="menu-scale">
@@ -751,7 +755,7 @@ export function MenuBar({
                   />
                 )}
               </div>
-              <div className="menu-scale">
+              <div className="menu-dpi-row">
                 <input
                   type="number"
                   min={72}
@@ -832,13 +836,21 @@ export function MenuBar({
                   onClick={() => { close(); setTheme(o.id); }}
                 />
               ))}
-              <div className="menu-divider" />
-              <button className="menu-item" onClick={() => { close(); onOpenSettings(); }}>
-                {t.prefsTitle} ⚙
-              </button>
             </>
           )}
         </Dropdown>
+
+        {/* Settings sits in the menu bar beside View rather than hidden inside
+            it: it is a destination, not one option among many. */}
+        <button
+          className="menu-bar-item"
+          aria-label={t.prefsTitle}
+          title={t.prefsTitle}
+          onClick={onOpenSettings}
+          data-tauri-drag-region="false"
+        >
+          {t.prefsTitle}
+        </button>
 
         {/* ---- Help menu ---- */}
         <Dropdown label={t.helpButton} ariaLabel={t.helpButton}>

@@ -126,6 +126,8 @@ export interface Dict {
   /** Toggle for the legend's layout direction. */
   legendVertical: string;
   legendHorizontal: string;
+  /** Legend key for the outline left on a located node. */
+  legendLocate: string;
   /** Help overlay / settings entry that opens the first-run tutorial. */
   viewTour: string;
   // tree orientation
@@ -173,7 +175,6 @@ export interface Dict {
   loadSampleCta: string;
   /** Display names of the bundled samples, used in the menu, empty state and tabs. */
   sampleShowcase: string;
-  sampleAllEvents: string;
   sampleCompare: string;
   sampleCompareB: string;
   sampleNested: string;
@@ -592,6 +593,7 @@ const en: Dict = {
   unpinOpen: "Unpin section",
   legendVertical: "Vertical layout",
   legendHorizontal: "Horizontal layout",
+  legendLocate: "Located node",
   viewTour: "View tutorial",
   orientation: "Orientation",
   orientTop: "Root top",
@@ -622,7 +624,7 @@ const en: Dict = {
   leavesUnit: "leaves",
   expandHint: "Alt-click to expand",
   emptyTitle: "Open a recPhyloXML file",
-  emptyBody: "Use the File menu, or drag & drop a .recphyloxml / .recphylo / .phyloxml / .xml / .nhx / .nwk file here.",
+  emptyBody: "Drop a file here, or open one from the File menu.",
   errorTitle: "Could not parse this file",
   errorHint: "Supported: recPhyloXML (.recphyloxml / .recphylo / .phyloxml / .xml), NHX (.nhx), Newick (.nwk / .newick). Check the file format and encoding.",
   errorRetry: "Choose another file",
@@ -633,8 +635,6 @@ const en: Dict = {
   emptyDragHint: "You can also drag & drop a file anywhere in the window.",
   loadSampleCta: "Load sample ▸",
   sampleShowcase: "Showcase: speciation / duplication / loss / transfer",
-  sampleAllEvents:
-    "All event types: speciation / duplication / loss / branching-out / bifurcation-out / transfer",
   sampleCompare: "Comparison: two outcomes of one gene family",
   sampleCompareB: "Outcome B (duplication-rich)",
   sampleNested: "Nested: gene / symbiont / host",
@@ -1028,6 +1028,7 @@ const zh: Dict = {
   unpinOpen: "\u53d6\u6d88\u56fa\u5b9a",
   legendVertical: "\u56fe\u4f8b\u5782\u76f4\u6392\u5e03",
   legendHorizontal: "\u56fe\u4f8b\u6c34\u5e73\u6392\u5e03",
+  legendLocate: "\u5b9a\u4f4d\u8282\u70b9",
   viewTour: "\u67e5\u770b\u65b0\u624b\u6307\u5357",
   orientation: "树朝向",
   orientTop: "根在上",
@@ -1058,7 +1059,7 @@ const zh: Dict = {
   leavesUnit: "\u53f6",
   expandHint: "Alt \u70b9\u51fb\u5c55\u5f00",
   emptyTitle: "\u6253\u5f00\u4e00\u4e2a recPhyloXML \u6587\u4ef6",
-  emptyBody: "\u4f7f\u7528\u6587\u4ef6\u83dc\u5355\uff0c\u6216\u5c06 .recphyloxml / .recphylo / .phyloxml / .xml / .nhx / .nwk \u6587\u4ef6\u62d6\u62fd\u5230\u6b64\u5904\u3002",
+  emptyBody: "\u5c06\u6587\u4ef6\u62d6\u62fd\u5230\u6b64\u5904\uff0c\u6216\u4f7f\u7528\u300c\u6587\u4ef6\u300d\u83dc\u5355\u6253\u5f00\u3002",
   errorTitle: "\u65e0\u6cd5\u89e3\u6790\u8be5\u6587\u4ef6",
   errorHint: "\u652f\u6301\u683c\u5f0f\uff1arecPhyloXML\uff08.recphyloxml / .recphylo / .phyloxml / .xml\uff09\u3001NHX\uff08.nhx\uff09\u3001Newick\uff08.nwk / .newick\uff09\u3002\u8bf7\u68c0\u67e5\u6587\u4ef6\u683c\u5f0f\u4e0e\u7f16\u7801\u3002",
   errorRetry: "\u91cd\u65b0\u9009\u62e9\u6587\u4ef6",
@@ -1069,7 +1070,6 @@ const zh: Dict = {
   emptyDragHint: "\u4e5f\u53ef\u4ee5\u5c06\u6587\u4ef6\u62d6\u62fd\u5230\u7a97\u53e3\u4efb\u610f\u4f4d\u7f6e\u3002",
   loadSampleCta: "载入示例 ▸",
   sampleShowcase: "完整示例：物种形成 / 重复 / 丢失 / 转移",
-  sampleAllEvents: "全事件类型：物种形成 / 重复 / 丢失 / 转移(供体) / 树外分叉 / 转移(受体)",
   sampleCompare: "对比示例：同一家族的两种结果",
   sampleCompareB: "结果 B（重复为主）",
   sampleNested: "嵌套示例：基因/共生体/宿主",

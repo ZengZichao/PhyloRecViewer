@@ -4,10 +4,14 @@
  * They pin down the guarantees this layer makes, so that a future change cannot
  * quietly break them: hostile names stay plain text, a merged multi-pane SVG
  * grows no duplicate ids and no dangling `url(#…)` refs, the rasterizer never
- * asks for a canvas the platform cannot give, and degenerate documents still
- * export.
+ * asks for a canvas the platform cannot give, degenerate documents still export,
+ * and a PDF export still produces a file when the vector converter cannot be
+ * fetched at all (issue #11).
  */
 import { describe, it, expect, vi, afterEach, beforeEach } from "vitest";
+// Read as raw text through Vite (`?raw`): under the jsdom environment
+// `import.meta.url` is an http: URL, so it cannot be handed to `fs`.
+import exportersSource from "./exporters.ts?raw";
 import { layout, type LayoutResult } from "../layout";
 import { parseReconciliation } from "../parser/formats";
 import { defaultRenderOptions } from "../render/options";
@@ -16,8 +20,10 @@ import {
   DEFAULT_PNG_DPI,
   MIN_PNG_DPI,
   buildDocSvg,
+  exportPdf,
   exportPng,
   exportSvg,
+  renderPdfBlob,
   renderPngBlob,
   sceneToInteractiveHtml,
   sceneToSvgString,
@@ -564,5 +570,195 @@ describe("PNG rasterization and canvas limits", () => {
     expect(document.querySelectorAll("a")).toHaveLength(0);
     vi.runAllTimers();
     expect(revoke).toHaveBeenCalledTimes(2);
+  });
+});
+
+/* -------------------------------------------------------------------- PDF export */
+
+/** Read a Blob's bytes as latin1 text: enough to see the PDF header and the page
+ *  dictionary, where the px->pt conversion is visible. jsdom's `Blob` may not
+ *  expose `arrayBuffer()`, so fall back to `FileReader`. */
+async function blobAsText(blob: Blob): Promise<string> {
+  const buf =
+    typeof blob.arrayBuffer === "function"
+      ? await blob.arrayBuffer()
+      : await new Promise<ArrayBuffer>((res, rej) => {
+          const reader = new FileReader();
+          reader.onload = () => res(reader.result as ArrayBuffer);
+          reader.onerror = () => rej(new Error("could not read the PDF blob"));
+          reader.readAsArrayBuffer(blob);
+        });
+  return Array.from(new Uint8Array(buf), (b) => String.fromCharCode(b)).join("");
+}
+
+describe("PDF export with a statically loaded writer", () => {
+  /** `addImage` parses the image itself, so the raster fallback needs a REAL (if
+   *  tiny) PNG: a placeholder string would make it throw for the wrong reason. */
+  const PNG_1PX =
+    "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==";
+
+  const doc = exportDoc([pane(lay(twoLeafXml("p1", "p2"), "pdf.xml"))]);
+  const { width, height } = buildDocSvg(doc);
+
+  let ctx: { fillStyle: string; fillRect: ReturnType<typeof vi.fn>; drawImage: ReturnType<typeof vi.fn> };
+
+  beforeEach(() => {
+    ctx = { fillStyle: "", fillRect: vi.fn(), drawImage: vi.fn() };
+    vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockImplementation(
+      function (this: HTMLCanvasElement) {
+        return ctx as unknown as CanvasRenderingContext2D;
+      },
+    );
+    // jsdom rasterizes nothing, so hand the export a real one-pixel PNG instead.
+    vi.spyOn(HTMLCanvasElement.prototype, "toDataURL").mockReturnValue(PNG_1PX);
+    vi.spyOn(HTMLCanvasElement.prototype, "toBlob").mockImplementation(
+      ((cb: ((b: Blob | null) => void) | null | undefined) => {
+        cb?.(new Blob([PNG_1PX], { type: "image/png" }));
+      }) as typeof HTMLCanvasElement.prototype.toBlob,
+    );
+    vi.stubGlobal(
+      "Image",
+      class {
+        decoding = "";
+        src = "";
+        complete = true;
+        naturalWidth = 10;
+        onload: (() => void) | null = null;
+        onerror: (() => void) | null = null;
+        async decode(): Promise<void> {
+          return undefined;
+        }
+      },
+    );
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+    vi.useRealTimers();
+  });
+
+  it("produces a real PDF blob, with the writer already in memory", async () => {
+    await expectPdf((await renderPdfBlob(doc)).blob);
+  });
+
+  it("sizes the PDF page in points, not CSS pixels (96 dpi -> 72 pt)", async () => {
+    const text = await blobAsText((await renderPdfBlob(doc)).blob);
+    const box = text.match(/\/MediaBox\s*\[\s*[\d.]+\s+[\d.]+\s+([\d.]+)\s+([\d.]+)\s*\]/);
+    expect(box, `no /MediaBox found in the PDF header`).not.toBeNull();
+    // jsPDF may swap the axes for a landscape page, so compare the pair sorted.
+    const got = [Number(box![1]), Number(box![2])].sort((a, b) => a - b);
+    const want = [(width * 72) / 96, (height * 72) / 96].sort((a, b) => a - b);
+    expect(got[0]).toBeCloseTo(want[0], 1);
+    expect(got[1]).toBeCloseTo(want[1], 1);
+  });
+
+  /** Assert the bytes are a real, finished PDF file. */
+  async function expectPdf(blob: Blob): Promise<void> {
+    expect(blob.type).toBe("application/pdf");
+    const text = await blobAsText(blob);
+    expect(text.startsWith("%PDF-")).toBe(true);
+    expect(text).toContain("%%EOF");
+  }
+
+  /** The svg2pdf.js module namespace, i.e. what a stub has to stand in for. */
+  type Svg2pdfModule = typeof import("svg2pdf.js");
+
+  /** Re-import the exporters with `svg2pdf.js` replaced by `factory`, so the PDF
+   *  paths can be driven against a converter that is missing or broken without
+   *  depending on which SVG features jsdom happens to implement. A factory that
+   *  throws stands for the chunk itself being unfetchable. */
+  async function withConverter(
+    factory: () => Partial<Svg2pdfModule>,
+    run: (mod: typeof import("./exporters")) => Promise<void>,
+  ): Promise<void> {
+    vi.resetModules();
+    vi.doMock("svg2pdf.js", factory);
+    try {
+      await run(await import("./exporters"));
+    } finally {
+      vi.doUnmock("svg2pdf.js");
+      vi.resetModules();
+    }
+  }
+
+  it("still delivers a PDF when the converter chunk cannot be fetched", async () => {
+    // The verbatim shape of issue #11: the browser asks for a lazily-emitted chunk
+    // whose hashed name a later deploy removed, so the import itself rejects. That
+    // may cost vector quality, but never the export - and the fallback proves it
+    // needs no fetch of its own, because jsPDF arrives through a static import.
+    // (Before the fix both PDF paths awaited the same chunk, so the fallback failed
+    // on the same missing file and the user got "导出失败: Failed to fetch...".)
+    await withConverter(
+      () => {
+        throw new Error("Failed to fetch dynamically imported module: .../svg2pdf.es.min-<hash>.js");
+      },
+      async (mod) => {
+        const res = await mod.renderPdfBlob(doc);
+        expect(res.rasterized).toBe(true);
+        await expectPdf(res.blob);
+        // The caller is told the resolution that actually took effect, so the UI
+        // can warn when the canvas limits clamped the nominal DPI.
+        expect(res.scale).not.toBeNull();
+      },
+    );
+  });
+
+  it("still delivers a PDF when the vector converter itself throws", async () => {
+    await withConverter(
+      () => ({ svg2pdf: () => Promise.reject(new Error("forced conversion failure")) }),
+      async (mod) => {
+        const res = await mod.renderPdfBlob(doc);
+        expect(res.rasterized).toBe(true);
+        await expectPdf(res.blob);
+      },
+    );
+  });
+
+  it("downloads the PDF through a real object URL", async () => {
+    const create = vi.fn(() => "blob:fake-pdf");
+    const revoke = vi.fn();
+    vi.stubGlobal("URL", { createObjectURL: create, revokeObjectURL: revoke });
+    const names: (string | null)[] = [];
+    const click = vi
+      .spyOn(HTMLAnchorElement.prototype, "click")
+      .mockImplementation(function (this: HTMLAnchorElement) {
+        names.push(this.getAttribute("download"));
+      });
+    vi.useFakeTimers();
+
+    const res = await exportPdf(doc, "figure.pdf");
+
+    expect(click).toHaveBeenCalledTimes(1);
+    expect(names).toEqual(["figure.pdf"]);
+    // The exact blob the export produced is the one handed to the download.
+    expect((create.mock.calls[0] as unknown[])[0]).toBe(res.blob);
+    vi.runAllTimers();
+    expect(revoke).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps jsPDF a static import so the fallback can never need a fetch", () => {
+    // A regression pin for issue #11, not a style rule: a lazily-fetched chunk is
+    // renamed by every build, so a browser holding an older entry chunk asks the
+    // server for a hash that no longer exists, and the import rejects. The writer is
+    // what BOTH PDF paths need, so if it were lazily fetched a missing chunk would
+    // defeat the fallback too and the export would fail outright.
+    // Comment prose is allowed to *describe* the forbidden form (the import block at
+    // the top of exporters.ts explains why), so strip comments before asserting on
+    // the code itself.
+    const code = exportersSource
+      .replace(/\/\*[\s\S]*?\*\//g, "")
+      .replace(/^[ \t]*\/\/.*$/gm, "");
+    expect(code).toMatch(/^import\s*\{\s*jsPDF\s*\}\s*from\s*["']jspdf["']/m);
+    expect(code).not.toMatch(/\bimport\s*\(\s*["']jspdf["']\s*\)/);
+    // svg2pdf.js is the only runtime lazy import left, and it goes through the
+    // guarded loader that turns an unfetchable chunk into the raster fallback.
+    // (It cannot be static: under Node it resolves to its UMD entry, which breaks the
+    // headless `npm run cli` path - the reason is recorded in exporters.ts.) The
+    // `typeof import(...)` type position is erased at runtime, hence matching `await`.
+    expect(code).toMatch(/import\s*\(\s*["']svg2pdf\.js["']\s*\)/);
+    expect(code.match(/\bawait\s+import\s*\(/g)).toHaveLength(1);
+    expect(code).toMatch(/async function loadVectorConverter/);
+    expect(code).toMatch(/const convert = await loadVectorConverter\(\)/);
   });
 });

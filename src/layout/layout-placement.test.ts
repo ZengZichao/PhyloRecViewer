@@ -220,7 +220,94 @@ describe("elbow mode keeps in-branch nodes on the tube", () => {
     const gp = res.positions.gene.get(dup.id)!;
     // elbowV drops vertically at the CHILD's x for every y below the parent, so
     // the node must sit on sp.x (within half a tube), not on the parent's x.
+    // The bound is deliberately the whole tube, not the centerline: a
+    // duplication is centered between the LATERAL OFFSETS of its copies (see
+    // "a duplication is the branching point" below), so it may sit up to one
+    // lane-offset off the centerline when its copies are packed in lanes.
     expect(Math.abs(gp.x - sp.x)).toBeLessThanOrEqual(sp.width / 2);
     expect(gp.y).toBeGreaterThan(rp.y);
+  });
+});
+
+describe("a duplication is the branching point of its copies", () => {
+  // One duplication inside species A whose two copies are separate A leaves:
+  // the classic "two retained copies" shape of the nested sample.
+  const SAME_SPECIES_DUP = `<recPhylo><spTree><phylogeny><clade><name>R</name>
+      <clade><name>A</name></clade><clade><name>B</name></clade>
+    </clade></phylogeny></spTree>
+    <recGeneTree><phylogeny><clade><name>r</name><eventsRec><speciation speciesLocation="R"/></eventsRec>
+      <clade><name>dup</name><eventsRec><duplication speciesLocation="A"/></eventsRec>
+        ${leaf("A", "c1")}${leaf("A", "c2")}
+      </clade>
+      ${leaf("B", "z")}
+    </clade></phylogeny></recGeneTree></recPhylo>`;
+
+  for (const curved of [true, false]) {
+    it(`centers the duplication between its copies' lanes (curved=${curved})`, () => {
+      const recon = parseRecPhyloXML(SAME_SPECIES_DUP);
+      const res = layout(recon, defaultLayoutOptions, new Set(), new Set(), curved);
+      const nodes = recon.geneTrees[0].nodes;
+      const dup = nodes.find((n) => n.name === "dup")!;
+      const kids = dup.children;
+      expect(kids.length).toBe(2);
+      const a = recon.species.byName.get("A")!;
+      const sp = res.positions.species.get(a.id)!;
+      const gp = res.positions.gene.get(dup.id)!;
+      const k1 = res.positions.gene.get(kids[0]!.id)!;
+      const k2 = res.positions.gene.get(kids[1]!.id)!;
+      // The copies split into distinct lanes (their intervals on A's branch
+      // overlap, so the packer cannot share one lane)...
+      expect(k1.lane).not.toBe(k2.lane);
+      expect(Math.abs(k1.x - k2.x)).toBeGreaterThanOrEqual(3);
+      // ...packed symmetrically about the tube at the fork, and the
+      // duplication sits above them (its edge routing opens the fork AT the
+      // glyph - pinned by render/gene-edge-routing.test.ts).
+      expect(Math.abs((k1.x + k2.x) / 2 - sp.x)).toBeLessThan(1e-6);
+      expect(gp.y).toBeLessThan(Math.min(k1.y, k2.y));
+      if (!curved) {
+        // Elbow tube: the centerline does not drift with y, so "centered
+        // between the copies" is exactly the midpoint of their x.
+        expect(gp.x).toBeCloseTo((k1.x + k2.x) / 2, 6);
+      } else {
+        // Curved tube: the centerline itself moves from R.x toward A.x down
+        // the branch, so the duplication sits off the children's midpoint by
+        // exactly that tube drift - never further sideways than the lane
+        // offsets of its own copies allow.
+        const rSp = res.positions.species.get(recon.species.byName.get("R")!.id)!;
+        expect(gp.x).toBeLessThanOrEqual(sp.x + (rSp.x - sp.x) + 1);
+        expect(gp.x).toBeGreaterThanOrEqual(sp.x - 1);
+      }
+    });
+  }
+
+  it("does not give a lone duplication zero lateral identity", () => {
+    // The compare-tool-B shape: a duplication on an internal branch whose
+    // copies drop into different descendant species. The nodes themselves
+    // stay on the tube centerline (a speciation-like x), so the divergence
+    // is contributed by the EDGE routing (pinned in
+    // render/gene-edge-routing.test.ts "a duplication's child edges diverge
+    // AT the duplication") - not by a sideways node offset that would poke
+    // out of the tube.
+    const recon = parseRecPhyloXML(`<recPhylo><spTree><phylogeny><clade><name>R</name>
+        <clade><name>A</name><clade><name>A1</name></clade><clade><name>A2</name></clade></clade>
+        <clade><name>B</name></clade>
+      </clade></phylogeny></spTree>
+      <recGeneTree><phylogeny><clade><name>r</name><eventsRec><speciation speciesLocation="R"/></eventsRec>
+        <clade><name>dup</name><eventsRec><duplication speciesLocation="A"/></eventsRec>
+          ${leaf("A1", "x")}${leaf("A2", "y")}
+        </clade>
+        ${leaf("B", "z")}
+      </clade></phylogeny></recGeneTree></recPhylo>`);
+    const res = layout(recon, defaultLayoutOptions, new Set(), new Set(), false);
+    const a = recon.species.byName.get("A")!;
+    const dup = recon.geneTrees[0].nodes.find((n) => n.name === "dup")!;
+    const gp = res.positions.gene.get(dup.id)!;
+    const sp = res.positions.species.get(a.id)!;
+    expect(sp.laneCount).toBe(1); // one lane hosts the lone duplication
+    // Elbow tube (constant centerline below the turn): the duplication keeps
+    // NO sideways node offset of its own - the fork divergence lives in the
+    // edge routing (pinned in render/gene-edge-routing.test.ts), so the node
+    // sits exactly on the tube.
+    expect(gp.x).toBeCloseTo(sp.x, 6);
   });
 });

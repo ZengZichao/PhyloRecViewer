@@ -85,7 +85,7 @@ PhyloRecViewer is an **interactive gene–species reconciliation viewer** for ev
 
 ### 1.2 Quick start
 
-1. **Launch**: the app opens on an empty-state hub — **Open file**, **Load sample** (one of the four bundled samples), drag files into the window, or click **Shortcuts & help** to get oriented first.
+1. **Launch**: the app opens on an empty-state hub — **Open file**, **Load sample** (one of the three bundled samples), drag files into the window, or click **Shortcuts & help** to get oriented first.
 2. **Open your data**: **File → Open file** (or `⌘O` / `Ctrl+O`) and pick a supported file — `.recphyloxml` / `.recphylo` / `.xml` / `.phyloxml` holding **recPhyloXML content**, or `.nhx` / `.nwk` / `.newick` gene trees (see [Section 4.1](#41-opening-files)) — or simply drag files into the window.
 3. **Navigate**: scroll to zoom, drag empty space to pan, press `F` to fit the view.
 4. **Interact**: click a gene node to highlight its lineage and open the node inspector; `Shift`-click to annotate; `Alt`/`Option`-click an internal node to collapse it; click a species branch to mirror (swap) it.
@@ -216,7 +216,6 @@ The desktop build registers file associations for `.recphyloxml` / `.recphylo` a
 | Sample | Description |
 |--------|-------------|
 | **Showcase** | General sample: speciation / duplication / loss / transfer |
-| **All event types** | Every reconciliation event in one tree, incl. branching-out and bifurcation-out |
 | **Compare demo** | Two inferences of the same family (auto-enters compare view) |
 | **Nested demo** | Gene / symbiont / host, three levels (auto-enters nested view) |
 
@@ -568,7 +567,7 @@ Undoable actions: species mirroring (swap), collapse/expand, gene-family colour 
 | **File** | New workspace | Open a fresh blank tab |
 | | Open file `⌘O` | Open one or more files (multi-select) |
 | | Paste tree from clipboard | Open a Newick/NHX tree pasted as text |
-| | Load sample… | Four bundled samples (Showcase / All event types / Compare / Nested) |
+| | Load sample… | Three bundled samples (Showcase / Compare / Nested) |
 | | Save session as… `⌘S` | Save session `.rpvsession.json` |
 | | Open session… | Restore a session |
 | | Close tab `⌘W` | Close the current tab |
