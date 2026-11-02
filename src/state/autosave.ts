@@ -19,6 +19,7 @@
  * so restoring a 10-tab workspace costs one parse, not ten (or thirty, with the
  * nested/compare layers).
  */
+import { translations } from "../i18n";
 import { useStore, friendlyParseError, type DocState } from "./store";
 import { ALL_EVENTS } from "../analysis/focus";
 import { defaultLayoutOptions } from "../layout";
@@ -446,14 +447,16 @@ export function resetAutosaveBookkeeping(): void {
 /** Tell the user, by name, that part (or all) of the crash snapshot is gone. */
 function reportRestoreFailure(names: string[], total: boolean): void {
   const zh = useStore.getState().locale === "zh";
-  const listed = names.filter(Boolean).join("、") || (zh ? "未知文件" : "unknown file");
+  const listed =
+    names.filter(Boolean).join(zh ? "、" : ", ") ||
+    translations[zh ? "zh" : "en"].unknownFile;
   const msg = total
     ? zh
-      ? `上次的会话无法恢复：${listed}。原始数据已保留，可在文件修复后重新打开本应用`
-      : `Last session could not be restored: ${listed}. The raw snapshot is kept.`
+      ? translations.zh.restoreFailed.replace("{names}", listed)
+      : translations.en.restoreFailed.replace("{names}", listed)
     : zh
-      ? `部分文档无法恢复：${listed}`
-      : `Some documents could not be restored: ${listed}`;
+      ? translations.zh.someDocsFailed.replace("{names}", listed)
+      : translations.en.someDocsFailed.replace("{names}", listed);
   useStore.getState().showToast(msg, "error");
 }
 
@@ -525,8 +528,8 @@ export function writeAutosave(): void {
       const zh = st.locale === "zh";
       st.showToast(
         zh
-          ? "自动保存不可用：本地存储已满或被禁用，请及时导出会话文件"
-          : "Autosave unavailable: local storage is full or blocked. Export your session file.",
+          ? translations.zh.autosaveUnavailable
+          : translations.en.autosaveUnavailable,
         "error",
       );
     }
@@ -610,7 +613,7 @@ export function restoreAutosave(): boolean {
     data = parseSession(text);
   } catch (e) {
     quarantine(text);
-    reportRestoreFailure([friendlyParseError(e).split("\n")[0]], true);
+    reportRestoreFailure([friendlyParseError(e, useStore.getState().locale).split("\n")[0]], true);
     return false;
   }
 

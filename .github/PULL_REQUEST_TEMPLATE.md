@@ -31,6 +31,18 @@ excerpt is ideal). For a UI change, attach a screenshot of the canvas or panel. 
 - [ ] No `console.log`, commented-out code, or generated artifacts (`dist/`, `coverage/`, `_build/`) committed
 - [ ] No secret, token, or signing key added; `package-lock.json` / `Cargo.lock` changes come from `npm install` / `cargo`, never hand-edited
 
+## UI copy checklist
+
+Applies whenever a user-visible string changes. Rules live in `docs/STYLE-GUIDE-UI.md`;
+terminology lives in `docs/GLOSSARY-UI.md`; `src/i18nText.test.ts` enforces the mechanical parts.
+
+- [ ] No hard-coded Chinese or English in components; copy comes from `src/i18n.ts`
+- [ ] Both `zh` and `en` updated, with identical `{placeholders}`
+- [ ] Counted units use `countLabel()` — no `(s)` plurals, no literal `N`
+- [ ] No all-caps emphasis and no CSS `text-transform`
+- [ ] Parser/session messages changed? A matching rule was added to `src/i18nDiagnostics.ts`
+- [ ] Screenshots checked in both languages, dark and light, if layout is affected
+
 ## Reviewer notes
 
 <!-- Known risks, follow-up work deliberately left out, things you would like

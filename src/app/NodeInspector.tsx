@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { useT } from "../i18n";
+import { formatConfidence, useT, type Dict } from "../i18n";
 import { useStore } from "../state/store";
 import { APP_NAME, APP_VERSION } from "../version";
 import type { GeneNode } from "../model/types";
@@ -12,6 +12,19 @@ import type { GeneNode } from "../model/types";
  * tooltip stays a lightweight preview; this is the "read one event properly"
  * surface the app lacked.
  */
+function supportLabel(type: string, t: Dict): string {
+  switch (type) {
+    case "bootstrap":
+      return t.supportBootstrap;
+    case "posterior":
+      return t.supportPosterior;
+    case "alrt":
+      return t.supportAlrt;
+    default:
+      return t.supportUnknown;
+  }
+}
+
 export function NodeInspector() {
   const t = useT();
   const inspector = useStore((s) => s.inspector);
@@ -29,14 +42,14 @@ export function NodeInspector() {
     const pools: { label: string; recon: typeof recon }[] = [
       { label: t.scopePrimary, recon },
       { label: t.paneSymbiontHost, recon: nested },
-      { label: "B", recon: compare },
+      { label: t.paneComparison, recon: compare },
     ];
     for (const pool of pools) {
       if (!pool.recon) continue;
       if (inspector.kind === "gene") {
         for (const tree of pool.recon.geneTrees) {
           const g = tree.nodes.find((n) => n.id === inspector.id);
-          if (g) return { pane: pool.label, gene: g, family: tree.name ?? `#${tree.index + 1}`, transfer: null as null | { donor: string; recipient: string } };
+          if (g) return { pane: pool.label, gene: g, family: tree.name || `${t.geneTree} ${tree.index + 1}`, transfer: null as null | { donor: string; recipient: string } };
         }
       } else {
         // Transfer ids carry the arrival node id; find the owning node.
@@ -75,20 +88,20 @@ export function NodeInspector() {
     rows.push([t.inspRecipient, info.transfer.recipient]);
   }
   if (g.endEvent.timeSlice != null) rows.push([t.inspTimeSlice, String(g.endEvent.timeSlice)]);
-  if (g.endEvent.confidence != null) rows.push([t.inspConfidence, String(g.endEvent.confidence)]);
-  else if (g.support) rows.push([t.inspSupport, `${g.support.value}${g.support.type ? ` (${g.support.type})` : ""}`]);
+  if (g.endEvent.confidence != null) rows.push([t.inspConfidence, formatConfidence(g.endEvent.confidence)]);
+  else if (g.support) rows.push([t.inspSupport, `${g.support.value}${g.support.type ? ` (${supportLabel(g.support.type, t)})` : ""}`]);
   for (const e of g.events) {
     if (e.type === "transferBack") {
       rows.push([
         t.event.transferBack,
-        `${e.speciesLocation ?? "?"} → ${e.destinationSpecies ?? "?"}` +
+        `${e.speciesLocation ?? t.inspNone} → ${e.destinationSpecies ?? t.inspNone}` +
           (e.timeSlice != null ? ` · ${t.inspTimeSlice} ${e.timeSlice}` : "") +
           (e.confidence != null ? ` · ${e.confidence}` : ""),
       ]);
     }
   }
   if (g.branchLength != null) rows.push([t.inspBranch, String(g.branchLength)]);
-  rows.push([t.inspParent, g.parent ? `${g.parent.name || g.parent.endEvent.type} (${g.parent.endEvent.type})` : t.inspNone]);
+  rows.push([t.inspParent, g.parent ? g.parent.name || t.event[g.parent.endEvent.type] : t.inspNone]);
   rows.push([t.inspChildren, String(g.children.length)]);
 
   const copyDetails = () => {
@@ -111,8 +124,8 @@ export function NodeInspector() {
         <button
           className={pinned ? "active" : ""}
           aria-pressed={pinned}
-          aria-label={t.inspLocate}
-          title={pinned ? t.inspLocate : t.inspLocate}
+          aria-label={pinned ? t.unpinHighlight : t.pinHighlight}
+          title={pinned ? t.unpinHighlight : t.pinHighlight}
           onClick={() => setPinned((v) => !v)}
         >
           📌

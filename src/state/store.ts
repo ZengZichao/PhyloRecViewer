@@ -18,6 +18,8 @@ import {
 import type { ThemePref } from "../render/theme";
 import type { SavedTab } from "../session";
 import { loadPrefs, savePrefs } from "./prefs";
+import { SUPPORTED_FORMATS, translations } from "../i18n";
+import { localizeDiagnostic } from "../i18nDiagnostics";
 
 /** Which docked analysis panel is showing. */
 export type RightPanelTab =
@@ -518,7 +520,12 @@ function loadDoc(files: { name: string; text: string }[]): DocLoad {
         ? parseMerged(files)
         : parseReconciliation(first?.text ?? "", first?.name ?? "document");
     }
-    const title = merged ? `${files.length} families · ${first?.name ?? ""}`.trim() : first?.name ?? null;
+    const title = merged
+      ? (translations[useStore.getState().locale] ?? translations.en).mergedTabTitle
+          .replace("{n}", String(files.length))
+          .replace("{name}", first?.name ?? "")
+          .trim()
+      : first?.name ?? null;
     // Apply the user's saved "default view" to every newly opened document so
     // layout/style preferences take effect immediately. Session/autosave
     // restore calls `applyViewState` afterwards to override with its own.
@@ -578,7 +585,7 @@ function loadDoc(files: { name: string; text: string }[]): DocLoad {
       },
     };
   } catch (e) {
-    return { ok: false, error: friendlyParseError(e) };
+    return { ok: false, error: friendlyParseError(e, useStore.getState().locale) };
   }
 }
 
@@ -920,7 +927,7 @@ export const useStore = create<AppState>((set, get) => ({
       // catch means an unexpected crash inside a heavy task. Route it to the
       // same recoverable error panel instead of an unhandled rejection.
       console.error("PhyloRecViewer heavy task failed:", e);
-      set({ error: friendlyParseError(e), warnings: [] });
+      set({ error: friendlyParseError(e, useStore.getState().locale), warnings: [] });
     } finally {
       endLoading();
     }
@@ -992,14 +999,14 @@ export const useStore = create<AppState>((set, get) => ({
       }));
       if (hadCompare) {
         const locale = get().locale;
-        get().showToast(locale === "zh" ? "已切换到嵌套视图，对比层已移除" : "Switched to nested view; compare layer removed", "info");
+        get().showToast(translations[locale].nestedSwitchToast, "info");
       }
     } catch (e) {
       set((st) => ({
         nested: null,
         nestedName: fileName,
         nestedXml: null,
-        nestedError: friendlyParseError(e),
+        nestedError: friendlyParseError(e, useStore.getState().locale),
         nestedWarnings: [],
         ...commit(st, "edit", docSnapshot(st)),
       }));
@@ -1045,14 +1052,14 @@ export const useStore = create<AppState>((set, get) => ({
       }));
       if (hadNested) {
         const locale = get().locale;
-        get().showToast(locale === "zh" ? "已切换到对比视图，嵌套层已移除" : "Switched to compare view; nested layer removed", "info");
+        get().showToast(translations[locale].compareSwitchToast, "info");
       }
     } catch (e) {
       set((st) => ({
         compare: null,
         compareName: fileName,
         compareXml: null,
-        compareError: friendlyParseError(e),
+        compareError: friendlyParseError(e, useStore.getState().locale),
         compareWarnings: [],
         ...commit(st, "edit", docSnapshot(st)),
       }));
@@ -1157,7 +1164,7 @@ export const useStore = create<AppState>((set, get) => ({
     // i18n dictionaries; the {n} placeholder is replaced with the file count,
     // matching the `mergedToast` entry in i18n.ts.
     const locale = get().locale;
-    const tmpl = locale === "zh" ? "已将 {n} 个文件合并为 1 个调和文档" : "Merged {n} files into one reconciliation";
+    const tmpl = translations[locale].mergedToast;
     const msg = tmpl.replace("{n}", String(files.length));
     get().showToast(msg, "info");
   },
@@ -1197,8 +1204,8 @@ export const useStore = create<AppState>((set, get) => ({
       const st = get();
       st.showToast(
         st.locale === "zh"
-          ? `文件超过 ${MAX_FILE_MIB} MiB 上限：${oversized.map((f) => f.name).join("、")}`
-          : `File(s) exceed the ${MAX_FILE_MIB} MiB limit: ${oversized.map((f) => f.name).join(", ")}`,
+          ? translations.zh.fileTooLarge.replace("{names}", oversized.map((f) => f.name).join("、"))
+          : translations.en.fileTooLarge.replace("{names}", oversized.map((f) => f.name).join(", ")),
         "error",
       );
       if (oversized.length === files.length) return;
@@ -1239,7 +1246,7 @@ export const useStore = create<AppState>((set, get) => ({
       // Reading a dropped directory / unreadable file rejects here; surface it
       // without clobbering the current document (consistent with loadXml's
       // failure path: only set error, don't touch recon / fileName / xml).
-      reportLoadFailure(tabId, friendlyParseError(e));
+      reportLoadFailure(tabId, friendlyParseError(e, useStore.getState().locale));
     } finally {
       inflightTabs.delete(tabId);
       endLoading();
@@ -1754,8 +1761,8 @@ function reportLoadFailure(tabId: string, message: string): void {
   }
   s.showToast(
     s.locale === "zh"
-      ? `标签「${meta?.title || tabId}」中的文件打开失败`
-      : `Failed to open a file in tab "${meta?.title || tabId}"`,
+      ? translations.zh.tabFileOpenFailed.replace("{title}", meta?.title || tabId)
+      : translations.en.tabFileOpenFailed.replace("{title}", meta?.title || tabId),
     "error",
   );
 }
@@ -1783,20 +1790,20 @@ function materializeDoc(doc: DocState): DocState {
     // autosaved) and report why it cannot be drawn.
     next.recon = null;
     next.warnings = [];
-    next.error = friendlyParseError(e);
+    next.error = friendlyParseError(e, useStore.getState().locale);
   }
   if (saved.nestedXml) {
     try {
       next.nested = parseReconciliation(saved.nestedXml, saved.nestedName ?? "nested");
     } catch (e) {
-      next.nestedError = friendlyParseError(e);
+      next.nestedError = friendlyParseError(e, useStore.getState().locale);
     }
   }
   if (saved.compareXml) {
     try {
       next.compare = parseReconciliation(saved.compareXml, saved.compareName ?? "compare");
     } catch (e) {
-      next.compareError = friendlyParseError(e);
+      next.compareError = friendlyParseError(e, useStore.getState().locale);
     }
   }
   return next;
@@ -1813,8 +1820,8 @@ function reportLazyFailure(raw: DocState, doc: DocState): void {
   const zh = s.locale === "zh";
   s.showToast(
     zh
-      ? `无法打开标签「${title}」：文档已损坏或来自其它版本`
-      : `Could not open tab "${title}": the document is corrupt or from another version`,
+      ? translations.zh.tabCorrupt.replace("{title}", title)
+      : translations.en.tabCorrupt.replace("{title}", title),
     "error",
   );
 }
@@ -1894,21 +1901,23 @@ function flashRendering(): void {
  * capability (recPhyloXML / NHX / Newick). The raw technical error is kept as
  * context but the headline is actionable.
  */
-export function friendlyParseError(e: unknown): string {
+export function friendlyParseError(e: unknown, locale: "zh" | "en" = "en"): string {
+  const t = translations[locale] ?? translations.en;
   const raw = e instanceof Error ? e.message : String(e);
+  const shown = localizeDiagnostic(raw, locale);
   if (/empty|no files/i.test(raw)) {
-    return "The file is empty. Choose a recPhyloXML, NHX or Newick file with tree data.";
+    return translations[locale].parseEmptyFile;
   }
   if (/newer version/i.test(raw)) {
-    return raw;
+    return shown;
   }
   if (/not valid json/i.test(raw)) {
-    return raw;
+    return shown;
   }
   // Keep the technical detail (line numbers etc. when the parser provides
   // them) but preface it with the supported formats, so a hint from one parser
   // never contradicts what the app can actually open.
-  return `${raw}\n\nSupported: recPhyloXML (.recphyloxml / .xml), NHX (.nhx), Newick (.nwk / .newick).`;
+  return `${shown}\n\n${t.supportedFormats.replace("{formats}", SUPPORTED_FORMATS)}`;
 }
 
 // Compile-time guard: every per-document (DocState) field must also exist on

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type ReactNode } from "react";
-import { countLabel, useT } from "../i18n";
+import { countLabel, formatCount, useT } from "../i18n";
+import { localizeDiagnostic, localizeExample } from "../i18nDiagnostics";
 import { useStore } from "../state/store";
 import { statsToCsv, type TransferPair } from "../analysis/stats";
 import { reconHasConfidence, regexError } from "../analysis/focus";
@@ -430,9 +431,10 @@ function RpCollapsible({
 // --------------------------------------------------------------------------
 
 function Stat({ label, value, accent }: { label: string; value: number; accent?: boolean }) {
+  const locale = useStore((s) => s.locale);
   return (
     <div className={`rp-stat${accent ? " rp-stat-accent" : ""}`}>
-      <div className="rp-stat-value">{value}</div>
+      <div className="rp-stat-value">{formatCount(value, locale)}</div>
       <div className="rp-stat-label">{label}</div>
     </div>
   );
@@ -569,7 +571,7 @@ function StatsTab({ onToast }: { onToast: (msg: string, kind?: "success" | "erro
       generatedBy: `PhyloRecViewer ${APP_VERSION}`,
       generatedAt: new Date().toISOString(),
     });
-    const base = baseName(fileName);
+    const base = baseName(fileName, t.exportDefaultStem);
     const fname = `${base}-stats.csv`;
     if (isTauri()) {
       try {
@@ -646,12 +648,12 @@ function StatsTab({ onToast }: { onToast: (msg: string, kind?: "success" | "erro
           storageKey="rpv.rp.fam"
           defaultOpen={false}
           force={force}
-          summary={`${stats.families.length} ${t.geneTreeUnit}`}
+          summary={countLabel(stats.families.length, t.geneTreeUnit)}
         >
           <div className="rp-table-wrap"><table className="rp-table">
             <thead>
               <tr>
-                <th>{t.geneTree}</th>
+                <th>{t.inspFamily}</th>
                 <th>{t.event.speciation}</th>
                 <th>{t.event.duplication}</th>
                 <th>{t.event.loss}</th>
@@ -719,7 +721,7 @@ function StatsTab({ onToast }: { onToast: (msg: string, kind?: "success" | "erro
         force={force}
         summary={
           topSpecies.length > 0
-            ? `${t.topOf.replace("{n}", String(topSpecies.length)).replace("{total}", String(stats.perSpecies.length))} · ${topSpecies[0].species} ${topSpecies[0].copies}${t.copiesCol}`
+            ? `${t.topOfSpecies.replace("{n}", String(topSpecies.length)).replace("{total}", String(stats.perSpecies.length))} · ${topSpecies[0].species}: ${countLabel(topSpecies[0].copies, t.copiesCol)}`
             : t.noMatches
         }
       >
@@ -773,7 +775,7 @@ function StatsTab({ onToast }: { onToast: (msg: string, kind?: "success" | "erro
         storageKey="rpv.rp.nodes"
         defaultOpen={false}
         force={force}
-        summary={`${stats.nodes.length} ${t.geneNodes}`}
+        summary={countLabel(stats.nodes.length, t.geneNodes)}
       >
         <div className="rp-table-wrap rp-node-table-wrap"><table className="rp-table rp-node-table">
         <thead>
@@ -1024,7 +1026,7 @@ function AnnotationsTab() {
   if (!recon) return null;
 
   const paneLabel = (id: string): string =>
-    paneOf.get(id) === "nested" ? t.paneSymbiontHost : paneOf.get(id) === "compare" ? "B" : t.scopePrimary;
+    paneOf.get(id) === "nested" ? t.paneSymbiontHost : paneOf.get(id) === "compare" ? t.paneComparison : t.scopePrimary;
 
   const entries = Object.entries(annotations);
   if (entries.length === 0) {
@@ -1125,7 +1127,7 @@ function DiffTab() {
       ].join(","));
     }
     const csv = "\uFEFF" + lines.join("\n");
-    const fname = `${baseName(fileName)}-diff.csv`;
+    const fname = `${baseName(fileName, t.exportDefaultStem)}-diff.csv`;
     if (isTauri()) {
       void desktopSaveText(fname, csv, "csv").then(() => showToast(`${t.exportedToast}: ${fname}`, "success"));
     } else {
@@ -1137,7 +1139,7 @@ function DiffTab() {
   return (
     <div className="rp-section">
       <p className="rp-empty">
-        {pct === null ? "N/A" : `${pct}% ${t.agree}`}
+        {pct === null ? t.notApplicable : `${pct}% ${t.agree}`}
         {spct !== null && ` · ${t.speciesAgreeShort.replace("{p}", String(spct))}`}
         {" · "}
         {t.diffMatched.replace("{n}", String(diff.compared))}
@@ -1159,10 +1161,10 @@ function DiffTab() {
         <thead>
           <tr>
             <th scope="col">{t.colName}</th>
-            <th scope="col">{t.colEvent} (A)</th>
-            <th scope="col">{t.colEvent} (B)</th>
-            <th scope="col">{t.inspSpecies} (A)</th>
-            <th scope="col">{t.inspSpecies} (B)</th>
+            <th scope="col">{t.colEvent} ({t.paneTagA})</th>
+            <th scope="col">{t.colEvent} ({t.paneTagB})</th>
+            <th scope="col">{t.inspSpecies} ({t.paneTagA})</th>
+            <th scope="col">{t.inspSpecies} ({t.paneTagB})</th>
             <th scope="col">{t.diffColStatus}</th>
           </tr>
         </thead>
@@ -1203,6 +1205,7 @@ function ChecksTab() {
   const nested = useStore((s) => s.nested);
   const compare = useStore((s) => s.compare);
   const docWarnings = useStore((s) => s.warnings);
+  const locale = useStore((s) => s.locale);
   const nestedWarnings = useStore((s) => s.nestedWarnings);
   const compareWarnings = useStore((s) => s.compareWarnings);
   const nestedName = useStore((s) => s.nestedName);
@@ -1240,22 +1243,30 @@ function ChecksTab() {
   // "All checks passed" next to unresolved parser warnings used to promise a
   // clean bill of health the data did not have: the parse warnings now live
   // in the same panel, above the structural checks.
-  const warningGroups: { title: string; items: string[] }[] = [
-    { title: t.parseWarnings, items: docWarnings },
-    { title: `${t.nestedWarningsLabel}${nestedName ? ` (${nestedName})` : ""}`, items: nestedWarnings },
-    { title: `${t.compareWarningsLabel}${compareName ? ` (${compareName})` : ""}`, items: compareWarnings },
+  const warningGroups: { code: string; title: string; items: string[] }[] = [
+    { code: "parse_warnings", title: t.parseWarnings, items: docWarnings.map((w) => localizeDiagnostic(w, locale)) },
+    {
+      code: "nested_warnings",
+      title: `${t.nestedWarningsLabel}${nestedName ? ` (${nestedName})` : ""}`,
+      items: nestedWarnings.map((w) => localizeDiagnostic(w, locale)),
+    },
+    {
+      code: "compare_warnings",
+      title: `${t.compareWarningsLabel}${compareName ? ` (${compareName})` : ""}`,
+      items: compareWarnings.map((w) => localizeDiagnostic(w, locale)),
+    },
   ].filter((g) => g.items.length > 0);
 
   // Every reconciliation level that is loaded, so the exported report covers
   // them all: `issues` above is only the primary document, which left the
   // nested (symbiont -> host) layer unchecked.
-  const trees: { name: string; issues: ConsistencyIssue[] }[] = [
-    { name: t.paneGeneSymbiont, issues },
+  const trees: { code: string; name: string; issues: ConsistencyIssue[] }[] = [
+    { code: "gene", name: t.paneGeneSymbiont, issues },
     ...(nestedIssues
-      ? [{ name: `${t.paneSymbiontHost}${nestedName ? ` (${nestedName})` : ""}`, issues: nestedIssues }]
+      ? [{ code: "symbiont", name: `${t.paneSymbiontHost}${nestedName ? ` (${nestedName})` : ""}`, issues: nestedIssues }]
       : []),
     ...(compareIssues
-      ? [{ name: compareName ? `${t.comparePrefix} ${compareName}` : t.comparePrefix, issues: compareIssues }]
+      ? [{ code: "compare", name: compareName ? `${t.comparePrefix} ${compareName}` : t.comparePrefix, issues: compareIssues }]
       : []),
   ];
 
@@ -1271,9 +1282,9 @@ function ChecksTab() {
         const iss = codeToIssue.get(c.code);
         lines.push(
           [
-            cell(tr.name),
+            cell(tr.code),
             cell(iss ? iss.level : "pass"),
-            cell(c.code),
+            cell(c.code.replace(/[A-Z]/g, (m) => `_${m.toLowerCase()}`)),
             String(iss?.count ?? 0),
             cell(iss ? iss.examples.join("; ") : ""),
             cell(iss ? iss.nodeIds.join("; ") : ""),
@@ -1283,11 +1294,11 @@ function ChecksTab() {
     }
     for (const g of warningGroups) {
       for (const w of g.items) {
-        lines.push([cell(g.title), cell("warning"), cell("parseWarning"), "1", cell(w), ""].join(","));
+        lines.push([cell(g.code), cell("warning"), cell("parse_warning"), "1", cell(w), ""].join(","));
       }
     }
     const csv = "\uFEFF" + lines.join("\n");
-    const fname = `${baseName(fileName)}-qc.csv`;
+    const fname = `${baseName(fileName, t.exportDefaultStem)}-qc.csv`;
     if (isTauri()) {
       void desktopSaveText(fname, csv, "csv").then(() => showToast(`${t.exportedToast}: ${fname}`, "success"));
     } else {
@@ -1304,8 +1315,8 @@ function ChecksTab() {
           <span className="rp-checks-pass">{"\u2713"} {t.checkAllGood}</span>
         ) : (
           <span className="rp-checks-fail">
-            {issues.length} / {checks.length} {t.checksWithIssues}
-            {docWarnings.length + nestedWarnings.length + compareWarnings.length > 0 && " + parser warnings"}
+            {t.checksWithIssues.replace("{n}", formatCount(issues.length, locale)).replace("{m}", formatCount(checks.length, locale))}
+            {docWarnings.length + nestedWarnings.length + compareWarnings.length > 0 && t.warningSuffix}
           </span>
         )}
       </p>
@@ -1313,11 +1324,11 @@ function ChecksTab() {
         <button className="btn" onClick={exportQc}>{t.exportReport}</button>
       </div>
 
-      {warningGroups.map((g) => (
+      {warningGroups.map((g, gi) => (
         <RpCollapsible
           key={g.title}
           title={`${g.title} (${g.items.length})`}
-          storageKey={`rpv.rp.warn-${g.title}`}
+          storageKey={`rpv.rp.warn-${gi}`}
           defaultOpen={g.items.length <= 5}
         >
           <ul className="rp-issue-ex" style={{ margin: 0, paddingLeft: 18 }}>
@@ -1344,7 +1355,7 @@ function ChecksTab() {
         return (
           <div key={c.code} className={`rp-issue ${iss.level}`}>
             <div className="rp-issue-head">
-              <span className="rp-issue-count">{iss.count}</span>
+              <span className="rp-issue-count">{formatCount(iss.count, locale)}</span>
               <span>{c.problem}</span>
               <span className="ni-pane">{levelLabel(iss.level)}</span>
             </div>
@@ -1361,10 +1372,10 @@ function ChecksTab() {
                       useStore.getState().locateGene(iss.nodeIds[0]);
                     }}
                   >
-                    {t.locateFirst}: {iss.examples[0]}
+                    {t.locateFirst}: {localizeExample(iss.examples[0], locale)}
                   </button>
                 ) : (
-                  iss.examples.join(", ")
+                  iss.examples.map((ex) => localizeExample(ex, locale)).join(", ")
                 )}
                 {iss.count > iss.examples.length ? " \u2026" : ""}
               </div>

@@ -90,7 +90,7 @@ describe("recPhyloXML events", () => {
       ),
     );
     expect(
-      recon.warnings.some((w) => w.includes('unrecognised <eventsRec> child "infection"')),
+      recon.warnings.some((w) => w.includes('unrecognized <eventsRec> child "infection"')),
     ).toBe(true);
   });
 

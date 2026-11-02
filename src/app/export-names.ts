@@ -4,8 +4,8 @@
  * menu-bar component so it can be unit-tested (and so the module keeps
  * exporting only components).
  */
-export function baseName(name: string | null): string {
-  if (!name) return "reconciliation";
+export function baseName(name: string | null, fallback = "reconciliation"): string {
+  if (!name) return fallback;
   // Strip the extension and only the characters a filesystem actually rejects.
   // A `[^\w.-]` class was used before, and `\w` is ASCII-only: every CJK name
   // collapsed to "_" (完整示例….recphyloxml -> "_", 日本語.nhx -> "_"), so two
@@ -22,5 +22,5 @@ export function baseName(name: string | null): string {
     .replace(/^\s+|\s+$/g, "");
   // A stem of only dots would name the file "." / ".." once the extension is
   // appended back, which no filesystem takes well.
-  return stripped && !/^\.+$/.test(stripped) ? stripped : "reconciliation";
+  return stripped && !/^\.+$/.test(stripped) ? stripped : fallback;
 }

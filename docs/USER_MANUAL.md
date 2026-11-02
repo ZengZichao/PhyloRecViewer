@@ -251,7 +251,7 @@ Once loaded the menu item becomes **"Compare: <filename> ✕"**; click it to rem
 
 - **＋** at the right end of the tab bar: new blank tab.
 - Click a tab to switch; each tab independently stores its own file, swaps, collapses, family colours, annotations, renames, search criteria, and undo history.
-- Hovering a tab reveals its **✕** close button. If the document holds unsaved edits (annotations, swaps, colours, renames, …), a confirmation appears ("Close tab? … Keep / Close anyway"); closing the last tab resets it to blank rather than quitting.
+- Hovering a tab reveals its **✕** close button. If the document holds unsaved edits (annotations, swaps, colours, renames, …), a confirmation appears before an unsaved document is closed; closing the last tab resets it to blank rather than quitting.
 - Closing the active tab activates an adjacent tab.
 - Keyboard support on the tab bar: `←` / `→` to move, `Home` / `End` for first/last, `Enter` / `Space` to activate.
 
@@ -507,7 +507,7 @@ The **Export** menu (disabled while empty; `⌘E` / `Ctrl+E` exports PNG directl
 
 | Format | Notes |
 |--------|-------|
-| **PNG** | Raster; resolution selectable in the menu: **600 / 1200 / 2400 / 4800 DPI**, good for slides and documents. Oversized drawings are clamped to whichever platform canvas limit bites first — 16,384 px on the longest edge **and** 16,384²/4 ≈ 6.7×10⁷ px in total (for a near-square drawing the area limit binds first, at roughly 8,192 px per side). A toast reports the effective DPI actually used |
+| **PNG** | Raster; resolution selectable in the menu: **Screen 2× (192) / 300 / 600 / 1200 / 2400 / 4800 DPI**, good for slides and documents. Oversized drawings are clamped to whichever platform canvas limit bites first — 16,384 px on the longest edge **and** 16,384²/4 ≈ 6.7×10⁷ px in total (for a near-square drawing the area limit binds first, at roughly 8,192 px per side). A toast reports the effective DPI actually used |
 | **SVG** | Vector, infinitely scalable; good for further editing |
 | **PDF** | Vector page; good for paper figures |
 | **HTML** | Interactive HTML (keeps zoom / pan / tooltips); shareable offline |
@@ -567,7 +567,7 @@ Undoable actions: species mirroring (swap), collapse/expand, gene-family colour 
 | **File** | New workspace | Open a fresh blank tab |
 | | Open file `⌘O` | Open one or more files (multi-select) |
 | | Paste tree from clipboard | Open a Newick/NHX tree pasted as text |
-| | Load sample… | Three bundled samples (Showcase / Compare / Nested) |
+| | Samples | Three bundled samples (Showcase / Compare / Nested) |
 | | Save session as… `⌘S` | Save session `.rpvsession.json` |
 | | Open session… | Restore a session |
 | | Close tab `⌘W` | Close the current tab |
@@ -578,11 +578,11 @@ Undoable actions: species mirroring (swap), collapse/expand, gene-family colour 
 | | Copy SVG / Copy PNG | Copy the current figure to the clipboard |
 | | recPhyloXML (lossless round-trip) | Native export: species tree, branch lengths, all events (incl. multiple arrivals), timeSlice, confidence |
 | | NHX (extended dialect)… | Shows a "what will be lost" list first; switch to recPhyloXML or export anyway |
-| | PNG DPI | Screen 2× / 300 / 600 / 1200 / custom, with an output pixel estimate |
+| | PNG DPI | Screen 2× / 300 / 600 / 1200 / 2400 / 4800 / custom, with an output pixel estimate |
 | | Background | Theme / white / transparent |
 | **View** | Language: 中文 / English | Switch UI language |
 | | Theme: Light ☀ / Dark 🌙 / System 🖥 | Three theme modes |
-| | Preferences ⚙ | Open the preferences dialog |
+| | Preferences | Open the preferences dialog |
 | **Help** | Shortcuts & help `?` | Open the shortcuts & interactions card |
 | | View tutorial | Replay the five-step onboarding tour |
 
@@ -592,7 +592,7 @@ The menu bar also shows a **warnings badge** (e.g. `3 warnings`; hover for the f
 
 ## 13. Preferences & Themes
 
-**View → Preferences ⚙** opens the preferences dialog:
+The **Preferences** button in the menu bar opens the preferences dialog:
 
 - **Theme**: Light ☀ / Dark 🌙 / **System** 🖥 (follows the OS dark/light setting live). Default: system.
 - **Language**: 中文 / English. Default: **English**, unless the operating-system locale starts with `zh` (in which case Chinese); switching applies instantly; data (gene and species names) is never translated.
@@ -609,7 +609,7 @@ Themes affect the UI and canvas only; exports always render in the current theme
 
 - **Shortcuts & help card** (`?` or Help → Shortcuts & help): all keyboard shortcuts, on-canvas gestures, and mouse/touch hints, with a one-click tour replay at the bottom. Close with `Esc`, the backdrop, or ✕.
 - **Onboarding tour**: **5 steps** (Controls → Analysis → Canvas → Nested & compare → Export) with a spotlight highlight; `←` / `→` to navigate, skippable. Play it any time from the **Help menu / Preferences / help card**.
-- **Empty state**: a blank tab explains how to open a recPhyloXML file, offers a **Load sample ▸** shortcut and a drag-and-drop hint.
+- **Empty state**: a blank tab explains how to open a recPhyloXML file, offers a **Load sample** shortcut and a drag-and-drop hint.
 - **Parse-error panel**: shows "Could not parse this file" with supported formats, plus three recovery actions — **Choose another file / Back to previous / Load a sample**.
 
 ---
@@ -696,7 +696,7 @@ The format is auto-detected; no manual selection needed:
 ### Q4 Exported image is blurry / too low resolution
 
 - For publication figures prefer vector formats (**SVG / PDF**).
-- For **PNG**, pick 300 / 1200 / 2400 / 4800 DPI or a custom value in **Export menu → PNG DPI** or in **Preferences**.
+- For **PNG**, pick 300 / 600 / 1200 / 2400 / 4800 DPI or a custom value in **Export menu → PNG DPI** or in **Preferences**.
 
 ### Q5 Session file won't open
 

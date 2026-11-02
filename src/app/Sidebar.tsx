@@ -47,6 +47,7 @@ function Slider({
   onChange: (v: number) => void;
   ariaLabel?: string;
 }) {
+  const t = useT();
   const id = useId();
   // Drive the thumb from local state and commit to the store at most once per
   // animation frame, so dragging a slider does not fire a full O(N) relayout +
@@ -125,7 +126,7 @@ function Slider({
           max={max}
           step={step}
           value={draft}
-          aria-label={`${ariaLabel} value`}
+          aria-label={`${ariaLabel} ${t.valueSuffix}`}
           autoFocus
           onChange={(e) => setDraft(e.target.value)}
           onBlur={commitDraft}
@@ -698,7 +699,7 @@ function LabelReplaceDialog({ onClose }: { onClose: () => void }) {
             type="text"
             value={find}
             autoFocus
-            placeholder={useRegex ? "pattern…" : ""}
+            placeholder={useRegex ? t.patternPlaceholder : t.labelSearchPlaceholder}
             onChange={(e) => setFind(e.target.value)}
             onKeyDown={(e) => { if (e.key === "Enter" && find) apply(); }}
           />

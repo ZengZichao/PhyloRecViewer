@@ -90,6 +90,7 @@ const LEGEND_GAP = 24;
 
 /** Floor and default of the PNG DPI (dots per inch) a user can ask for. */
 export const MIN_PNG_DPI = 72;
+export const PNG_DPI_CHOICES = [192, 300, 600, 1200, 2400, 4800] as const;
 export const DEFAULT_PNG_DPI = 300;
 
 /** Screen reference DPI: one CSS pixel is one ninety-sixth of an inch. */
@@ -142,7 +143,7 @@ function buildLegendGroup(
     duplication: "Duplication",
     loss: "Loss",
     branchingOut: "Transfer (donor)",
-    bifurcationOut: "Bifurcation out",
+    bifurcationOut: "Bifurcation donor",
     transferBack: "Transfer (arrival)",
     leaf: "Extant gene",
   };
@@ -704,7 +705,18 @@ export async function exportPdf(doc: ExportDoc, filename: string): Promise<PdfRe
  * Build a self-contained, offline interactive HTML page: the SVG plus a small
  * dependency-free vanilla pan/zoom/fit script, shareable as a single file.
  */
-export function sceneToInteractiveHtml(doc: ExportDoc, title: string): string {
+export interface ExportUiLabels {
+  lang: string;
+  zoomIn: string;
+  zoomOut: string;
+  fit: string;
+}
+
+export function sceneToInteractiveHtml(
+  doc: ExportDoc,
+  title: string,
+  ui: ExportUiLabels,
+): string {
   const { svg, width, height } = buildDocSvg(doc);
   const inlineSvg = svg.replace(/^<\?xml[^>]*\?>\s*/, "");
   const bg = doc.theme.background;
@@ -741,9 +753,9 @@ export function sceneToInteractiveHtml(doc: ExportDoc, title: string): string {
     "document.getElementById('zout').onclick=function(){s/=1.2;apply();};" +
     "document.getElementById('fit').onclick=fit;fit();window.addEventListener('resize',fit);})();";
   return (
-    "<!doctype html><html><head><meta charset=\"utf-8\">" +
+    "<!doctype html><html lang=\"" + ui.lang + "\"><head><meta charset=\"utf-8\">" +
     "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">" +
-    "<title>" + safeTitle + "</title><style>" +
+    "<title>" + safeTitle + " — PhyloRecViewer</title><style>" +
     "html,body{height:100%;margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Noto Sans',sans-serif;background:" + bg + "}" +
     "#wrap{position:absolute;inset:0;overflow:hidden;cursor:grab}#wrap:active{cursor:grabbing}" +
     "#stage{position:absolute;top:0;left:0;transform-origin:0 0;width:" + width + "px;height:" + height + "px}" +
@@ -755,9 +767,9 @@ export function sceneToInteractiveHtml(doc: ExportDoc, title: string): string {
     // Buttons carry real names now: a bare +/−/⤢ glyph is unreadable to a
     // screen reader, and the page documents its keyboard controls.
     "<div id=\"ctrl\">" +
-    "<button id=\"zin\" aria-label=\"Zoom in (also + / =)\">+</button>" +
-    "<button id=\"zout\" aria-label=\"Zoom out (also -)\">−</button>" +
-    "<button id=\"fit\" aria-label=\"Fit to window (also 0 or Enter)\">\u2922</button>" +
+    "<button id=\"zin\" aria-label=\"" + ui.zoomIn + " (+ / =)\">+</button>" +
+    "<button id=\"zout\" aria-label=\"" + ui.zoomOut + " (−)\">−</button>" +
+    "<button id=\"fit\" aria-label=\"" + ui.fit + " (0 / Enter)\">\u2922</button>" +
     "</div>" +
     (prov ? "<div id=\"provenance\" hidden>" + safeProv + "</div>" : "") +
     "<script>" + script + "</script></body></html>"

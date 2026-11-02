@@ -283,9 +283,11 @@ async function exportHtml(
 ): Promise<string> {
   installDom();
   const exporters = await import("../src/export/exporters");
+  // The CLI writes English documents; the app passes localised labels instead.
   return exporters.sceneToInteractiveHtml(
     buildExportDoc(session, recon),
     docTitle(session, sessionPath),
+    { lang: "en", zoomIn: "Zoom in", zoomOut: "Zoom out", fit: "Fit to window" },
   );
 }
 

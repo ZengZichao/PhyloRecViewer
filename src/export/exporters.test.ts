@@ -32,6 +32,8 @@ import {
   type ExportPane,
 } from "./exporters";
 
+const EN_UI = { lang: "en", zoomIn: "Zoom in", zoomOut: "Zoom out", fit: "Fit to window" };
+
 /* ------------------------------------------------------------------ fixtures */
 
 /** Escape a raw string so it is safe inside an XML attribute value. */
@@ -232,7 +234,7 @@ describe("SVG export escaping of untrusted text", () => {
       "Duplication",
       "Loss",
       "Transfer",
-      "Bifurcation out",
+      "Bifurcation donor",
       "Transfer (donor)",
       "Collapsed",
       "Extant gene",
@@ -417,7 +419,7 @@ describe("id and reference integrity across panes", () => {
 describe("the interactive HTML export", () => {
   it("escapes the page title and embeds only the pan/zoom script", () => {
     const doc = exportDoc([pane(lay(twoLeafXml("x1", "x2"), "h.xml"))]);
-    const html = sceneToInteractiveHtml(doc, '</title><script>alert(2)</script><b>');
+    const html = sceneToInteractiveHtml(doc, '</title><script>alert(2)</script><b>', EN_UI);
     expect(html.startsWith("<!doctype html>")).toBe(true);
     // The single <script> element is the pan/zoom code; the injected one is text.
     expect(html.match(/<script/g)).toHaveLength(1);
@@ -435,7 +437,7 @@ describe("the interactive HTML export", () => {
   it("passes the composed size into the stage and the fit maths", () => {
     const doc = exportDoc([pane(lay(SOLO_XML, "solo.xml"))]);
     const { width, height } = buildDocSvg(doc);
-    const html = sceneToInteractiveHtml(doc, "solo");
+    const html = sceneToInteractiveHtml(doc, "solo", EN_UI);
     expect(html).toContain(`width:${width}px`);
     expect(html).toContain(`height:${height}px`);
     expect(html).toContain(`var W=${width},H=${height};`);

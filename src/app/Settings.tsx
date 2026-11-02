@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useT } from "../i18n";
+import { PNG_DPI_CHOICES } from "../export/exporters";
 import { useStore } from "../state/store";
 import { defaultLayoutOptions } from "../layout";
 import { defaultRenderOptions } from "../render/options";
@@ -137,7 +138,7 @@ export function Settings({ open, onClose }: { open: boolean; onClose: () => void
 
         <h4>{t.pngResolution}</h4>
         <div className="settings-row">
-          {[192, 300, 600, 1200, 2400, 4800].map((sc) => (
+          {PNG_DPI_CHOICES.map((sc) => (
             <button
               key={sc}
               className={`btn ghost${pngDpi === sc ? " active" : ""}`}
@@ -160,7 +161,7 @@ export function Settings({ open, onClose }: { open: boolean; onClose: () => void
         <p className="settings-note">
           {hasDefault
             ? t.saveDefaultViewTitle
-            : `${t.saveDefaultViewTitle}（${t.defaultView}）`}
+            : `${t.saveDefaultViewTitle} — ${t.defaultView}`}
         </p>
         <div className="settings-row">
           <button className="btn" onClick={saveAsDefault}>
@@ -178,7 +179,7 @@ export function Settings({ open, onClose }: { open: boolean; onClose: () => void
           {autosaveFailed
             ? t.autosaveFailedLabel
             : autosaveAt
-              ? t.autosaveOn.replace("{time}", new Date(autosaveAt).toLocaleString())
+              ? t.autosaveOn.replace("{time}", new Date(autosaveAt).toLocaleString(locale === "zh" ? "zh-CN" : "en-US"))
               : t.autosaveNone}
         </p>
         <div className="settings-row">
@@ -207,7 +208,7 @@ export function Settings({ open, onClose }: { open: boolean; onClose: () => void
                   const url = URL.createObjectURL(blob);
                   const a = document.createElement("a");
                   a.href = url;
-                  a.download = "phylorecviewer-recovered-session.json";
+                  a.download = "recovered.rpvsession.json";
                   document.body.appendChild(a);
                   a.click();
                   a.remove();

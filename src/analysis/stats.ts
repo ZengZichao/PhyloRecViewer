@@ -181,7 +181,7 @@ export function computeStats(recon: Reconciliation): ReconStats {
         event: g.endEvent.type,
         species: sp,
         family: tree.index,
-        familyName: tree.name || `#${tree.index + 1}`,
+        familyName: tree.name ?? `#${tree.index + 1}`,
         donors: arrivals.map((e) => e.speciesLocation ?? "?").join(";"),
         recipients: arrivals.map((e) => e.destinationSpecies ?? "?").join(";"),
         timeSlice: g.endEvent.timeSlice ?? arrivals.find((e) => e.timeSlice != null)?.timeSlice ?? null,
@@ -208,7 +208,7 @@ export function computeStats(recon: Reconciliation): ReconStats {
     }
     families.push({
       index: tree.index,
-      name: tree.name || `#${tree.index + 1}`,
+      name: tree.name ?? `#${tree.index + 1}`,
       nodes: tree.nodes.length,
       counts,
     });
@@ -294,11 +294,11 @@ export interface StatsCsvMeta {
 export function statsToCsv(stats: ReconStats, meta: StatsCsvMeta = {}): string {
   const lines: string[] = [];
   // Header block: provenance for anyone reading the file months later.
-  lines.push(`# PhyloRecViewer statistics export`);
+  lines.push(`# PhyloRecViewer statistics export (v2)`);
   if (meta.generatedBy) lines.push(`# generated_by,${csvCell(meta.generatedBy)}`);
   if (meta.generatedAt) lines.push(`# generated_at,${csvCell(meta.generatedAt)}`);
   if (meta.sourceFile) lines.push(`# source_file,${csvCell(meta.sourceFile)}`);
-  lines.push("# csv_format,PhyloRecViewer stats v2 (UTF-8 BOM; sections: families, transfer_matrix, species, nodes)");
+  lines.push("# csv_format,PhyloRecViewer statistics export v2 (UTF-8 BOM; sections: families, transfer_matrix, species, nodes)");
 
   lines.push("");
   lines.push("# section: families");
@@ -320,12 +320,12 @@ export function statsToCsv(stats: ReconStats, meta: StatsCsvMeta = {}): string {
   }
 
   lines.push("");
-  lines.push("# section: transfer_matrix (donor -> recipient, one row per species pair)");
+  lines.push("# section: transfer_matrix (donor to recipient, one row per species pair)");
   lines.push(csvRow(["donor", "recipient", "count"]));
   for (const p of stats.transferMatrix) lines.push(csvRow([p.from, p.to, p.count]));
 
   lines.push("");
-  lines.push("# section: species (per-species event density; copies = non-loss node count, NOT concurrent copy number)");
+  lines.push("# section: species (per-species event density; copies = non-loss node count, not concurrent copy number)");
   lines.push(csvRow(["species", "copies", "speciation", "duplication", "loss", "branching_out", "bifurcation_out", "leaf", "transfer_arrivals"]));
   for (const s of stats.perSpecies) {
     lines.push(
@@ -346,7 +346,7 @@ export function statsToCsv(stats: ReconStats, meta: StatsCsvMeta = {}): string {
     const c = stats.unassigned.counts;
     lines.push(
       csvRow([
-        "(no species)",
+        "NA",
         0,
         c.speciation,
         c.duplication,

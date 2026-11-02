@@ -58,7 +58,7 @@ export function TabBar() {
       id === activeId
         ? isDocDirty(activeDoc)
         : isDocDirty(docs[id] ?? { editSeq: 0, savedSeq: 0 });
-    if (dirty && !window.confirm(t.closeConfirmBody)) return;
+    if (dirty && !window.confirm(`${t.closeConfirmTitle}\n\n${t.closeConfirmBody}`)) return;
     closeTab(id);
   };
 
@@ -133,13 +133,12 @@ export function TabBar() {
               e.preventDefault();
               setMenu({ id: tab.id, x: e.clientX, y: e.clientY });
             }}
-            title={
+            className={`tab${selected ? " active" : ""}${dirty ? " dirty" : ""}`}
+            data-tooltip={
               sourceFilesCount(tab.id) > 1
                 ? t.tabTooltipMerged.replace("{n}", String(sourceFilesCount(tab.id)))
                 : label
             }
-            className={`tab${selected ? " active" : ""}${dirty ? " dirty" : ""}`}
-            data-tooltip={label}
             onClick={() => switchTab(tab.id)}
             onKeyDown={(e) => {
               // Delete/Backspace on the FOCUSED TAB closes it: the handler used

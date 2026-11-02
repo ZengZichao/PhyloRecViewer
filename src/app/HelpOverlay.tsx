@@ -47,6 +47,9 @@ export function HelpOverlay() {
     { keys: ["⌘/Ctrl", "+ / −"], label: t.helpZoomInOut },
     { keys: ["?"], label: t.helpTitle },
     { keys: ["Esc"], label: t.helpClosePanel },
+    { keys: ["⌘/Ctrl", "Enter"], label: t.annoTitle },
+    { keys: ["Delete"], label: t.closeTabTitle },
+    { keys: ["←/→", "Home/End"], label: t.panelAnnotate },
   ];
 
   // The interaction catalogue: the three modifier-click gestures plus pan/zoom
@@ -54,7 +57,7 @@ export function HelpOverlay() {
   const gestures: { keys: string[]; label: string }[] = [
     { keys: [t.hintClickHighlight], label: `${t.hintHighlightAction} ${t.geneNodes} · ${t.inspectorTitle}` },
     { keys: [t.hintShiftAnnotate], label: t.annoTitle },
-    { keys: [t.hintAltCollapse], label: `${t.collapsedClade} ${t.collapse}/${t.expand}` },
+    { keys: [t.hintAltCollapse], label: t.collapseExpandAction },
     { keys: [t.hintMirror], label: t.hintMirror },
     { keys: [t.renameLabel], label: t.renameLabel },
     { keys: ["⟳", "⇠"], label: t.helpZoomInOut },

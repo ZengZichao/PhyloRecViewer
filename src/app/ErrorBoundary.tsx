@@ -1,4 +1,5 @@
 import { Component, type ErrorInfo, type ReactNode } from "react";
+import { translations } from "../i18n";
 import { useStore } from "../state/store";
 import { sessionDataOfStore } from "../state/autosave";
 import { serializeSession } from "../session";
@@ -57,7 +58,7 @@ export class ErrorBoundary extends Component<Props, State> {
   render(): ReactNode {
     const { error } = this.state;
     if (!error) return this.props.children;
-    const zh = useStore.getState().locale === "zh";
+    const t = translations[useStore.getState().locale] ?? translations.en;
     return (
       <div
         style={{
@@ -70,19 +71,17 @@ export class ErrorBoundary extends Component<Props, State> {
         }}
       >
         <div className="state-panel error" role="alert">
-          <h2>{zh ? "出错了" : "Something went wrong"}</h2>
+          <h2>{t.crashTitle}</h2>
           <p>{error.message}</p>
           <p className="muted">
-            {zh
-              ? "你的工作尚未丢失，可先导出当前会话再重新加载。"
-              : "Your work is not lost — export the current session, then reload."}
+            {t.crashBody}
           </p>
           <div style={{ display: "flex", gap: 8, marginTop: 12, justifyContent: "center" }}>
             <button className="btn primary" onClick={downloadRecoverySession}>
-              {zh ? "导出当前会话" : "Export current session"}
+              {t.crashExport}
             </button>
             <button className="btn" onClick={() => location.reload()}>
-              {zh ? "重新加载" : "Reload"}
+              {t.crashReload}
             </button>
           </div>
         </div>

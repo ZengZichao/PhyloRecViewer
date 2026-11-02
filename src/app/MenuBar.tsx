@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
+import { localizeDiagnostic } from "../i18nDiagnostics";
 import { countLabel, useT } from "../i18n";
 import type { LayoutResult } from "../layout";
 import {
@@ -8,6 +9,7 @@ import {
   exportSvg,
   renderPdfBlob,
   renderPngBlob,
+  PNG_DPI_CHOICES,
   sceneToInteractiveHtml,
   sceneToSvgString,
   buildDocSvg,
@@ -241,9 +243,9 @@ export function MenuBar({
     void runHeavy(() => {
       loadXml(s.xml, t[s.labelKey]);
       if (s.nestedXml)
-        loadNestedXml(s.nestedXml, s.nestedLabelKey ? t[s.nestedLabelKey] : "nested");
+        loadNestedXml(s.nestedXml, s.nestedLabelKey ? t[s.nestedLabelKey] : t.paneSymbiontHost);
       if (s.compareXml)
-        loadCompareXml(s.compareXml, s.compareLabelKey ? t[s.compareLabelKey] : "compare");
+        loadCompareXml(s.compareXml, s.compareLabelKey ? t[s.compareLabelKey] : t.paneComparison);
       setSampleId(s.id);
       useStore.getState().markDocClean();
     });
@@ -305,7 +307,7 @@ export function MenuBar({
     const data = sessionDataOfStore();
     if (!data) return;
     const text = serializeSession(data);
-    const name = `${baseName(data.fileName)}.rpvsession.json`;
+    const name = `${baseName(data.fileName, t.exportDefaultStem)}.rpvsession.json`;
     if (isTauri()) {
       try {
         const ok = await desktopSaveText(name, text, "json");
@@ -354,6 +356,7 @@ export function MenuBar({
           eventsTitle: t.events,
           familiesTitle: t.geneFamilies,
           transferLabel: t.transferLegend,
+          collapsedLabel: t.collapsedClade,
           families: result.reconciliation.geneTrees.map((gt) => ({
             name: gt.name || `${t.geneTree} ${gt.index + 1}`,
             color: geneColors[gt.index] ?? geneColor(themes[resolvedThemeId], gt.index),
@@ -370,8 +373,8 @@ export function MenuBar({
         background === "transparent" ? null : background === "white" ? "#ffffff" : undefined,
       provenance: {
         application: `${APP_NAME} ${APP_VERSION}`,
-        generatedAt: new Date().toISOString(),
-        sourceFile: fileName ?? "(unsaved)",
+        generated_at: new Date().toISOString(),
+        source_file: fileName ?? t.unsavedSource,
         families: String(recon?.geneTrees.length ?? 0),
         warnings: String(warnings.length),
       },
@@ -410,7 +413,7 @@ export function MenuBar({
   const doExport = async (kind: "svg" | "png" | "pdf") => {
     if (panes.length === 0) return;
     const doc = buildDoc();
-    const base = baseName(fileName);
+    const base = baseName(fileName, t.exportDefaultStem);
     try {
       setBusy(kind);
       let ok = true;
@@ -445,7 +448,7 @@ export function MenuBar({
       }
       if (ok) showToast(`${t.exportedToast}: ${base}.${kind}`, "success");
     } catch (e) {
-      showToast(`${t.exportFailed}: ${(e as Error).message}`, "error");
+      showToast(`${t.exportFailed}: ${localizeDiagnostic((e as Error).message, locale)}`, "error");
     } finally {
       setBusy(null);
     }
@@ -454,10 +457,15 @@ export function MenuBar({
   const exportHtml = async () => {
     if (panes.length === 0) return;
     const doc = buildDoc();
-    const base = baseName(fileName);
+    const base = baseName(fileName, t.exportDefaultStem);
     try {
       setBusy("html");
-      const html = sceneToInteractiveHtml(doc, base);
+      const html = sceneToInteractiveHtml(doc, base, {
+        lang: locale === "zh" ? "zh-CN" : "en",
+        zoomIn: t.zoomIn,
+        zoomOut: t.zoomOut,
+        fit: t.fit,
+      });
       let ok = true;
       if (isTauri()) {
         ok = await desktopSaveText(`${base}.html`, html, "html");
@@ -530,14 +538,14 @@ export function MenuBar({
   const exportNhxConfirmed = async () => {
     if (!recon) return;
     const text = reconToNhx(recon);
-    const name = `${baseName(fileName)}.nhx`;
+    const name = `${baseName(fileName, t.exportDefaultStem)}.nhx`;
     await downloadText(name, text, "nhx", "text/plain");
   };
 
   const exportRecPhylo = async () => {
     if (!recon) return;
     const text = reconToRecPhyloXml(recon);
-    const name = `${baseName(fileName)}.recphyloxml`;
+    const name = `${baseName(fileName, t.exportDefaultStem)}.recphyloxml`;
     await downloadText(name, text, "recphyloxml", "application/xml");
   };
 
@@ -601,7 +609,7 @@ export function MenuBar({
         showToast(t.pasteTreeEmpty, "error");
         return;
       }
-      openInNewTab([{ name: "pasted-tree.nhx", text }]);
+      openInNewTab([{ name: `${t.pastedTreeName}.nhx`, text }]);
       showToast(t.pasteTreeOk, "success");
     } catch {
       showToast(t.pasteTreeEmpty, "error");
@@ -628,7 +636,7 @@ export function MenuBar({
                 {t.pasteTree}
               </button>
               <div className="menu-divider" />
-              <div className="menu-label">{t.loadSample}</div>
+              <div className="menu-label">{t.samplesHeading}</div>
               {samples.map((s) => (
                 <button
                   key={s.id}
@@ -664,7 +672,7 @@ export function MenuBar({
                     className="menu-item"
                     onClick={() => { close(); setExternalSpeciesTree(null); showToast(t.speciesTreeCleared, "info"); }}
                   >
-                    {t.speciesTreeCleared} ✕
+                    {t.removeSpeciesTree} ✕
                   </button>
                 </>
               ) : (
@@ -709,7 +717,7 @@ export function MenuBar({
 
         {/* ---- Export menu ---- */}
         <Dropdown
-          label={busy ? `${t.exportLabel} …` : t.exportLabel}
+          label={busy ? `${t.exportLabel}…` : t.exportLabel}
           ariaLabel={t.exportLabel}
           title={`${modKey}E`}
           disabled={!(panes.length > 0) || !!busy}
@@ -720,16 +728,16 @@ export function MenuBar({
               <div className="menu-label">{t.exportImage}</div>
               <div className="menu-scale">
                 <button className="menu-scale-btn" onClick={() => { close(); void doExport("png"); }}>
-                  PNG
+                  {t.exportAction} PNG
                 </button>
                 <button className="menu-scale-btn" onClick={() => { close(); void doExport("svg"); }}>
-                  SVG
+                  {t.exportAction} SVG
                 </button>
                 <button className="menu-scale-btn" onClick={() => { close(); void doExport("pdf"); }}>
-                  PDF
+                  {t.exportAction} PDF
                 </button>
                 <button className="menu-scale-btn" onClick={() => { close(); void exportHtml(); }}>
-                  HTML
+                  {t.exportAction} HTML
                 </button>
               </div>
               <div className="menu-scale">
@@ -744,9 +752,9 @@ export function MenuBar({
               <div className="menu-label">{t.pngResolution}</div>
               <div className="menu-scale">
                 <RadioItem on={pngDpi === 192} label={t.pngScreen} onClick={() => setPngDpi(192)} />
-                <RadioItem on={pngDpi === 300} label="300 DPI" onClick={() => setPngDpi(300)} />
-                <RadioItem on={pngDpi === 600} label="600 DPI" onClick={() => setPngDpi(600)} />
-                <RadioItem on={pngDpi === 1200} label="1200 DPI" onClick={() => setPngDpi(1200)} />
+                {PNG_DPI_CHOICES.filter((dpi) => dpi !== 192).map((dpi) => (
+                  <RadioItem key={dpi} on={pngDpi === dpi} label={`${dpi} DPI`} onClick={() => setPngDpi(dpi)} />
+                ))}
                 {customDpi != null && (
                   <RadioItem
                     on={pngDpi === customDpi}
@@ -782,7 +790,7 @@ export function MenuBar({
                 )}
               </div>
               <div className="menu-divider" />
-              <div className="menu-label">{t.themeBg}</div>
+              <div className="menu-label">{t.background}</div>
               <div className="menu-scale">
                 <RadioItem on={background === "theme"} label={t.themeBg} onClick={() => setBackground("theme")} />
                 <RadioItem on={background === "white"} label={t.whiteBg} onClick={() => setBackground("white")} />
@@ -980,7 +988,7 @@ export function MenuBar({
             <p>{t.nhxLossList}</p>
             <ul className="multi-open-files">
               {nhxLosses.map((l) => (
-                <li key={l}>{l}</li>
+                <li key={l}>{localizeDiagnostic(l, locale)}</li>
               ))}
             </ul>
             <div className="multi-open-actions">
@@ -1016,7 +1024,7 @@ export function MenuBar({
             <p>
               <strong>{t.aboutCitation}:</strong>
               <br />
-              Zeng, Z. {APP_NAME} v{APP_VERSION}. https://github.com/ZengZichao/PhyloRecViewer
+              Zeng, Z. (2026). {APP_NAME} (v{APP_VERSION}) [Computer software]. https://github.com/ZengZichao/PhyloRecViewer
             </p>
             <div className="multi-open-actions">
               <button
@@ -1024,10 +1032,10 @@ export function MenuBar({
                 onClick={() => {
                   const diag = [
                     `${APP_NAME} ${APP_VERSION}`,
-                    `locale: ${locale}`,
-                    `document: ${fileName ?? "(none)"}`,
-                    `warnings: ${warnings.length}`,
-                    `ua: ${navigator.userAgent}`,
+                    `Language: ${locale}`,
+                    `Document: ${fileName ?? t.unsavedSource}`,
+                    `Parser warnings: ${warnings.length}`,
+                    `User agent: ${navigator.userAgent}`,
                   ].join("\n");
                   void navigator.clipboard?.writeText(diag).then(
                     () => showToast(t.copyOk, "success"),

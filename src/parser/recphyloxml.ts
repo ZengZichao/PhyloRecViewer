@@ -543,7 +543,7 @@ function parseEvents(
     const lowered = key.toLowerCase();
     const nearMiss = END_EVENTS.find((t) => t.toLowerCase() === lowered);
     warnings.push(
-      `Gene node "${label}" has an unrecognised <eventsRec> child "${key}"` +
+      `Gene node "${label}" has an unrecognized <eventsRec> child "${key}"` +
         (nearMiss
           ? ` (recPhyloXML event names are case-sensitive; did you mean "${nearMiss}"?)`
           : "") +

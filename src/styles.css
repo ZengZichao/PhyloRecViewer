@@ -469,8 +469,6 @@ body {
   margin: 0;
   font-size: var(--fs-note);
   font-weight: var(--fw-semibold);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
   color: var(--muted);
 }
 
@@ -741,8 +739,6 @@ body {
   text-align: center;
   font-size: var(--fs-note);
   font-weight: var(--fw-semibold);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
   color: var(--muted);
   margin: 0 0 var(--space-2);
 }
@@ -858,9 +854,10 @@ body {
 }
 .panel-head h3 {
   margin: 0;
-  /* Section titles stay on one line and are never clipped / ellipsized. */
-  white-space: nowrap;
-  overflow: visible;
+  /* Section titles wrap rather than clip when a translation runs long. */
+  white-space: normal;
+  overflow-wrap: anywhere;
+  line-height: 1.2;
 }
 .panel-head .chev {
   font-size: 10px;
@@ -946,8 +943,6 @@ body {
 .menu-label {
   font-size: 10px;
   font-weight: var(--fw-semibold);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
   color: var(--muted);
   padding: var(--space-1) var(--space-3) 2px;
 }
@@ -1589,8 +1584,6 @@ body {
 .legend-title {
   font-size: 10px;
   font-weight: var(--fw-semibold);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
   color: var(--muted);
   margin: 2px 0 var(--space-2);
 }
@@ -1760,8 +1753,6 @@ body {
   margin: var(--space-2) 0 2px;
   font-size: 10px;
   font-weight: var(--fw-semibold);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
   color: var(--muted);
 }
 /* Collapsible section header (button styled like rp-h4). */
@@ -1774,8 +1765,6 @@ body {
   background: none;
   padding: 0;
   cursor: pointer;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
   font-size: 10px;
   font-weight: var(--fw-semibold);
   color: var(--muted);
@@ -1915,8 +1904,6 @@ body {
   color: var(--muted);
   font-weight: 600;
   font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
   padding: 6px;
   border-bottom: 1px solid var(--border-weak);
   position: sticky;
@@ -2234,8 +2221,6 @@ body {
 .label-rename-field label {
   font-size: 11px;
   font-weight: var(--fw-semibold);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
   color: var(--muted);
 }
 .label-rename-field input[type="text"] {
@@ -2513,7 +2498,6 @@ body {
 .help-card h4 {
   margin: 16px 0 8px;
   font-size: 12px;
-  text-transform: uppercase;
   letter-spacing: 0.05em;
   color: var(--muted);
 }
@@ -3043,8 +3027,6 @@ margin: 0 var(--space-1);
 .onboard-step {
   font-size: 11px;
   color: var(--muted);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
   margin-bottom: var(--space-2);
 }
 .onboard-dots {

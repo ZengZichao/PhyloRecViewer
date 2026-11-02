@@ -422,7 +422,24 @@ fn file_picker<R: tauri::Runtime>(
         .map(|e| e.trim_start_matches('.').to_string())
         .collect();
     let extensions: Vec<&str> = names.iter().map(String::as_str).collect();
-    attach_parent(app, app.dialog().file()).add_filter("recPhyloXML / NHX", &extensions)
+    attach_parent(app, app.dialog().file()).add_filter("All supported trees", &extensions)
+}
+
+/// Human-readable save-filter names. `to_uppercase()` used to produce
+/// "RECPHYLOXML", contradicting the product's own spelling of recPhyloXML.
+fn filter_display_name(ext: &str) -> &'static str {
+    match ext {
+        "recphyloxml" | "recphylo" | "phyloxml" | "xml" => "recPhyloXML",
+        "nhx" => "NHX",
+        "nwk" | "newick" => "Newick",
+        "svg" => "SVG",
+        "png" => "PNG",
+        "pdf" => "PDF",
+        "html" => "HTML",
+        "csv" => "CSV",
+        "json" => "JSON",
+        _ => "File",
+    }
 }
 
 /// Show a native open dialog and read what the user picked. Runs the whole
@@ -468,7 +485,7 @@ fn pick_save_target<R: tauri::Runtime>(
     let builder = if ext.is_empty() {
         builder
     } else {
-        builder.add_filter(ext.to_uppercase(), &[ext])
+        builder.add_filter(filter_display_name(ext), &[ext])
     };
     attach_parent(app, builder)
         .blocking_save_file()

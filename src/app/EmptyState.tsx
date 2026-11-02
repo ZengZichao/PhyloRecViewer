@@ -39,9 +39,9 @@ export function EmptyState() {
     void runHeavy(() => {
       loadXml(s.xml, t[s.labelKey]);
       if (s.nestedXml)
-        loadNestedXml(s.nestedXml, s.nestedLabelKey ? t[s.nestedLabelKey] : "nested");
+        loadNestedXml(s.nestedXml, s.nestedLabelKey ? t[s.nestedLabelKey] : t.paneSymbiontHost);
       if (s.compareXml)
-        loadCompareXml(s.compareXml, s.compareLabelKey ? t[s.compareLabelKey] : "compare");
+        loadCompareXml(s.compareXml, s.compareLabelKey ? t[s.compareLabelKey] : t.paneComparison);
       setSampleId(s.id);
       useStore.getState().markDocClean();
     });
@@ -54,8 +54,8 @@ export function EmptyState() {
       </div>
       <h2 className="empty-app-name">Phylo<span className="brand-mark">Rec</span>Viewer</h2>
       <p className="empty-body">{t.emptyBody}</p>
-      <p className="empty-formats" aria-hidden="true">
-        recPhyloXML · PhyloXML · Newick · NHX
+      <p className="empty-formats">
+        recPhyloXML · NHX · Newick
       </p>
 
       <div className="empty-actions">
@@ -109,7 +109,7 @@ export function EmptyState() {
         </div>
       </div>
 
-      <div className="empty-steps" aria-hidden="true">
+      <div className="empty-steps">
         <span>① {t.panelStats}</span>
         <span>② {t.panelDiff}</span>
         <span>③ {t.exportLabel}</span>

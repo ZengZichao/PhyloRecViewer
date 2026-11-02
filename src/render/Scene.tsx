@@ -20,7 +20,8 @@ import {
   type Pt,
 } from "./geometry";
 import { type DetailLevel, type LabelStyle, type RenderOptions } from "./options";
-import { EVENT_LABELS, geneColor, type Theme } from "./theme";
+import { countLabel, formatConfidence, useT, type Dict } from "../i18n";
+import { geneColor, type Theme } from "./theme";
 
 export interface SceneProps {
   result: LayoutResult;
@@ -306,11 +307,6 @@ const SceneContent = memo(function SceneContent({
   hideOutside = null,
   interactive = false,
   detail = "full",
-  eventLabels = EVENT_LABELS,
-  collapsedWord = "Collapsed",
-  leavesWord = "leaves",
-  expandHint = "Alt-click to expand",
-  mirrorWord = "Click to mirror this subtree",
   arrowId,
   tubeGradId,
   onGeneEnter,
@@ -328,6 +324,7 @@ const SceneContent = memo(function SceneContent({
   annotations = {},
   viewport = null,
 }: SceneProps & { arrowId: string; tubeGradId: string }) {
+  const t = useT();
   const { reconciliation: recon, transfers, width, height, positions: pos } = result;
   const { species } = recon;
   const hidden = result.hiddenIds;
@@ -343,7 +340,7 @@ const SceneContent = memo(function SceneContent({
   return (
     <>
       <g className="species-layer">
-        {renderSpecies(species.root, species.nodes, theme, options, result, proj, pos, interactive ? onSpeciesClick : undefined, mirrorWord, tubeGradId)}
+        {renderSpecies(species.root, species.nodes, theme, options, result, proj, pos, interactive ? onSpeciesClick : undefined, t.mirrorHint, tubeGradId)}
       </g>
       {options.showSpeciesLabels && showLabels && (
         <g className="species-labels">{renderSpeciesLabels(species.nodes, theme, options, proj, pos, speciesLabelDy, labelOverrides, onLabelClick)}</g>
@@ -356,20 +353,20 @@ const SceneContent = memo(function SceneContent({
         {recon.geneTrees.map((tree) => (
           <Fragment key={tree.index}>
             {renderGeneEdges(tree.nodes, theme, options, proj, pos, species, highlight, hidden, detail, colorOf(tree.index), viewport, hideOutside)}
-            {renderGeneGlyphs(tree.nodes, theme, options, proj, pos, highlight, hidden, collapsed, detail, eventLabels, colorOf(tree.index), {
+            {renderGeneGlyphs(tree.nodes, theme, options, proj, pos, highlight, hidden, collapsed, detail, t, colorOf(tree.index), {
               interactive,
               onGeneEnter,
               onGeneLeave,
               onGeneClick,
               onGeneKeyDown,
-            }, viewport, { word: collapsedWord, leaves: leavesWord, hint: expandHint }, hideOutside, diffSet)}
+            }, viewport, { word: t.collapsedClade, leaves: t.leavesUnit, hint: t.expandHint, unnamed: t.cladeFallback }, hideOutside, diffSet)}
             {options.showGeneLabels && showLabels && renderGeneLabels(tree.nodes, theme, options, proj, pos, highlight, hidden, collapsed, colorOf(tree.index), viewport, hideOutside, labelOverrides, labelOverridesById, onLabelClick)}
           </Fragment>
         ))}
       </g>
 
       <g className="transfer-layer">
-        {renderTransfers(transfers, options, proj, pos, arrowId, highlight, hideOutside, colorOf, onTransferClick, eventLabels)}
+        {renderTransfers(transfers, options, proj, pos, arrowId, highlight, hideOutside, colorOf, t, onTransferClick)}
       </g>
 
       <g className="annotation-layer">
@@ -451,7 +448,7 @@ function renderSpecies(
   proj: Projector,
   pos: Positions,
   onSpeciesClick?: (name: string) => void,
-  mirrorWord = "Click to mirror this subtree",
+  mirrorWord = "",
   tubeGradId?: string,
 ) {
   const paths: JSX.Element[] = [];
@@ -781,11 +778,11 @@ function renderGeneGlyphs(
   hidden: Set<string>,
   collapsed: Set<string>,
   detail: DetailLevel,
-  eventLabels: Record<EventType, string>,
+  dict: Dict,
   color: string,
   h: GlyphHandlers,
   viewport: CullRect | null,
-  collapsedLabels: { word: string; leaves: string; hint: string },
+  collapsedLabels: { word: string; leaves: string; hint: string; unnamed: string },
   hideOutside?: Set<string> | null,
   diffSet?: Set<string> | null,
 ) {
@@ -818,8 +815,8 @@ function renderGeneGlyphs(
         ? collapsedGlyph(c.x, c.y, proj, color, s)
         : geneGlyph(g.endEvent.type, c.x, c.y, theme, color, s);
       const title = isCollapsed
-        ? `${g.name || "clade"}\n${collapsedLabels.word} (${leafCount(g)} ${collapsedLabels.leaves}) - ${collapsedLabels.hint}`
-        : tooltipText(g, eventLabels);
+        ? `${g.name || collapsedLabels.unnamed}\n${collapsedLabels.word} (${countLabel(leafCount(g), collapsedLabels.leaves)}) - ${collapsedLabels.hint}`
+        : tooltipText(g, dict);
       // Confidence shown next to the node: the terminal event's value first,
       // then a clade-level support - the same accessor the filter uses, so a
       // value that can be filtered on is also visible.
@@ -998,23 +995,23 @@ function geneGlyph(
   }
 }
 
-function tooltipText(g: GeneNode, eventLabels: Record<EventType, string>): string {
+function tooltipText(g: GeneNode, t: Dict): string {
   const ev = g.endEvent;
-  const label = eventLabels[ev.type];
+  const label = t.event[ev.type];
   const where = ev.speciesLocation ?? ev.destinationSpecies ?? g.speciesId;
   const name = g.name ? `${g.name}\n` : "";
   const lines: string[] = [`${name}${label}${where ? ` @ ${where}` : ""}`.trimEnd()];
   // The scientific evidence a reviewer needs, without opening a panel: time
   // slice, event confidence, clade support, and every transfer arrival.
-  if (ev.timeSlice != null) lines.push(`timeSlice: ${ev.timeSlice}`);
-  if (ev.confidence != null) lines.push(`confidence: ${ev.confidence}`);
-  else if (g.support) lines.push(`support: ${g.support.value}`);
-  if (g.branchLength != null) lines.push(`branch: ${g.branchLength}`);
+  if (ev.timeSlice != null) lines.push(`${t.inspTimeSlice}: ${ev.timeSlice}`);
+  if (ev.confidence != null) lines.push(`${t.inspConfidence}: ${formatConfidence(ev.confidence)}`);
+  else if (g.support) lines.push(`${t.inspSupport}: ${g.support.value}`);
+  if (g.branchLength != null) lines.push(`${t.inspBranch}: ${g.branchLength}`);
   for (const e of g.events) {
     if (e.type === "transferBack") {
       lines.push(
-        `${eventLabels.transferBack}: ${e.speciesLocation ?? "?"} -> ${e.destinationSpecies ?? "?"}` +
-          (e.timeSlice != null ? ` (t=${e.timeSlice})` : "") +
+        `${t.event.transferBack}: ${e.speciesLocation ?? t.inspNone} → ${e.destinationSpecies ?? t.inspNone}` +
+          (e.timeSlice != null ? ` (${t.inspTimeSlice} ${e.timeSlice})` : "") +
           (e.confidence != null ? ` [${e.confidence}]` : ""),
       );
     }
@@ -1037,6 +1034,7 @@ function renderGeneLabels(
   labelOverrides?: Record<string, string>,
   labelOverridesById?: Record<string, string>,
   onLabelClick?: (originalLabel: string, nodeId: string | undefined, evt: ReactMouseEvent) => void,
+  t?: Dict,
 ) {
   const bottom: GeneNode[] = [];
   const internal: GeneNode[] = [];
@@ -1063,7 +1061,7 @@ function renderGeneLabels(
     // Apply user override to the base label.
     let displayName: string;
     if (isCollapsed) {
-      const base = overrideKey ? (idOverride ?? labelOverrides?.[overrideKey] ?? overrideKey) : "clade";
+      const base = overrideKey ? (idOverride ?? labelOverrides?.[overrideKey] ?? overrideKey) : (t?.cladeFallback ?? "");
       displayName = `${base} (${leafCount(g)})`;
     } else {
       displayName = overrideKey ? (idOverride ?? labelOverrides?.[overrideKey] ?? overrideKey) : "";
@@ -1132,8 +1130,8 @@ function renderTransfers(
   highlight: Set<string> | null,
   hideOutside: Set<string> | null,
   colorOf: (ti: number) => string,
+  dict?: Dict,
   onTransferClick?: (edge: TransferEdge) => void,
-  eventLabels?: Record<EventType, string>,
 ) {
   // Multiple arrivals on one node (or the same donor->recipient pair) used to
   // draw perfectly overlapping arcs - N statistical events looked like one.
@@ -1146,17 +1144,17 @@ function renderTransfers(
     // Use the gene tree color for each transfer, so different families are
     // visually distinguished instead of all being the same color.
     const stroke = colorOf(t.treeIndex);
-    const pairKey = `${t.from.id} ${t.to.id}`;
+    const pairKey = `${t.from.id}\u0000${t.to.id}`;
     const idx = pairSeen.get(pairKey) ?? 0;
     pairSeen.set(pairKey, idx + 1);
     const bow = Math.min(0.5, options.transferBow + idx * 0.09);
-    const donorSp = t.from.speciesId || t.from.endEvent.speciesLocation || "?";
-    const recipSp = t.to.speciesId || t.to.endEvent.destinationSpecies || "?";
+    const donorSp = t.from.speciesId || t.from.endEvent.speciesLocation || dict?.inspNone || "—";
+    const recipSp = t.to.speciesId || t.to.endEvent.destinationSpecies || dict?.inspNone || "—";
     const arrival = t.to.events.find((e) => e.type === "transferBack");
     const title =
-      `${eventLabels?.transferBack ?? "Transfer"}: ${donorSp} -> ${recipSp}` +
-      (arrival?.timeSlice != null ? `\ntimeSlice: ${arrival.timeSlice}` : "") +
-      (arrival?.confidence != null ? `\nconfidence: ${arrival.confidence}` : "");
+      `${dict?.event.transferBack ?? ""}: ${donorSp} → ${recipSp}` +
+      (arrival?.timeSlice != null ? `\n${dict?.inspTimeSlice ?? ""}: ${arrival.timeSlice}` : "") +
+      (arrival?.confidence != null ? `\n${dict?.inspConfidence ?? ""}: ${formatConfidence(arrival.confidence)}` : "");
     return (
       <path
         key={t.id}

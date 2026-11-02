@@ -12,7 +12,7 @@
  *   D=Y|N                duplication
  *   L=Y                  gene loss
  *   BO=Y / BC=Y          branching-out / bifurcation-out transfer donor
- *   TB=<donor>|<recip>   first transfer-back arrival (TB2..TB9: further ones)
+ *   TB=<donor>|<recipient>   first transfer-back arrival (TB2…TBn: further ones)
  *   TS=<n> / CN=<n>      terminal-event timeSlice / confidence
  *   BL=<number>          gene-tree branch length (redundant with :length)
  * A node without any event tag falls back to leaf / speciation by structure.

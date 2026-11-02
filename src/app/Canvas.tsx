@@ -621,7 +621,7 @@ export function Canvas({
         <button data-tooltip={`${t.zoomOut} · ⌘-`} aria-label={t.zoomOut} onClick={() => zoomBy(1 / 1.2)}>
           −
         </button>
-        <span className="zoom-level" aria-hidden="true">{Math.round(view.k * 100)}%</span>
+        <span className="zoom-level" aria-label={`${t.zoomLevel} ${Math.round(view.k * 100)}%`}>{Math.round(view.k * 100)}%</span>
         <button data-tooltip={`${t.zoomIn} · ⌘+`} aria-label={t.zoomIn} onClick={() => zoomBy(1.2)}>
           +
         </button>

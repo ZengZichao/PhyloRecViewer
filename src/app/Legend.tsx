@@ -43,7 +43,7 @@ export function Legend({
   return (
     <div
       className={`legend${horizontal ? " horizontal" : ""}`}
-      aria-label={`${t.events}: ${t.event.speciation}, ${t.event.duplication}, ${t.event.loss}, ${t.transferLegend}, ${t.event.transferBack}, ${t.event.branchingOut}, ${t.event.bifurcationOut}, ${t.collapsedClade}, ${t.event.leaf}, ${t.legendLocate}; ${t.geneFamilies}: ${recon.geneTrees.map((gt) => gt.name || `${t.geneTree} ${gt.index + 1}`).join(", ")}`}
+      aria-label={`${t.events}: ${t.event.speciation}, ${t.event.duplication}, ${t.event.loss}, ${t.transferLegend}, ${t.event.bifurcationOut}, ${t.event.branchingOut}, ${t.event.transferBack}, ${t.collapsedClade}, ${t.event.leaf}, ${t.legendLocate}; ${t.geneFamilies}: ${recon.geneTrees.map((gt) => gt.name || `${t.geneTree} ${gt.index + 1}`).join(", ")}`}
     >
       <button
         className="legend-dir"
@@ -125,7 +125,7 @@ export function Legend({
               type="color"
               className="legend-color"
               name={`legend-color-${tt.index}`}
-              aria-label={`${tt.name || `${t.geneTree} ${tt.index + 1}`} - ${t.changeColor}`}
+              aria-label={`${tt.name || `${t.geneTree} ${tt.index + 1}`} · ${t.changeColor}`}
               title={t.changeColor}
               value={geneColors[tt.index] ?? geneColor(theme, tt.index)}
               onChange={(e) => setGeneColor(tt.index, e.target.value)}

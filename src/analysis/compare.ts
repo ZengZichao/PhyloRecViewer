@@ -103,7 +103,7 @@ function keyOf(g: GeneNode): string {
  * across tools that label the same family identically) and fall back to index.
  */
 function familyScope(tree: GeneTree): string {
-  return `F<${tree.name ?? `#${tree.index}`}>:`;
+  return `F<${tree.name ?? `#${tree.index + 1}`}>:`;
 }
 
 function indexByKey(recon: Reconciliation): Map<string, GeneNode> {
@@ -188,7 +188,7 @@ export function computeDiff(a: Reconciliation, b: Reconciliation): DiffResult {
   let onlyA = 0;
   let onlyB = 0;
 
-  const familyNameA = new Map(a.geneTrees.map((t) => [t.index, t.name ?? `#${t.index}`]));
+  const familyNameA = new Map(a.geneTrees.map((t) => [t.index, t.name ?? `#${t.index + 1}`]));
 
   for (const [k, ga] of mapA) {
     const gb = mapB.get(k);
@@ -198,7 +198,7 @@ export function computeDiff(a: Reconciliation, b: Reconciliation): DiffResult {
       continue;
     }
     compared++;
-    const pair = pairOf(ga, gb, familyNameA.get(ga.treeIndex) ?? `#${ga.treeIndex}`);
+    const pair = pairOf(ga, gb, familyNameA.get(ga.treeIndex) ?? `#${ga.treeIndex + 1}`);
     pairs.push(pair);
     if (pair.agreeEvent) agreeEvent++;
     if (pair.agreeSpecies) agreeSpecies++;

@@ -507,7 +507,7 @@ export function App() {
             <div
               className="sidebar-resizer"
               role="separator"
-              aria-label={t.controlsPanel}
+              aria-label={`${t.resizeHint} · ${t.controlsPanel}`}
               aria-orientation="vertical"
               tabIndex={0}
               onKeyDown={(e) => {
@@ -656,7 +656,7 @@ export function App() {
                     return (
                       <>
                         <span className="compare-pct">
-                          {pct === null ? "N/A" : `${pct}% ${t.agree}`}
+                          {pct === null ? t.notApplicable : `${pct}% ${t.agree}`}
                         </span>
                         {spct !== null && (
                           <span className="compare-sub">{t.speciesAgreeShort.replace("{p}", String(spct))}</span>
@@ -679,15 +679,15 @@ export function App() {
                   <button
                     className={`btn ghost diff-hide-btn${diffHidden ? " active" : ""}`}
                     aria-pressed={diffHidden}
-                    aria-label={t.diffHide}
-                    data-tooltip={t.diffHide}
+                    aria-label={diffHidden ? t.diffShow : t.diffHide}
+                    data-tooltip={diffHidden ? t.diffShow : t.diffHide}
                     onClick={() => setDiffHidden((v) => !v)}
                   >
                     {diffHidden ? "◉" : "◎"}
                   </button>
                   <button
                     className="btn ghost"
-                    aria-label={t.splitSideBySide}
+                    aria-label={splitRow ? t.splitSideBySide : t.splitStacked}
                     aria-pressed={!splitRow}
                     onClick={() => setSplitRowPersist(!splitRow)}
                   >
@@ -896,7 +896,7 @@ function MultiFileDialog({
   }, [onCancel]);
 
   return (
-    <div className="multi-open" role="dialog" aria-modal="true" aria-label={t.multiOpenTitle}>
+    <div className="multi-open" role="dialog" aria-modal="true" aria-label={t.multiOpenTitle.replace("{n}", String(files.length))}>
       <div className="multi-open-card" ref={dialogRef}>
         <h3>{t.multiOpenTitle.replace("{n}", String(files.length))}</h3>
         <ul className="multi-open-files">

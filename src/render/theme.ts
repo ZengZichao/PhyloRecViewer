@@ -134,14 +134,3 @@ export const themes: Record<Theme["id"], Theme> = {
 export function geneColor(theme: Theme, treeIndex: number): string {
   return theme.genePalette[treeIndex % theme.genePalette.length];
 }
-
-/** Human-readable labels used in the legend and tooltips. */
-export const EVENT_LABELS: Record<EventType, string> = {
-  speciation: "Speciation",
-  duplication: "Duplication",
-  loss: "Loss",
-  branchingOut: "Transfer (donor)",
-  bifurcationOut: "Bifurcation out",
-  transferBack: "Transfer (arrival)",
-  leaf: "Extant gene",
-};
