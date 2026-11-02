@@ -61,7 +61,6 @@
      sample choices, so every rounded rectangle in a group is identical and the
      group itself stays centered instead of left-aligned at its widest member. */
   --hub-btn-w: min(152px, calc((100vw - 64px) / 3));
-  --hub-sample-w: min(460px, calc(100vw - 48px));
   --settings-btn-w: min(132px, calc((100vw - 96px) / 4));
   /* Outline color for a located node: a hue no event glyph or family palette
      entry uses, so the ring cannot be mistaken for data. */
@@ -2382,20 +2381,19 @@ body {
   margin-bottom: 10px;
   text-align: center;
 }
-/* Samples stack in one centered column of identical-width buttons. Auto-width
-   would size each to its own label (plus its badge), which is why the three
-   rounded rectangles used to end at different x positions. */
+/* The three sample choices share one centred row; they wrap only when the
+   viewport cannot hold them side by side. */
 .empty-sample-list {
-  display: grid;
-  grid-template-columns: var(--hub-sample-w);
-  gap: var(--space-2);
+  display: flex;
+  flex-wrap: wrap;
   justify-content: center;
+  gap: var(--space-2);
 }
 .empty-sample-btn {
-  width: var(--hub-sample-w);
-  text-align: left;
-  justify-content: flex-start;
-  min-width: 0;
+  width: auto;
+  min-width: 132px;
+  justify-content: center;
+  text-align: center;
 }
 .empty-sample-name {
   flex: 1 1 auto;

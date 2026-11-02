@@ -4,25 +4,14 @@ import { samples } from "../samples";
 import { useStore } from "../state/store";
 import { AppLogo } from "./AppLogo";
 
-/** Per-sample badge: what the sample opens, so the choice is informed (the
- *  nested/compare samples auto-enter their split views). */
-function sampleBadge(
-  s: (typeof samples)[number],
-  t: ReturnType<typeof useT>,
-): string | null {
-  if (s.nestedXml) return `${t.paneGeneSymbiont} / ${t.paneSymbiontHost}`;
-  if (s.compareXml) return t.panelDiff;
-  return null;
-}
-
 /**
  * First-run / no-document onboarding hub. Gives the empty screen an actionable
  * starting point: open a file, choose one of the three bundled samples, drag &
  * drop, or view the shortcuts/interactions help.
  *
  * The app logo sits centered at the top; below it are action buttons and the
- * three sample choices arranged vertically (left-aligned within the group, but
- * the group itself is centered in the canvas).
+ * three sample choices in a single centred row (they wrap only on narrow
+ * viewports).
  */
 export function EmptyState() {
   const t = useT();
@@ -92,20 +81,16 @@ export function EmptyState() {
       <div className="empty-samples">
         <span className="empty-samples-label">{t.emptyOrSample}</span>
         <div className="empty-sample-list">
-          {samples.map((s) => {
-            const badge = sampleBadge(s, t);
-            return (
-              <button
-                key={s.id}
-                className="btn ghost empty-sample-btn"
-                onClick={() => loadSample(s)}
-              >
-                <span className="empty-sample-arrow" aria-hidden="true">▸</span>
-                <span className="empty-sample-name">{t[s.labelKey]}</span>
-                {badge && <span className="multi-open-badge">{badge}</span>}
-              </button>
-            );
-          })}
+          {samples.map((s) => (
+            <button
+              key={s.id}
+              className="btn ghost empty-sample-btn"
+              onClick={() => loadSample(s)}
+            >
+              <span className="empty-sample-arrow" aria-hidden="true">▸</span>
+              <span className="empty-sample-name">{t[s.labelKey]}</span>
+            </button>
+          ))}
         </div>
       </div>
 

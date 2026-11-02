@@ -1,4 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { createRoot } from "react-dom/client";
 import { act } from "react";
 import { App } from "./App";
@@ -7,6 +9,7 @@ import { lightTheme } from "../render/theme";
 import { samples } from "../samples";
 import { parseRecPhyloXML } from "../parser/recphyloxml";
 import { useStore } from "../state/store";
+import { translations } from "../i18n";
 
 /** Same browser-API stubs App.test.tsx needs for a full render. */
 beforeEach(() => {
@@ -165,7 +168,20 @@ describe("empty-state hub copy", () => {
     expect(host.querySelectorAll(".empty-sample-list .empty-sample-btn")).toHaveLength(
       samples.length,
     );
+    const locale = useStore.getState().locale;
+    const labels = [...host.querySelectorAll(".empty-sample-name")].map((n) => n.textContent);
+    expect(labels).toEqual(samples.map((s) => translations[locale][s.labelKey]));
+    // Per-sample explainer badges ("Differences", "Gene → Symbiont…") are gone.
+    expect(host.querySelector(".empty-samples .multi-open-badge")).toBeNull();
     await unmount(root, host);
+  });
+
+  it("lays the three sample choices out in a single row", () => {
+    const css = readFileSync(join(process.cwd(), "src/styles.css"), "utf8");
+    const block = css.match(/\.empty-sample-list\s*\{([\s\S]*?)\}/)?.[1] ?? "";
+    expect(block).toContain("display: flex");
+    expect(block).toContain("flex-wrap: wrap");
+    expect(block).not.toContain("grid-template-columns");
   });
 });
 
