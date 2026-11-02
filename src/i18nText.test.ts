@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { readFileSync, readdirSync, statSync } from "node:fs";
-import { join, relative } from "node:path";
+import { join, relative, sep } from "node:path";
 import { translations, type Dict } from "./i18n";
 
 /**
@@ -20,7 +20,7 @@ function walk(dir: string): string[] {
 }
 
 const FILES = walk(SRC).filter((p) => /\.(ts|tsx)$/.test(p));
-const rel = (p: string) => relative(ROOT, p);
+const rel = (p: string) => relative(ROOT, p).split(sep).join("/");
 const read = (p: string) => readFileSync(p, "utf8");
 const CJK = /[\u3400-\u9fff]/;
 
