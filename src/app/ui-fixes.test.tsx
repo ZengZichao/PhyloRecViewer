@@ -176,12 +176,21 @@ describe("empty-state hub copy", () => {
     await unmount(root, host);
   });
 
-  it("lays the three sample choices out in a single row", () => {
+  it("aligns the sample row with the action row, same button size", () => {
     const css = readFileSync(join(process.cwd(), "src/styles.css"), "utf8");
-    const block = css.match(/\.empty-sample-list\s*\{([\s\S]*?)\}/)?.[1] ?? "";
-    expect(block).toContain("display: flex");
-    expect(block).toContain("flex-wrap: wrap");
-    expect(block).not.toContain("grid-template-columns");
+    const block = (selector: string) =>
+      css.match(new RegExp(`${selector.replace(/\./g, "\\.") }\\s*\\{([\\s\\S]*?)\\}`))?.[1] ?? "";
+    const actions = block(".empty-actions");
+    const samples = block(".empty-sample-list");
+    for (const rule of [
+      "grid-template-columns: repeat(3, var(--hub-btn-w))",
+      "gap: 8px",
+    ]) {
+      expect(actions).toContain(rule);
+      expect(samples).toContain(rule);
+    }
+    expect(block(".empty-sample-btn")).toContain("width: var(--hub-btn-w)");
+    expect(block(".empty-actions .btn")).toContain("width: var(--hub-btn-w)");
   });
 });
 

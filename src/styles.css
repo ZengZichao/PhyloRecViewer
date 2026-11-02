@@ -2381,22 +2381,21 @@ body {
   margin-bottom: 10px;
   text-align: center;
 }
-/* The three sample choices share one centred row; they wrap only when the
-   viewport cannot hold them side by side. */
+/* Same three-column grid as .empty-actions: the sample buttons sit directly
+   under the action buttons, with identical rounded-rectangle sizes. */
 .empty-sample-list {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(3, var(--hub-btn-w));
+  gap: 8px;
   justify-content: center;
-  gap: var(--space-2);
 }
 .empty-sample-btn {
-  width: auto;
-  min-width: 132px;
+  width: var(--hub-btn-w);
   justify-content: center;
   text-align: center;
 }
 .empty-sample-name {
-  flex: 1 1 auto;
+  flex: 0 1 auto;
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
