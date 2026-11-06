@@ -12,6 +12,77 @@ here once its deposit is published.
 A round of fixes against the published site, covering the empty-state hub, the
 analysis panel, located-node visibility, duplication rendering and PDF export.
 
+### UI design review round (2026-11-06)
+
+A dedicated visual pass over the interface — headless-browser screenshots of
+every major surface at 1440/1280/1024 window widths, light and dark themes,
+both languages — with every finding traced back to its root cause and fixed.
+Full report with evidence: `docs/UI-REVIEW-2026-11-06.md`.
+
+**Added**
+
+- **Nested-split orientation toggle** (`src/app/App.tsx`, `src/styles.css`):
+  the ⇔/⇕ button lived only in the compare status bar, so the nested view had
+  no reachable way to switch stacked/side-by-side even though the shared
+  `rpv.split.orientation` preference supports both. A floating toggle now sits
+  at the top-right of the nested split, reusing the existing strings.
+
+**Fixed**
+
+- **Compare status bar covered the bottom pane's interaction hints**
+  (`src/app/App.tsx`, `src/styles.css`): the bar was an absolute overlay on top
+  of the canvas-hint chip, with translucent text bleeding through both layers.
+  It is now an in-flow sibling of the pane row (`.split-outer`), so the panes
+  make room in both split orientations.
+- **Split-pane titles hid under the floating toolbar** (`src/styles.css`):
+  the centered `.pane-label` sat at the toolbar's own top band, so on narrower
+  panes the title slid completely behind it. Titles now render below the
+  toolbar with an ellipsis cap for long file names.
+- **Export-menu labels truncated or center-clipped** (`src/styles.css`): the
+  fixed 1fr chip grid clipped "Export PNG" to "Export…" on all four format
+  buttons and cut long radio labels from both ends ("Screen 2× (192 DPI)" →
+  "n 2×("). Chips are now content-sized and wrap (`flex-wrap`), so every
+  format, DPI and background label reads in full.
+- **Preferences buttons ellipsis-truncated** (`src/styles.css`): "Screen 2×
+  (19…", "Use current vi…", "Clear autosav…", "Reset prefere…" now wrap to a
+  second line instead, keeping the fixed track alignment.
+- **Narrow-window panel policy** (`src/app/App.tsx`): the launch thresholds
+  (1000/820) left both panels open at 1024×768, tripling up the legend, stats
+  pill and hint chip on a ~470px canvas. Panels now close below 1180/920, the
+  hint caps at 60% width and the legend scrolls beyond `calc(100% - 96px)`.
+  The presentation-mode restore effect no longer runs on mount — it used to
+  re-open both panels right after the narrow-viewport effect closed them.
+- **Node inspector covered the sidebar** (`src/app/App.tsx`): the card is
+  absolutely positioned bottom-left but rendered at the app root, so its
+  anchor was the viewport. It now renders inside `.main` and docks to the
+  canvas.
+- **Minimap collided with the floating toolbar** (`src/styles.css`): on narrow
+  canvases the toolbar's last buttons ran under the minimap; the minimap now
+  sits below the toolbar band.
+- **Presentation exit button sat on the menu bar** (`src/styles.css`): it now
+  floats bottom-center, clear of Preferences/Help.
+- **Shortcuts & interactions card rows duplicated themselves**
+  (`src/app/HelpOverlay.tsx`): kbd chips contained whole sentences repeated
+  verbatim in the label column, one row restated the mouse tip below, and the
+  clear-selection row was labelled with Esc semantics. The gesture catalogue
+  now pairs short gesture chips with distinct consequences.
+- **Narrow-pane toolbar clipped its last buttons** (`src/styles.css`): the
+  toolbar wraps and caps at the canvas width, and a container query hides the
+  zoom-percentage readout below a 480px canvas so the bar keeps one row (the
+  +/− buttons and keyboard zoom are unaffected).
+- **Legend and canvas-hint collided on ~500px panes** (`src/styles.css`): when
+  the legend is shown, `:has(.legend)` reserves its footprint so the hint chip
+  never slides underneath it.
+- **Sidebar control labels truncated** (`src/styles.css`): "Species branch
+  thickn…" now wraps, matching the section-title wrapping policy.
+- **Transfer-network tab mixed alignments** (`src/app/RightPanel.tsx`): the
+  hint line was centred while the scope note under it was left-aligned; both
+  are left-aligned notes now.
+- **Tab context menu styling** (`src/styles.css`): square corners, a hardcoded
+  shadow, gray hover and 12px text made it a second, off-system menu style
+  next to the dropdowns; it now shares the dropdown treatment (radius,
+  layered shadow, accent-weak hover, body-size text), verified in dark theme.
+
 ### Added
 
 - **Stale-build chunk recovery** (`src/platform/preloadRecovery.ts`): a

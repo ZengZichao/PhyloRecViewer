@@ -52,16 +52,19 @@ export function HelpOverlay() {
     { keys: ["←/→", "Home/End"], label: t.panelAnnotate },
   ];
 
-  // The interaction catalogue: the three modifier-click gestures plus pan/zoom
-  // and clearing, so hidden-gesture capabilities are documented in one place.
+  // The interaction catalogue: the three modifier-click gestures plus the
+  // plain-click gestures, so hidden capabilities are documented in one place.
+  // The key column holds the GESTURE (a short kbd chip), the label column the
+  // consequence — rows that repeated the same sentence in both columns, or
+  // restated the mouse tip below ("scroll to zoom, drag to pan"), only padded
+  // the card out.
   const gestures: { keys: string[]; label: string }[] = [
-    { keys: [t.hintClickHighlight], label: `${t.hintHighlightAction} ${t.geneNodes} · ${t.inspectorTitle}` },
+    { keys: [t.hintClickHighlight], label: `${t.hintHighlightAction} · ${t.inspectorTitle}` },
     { keys: [t.hintShiftAnnotate], label: t.annoTitle },
     { keys: [t.hintAltCollapse], label: t.collapseExpandAction },
-    { keys: [t.hintMirror], label: t.hintMirror },
-    { keys: [t.renameLabel], label: t.renameLabel },
-    { keys: ["⟳", "⇠"], label: t.helpZoomInOut },
-    { keys: [t.hintClear], label: t.helpClosePanel },
+    { keys: [t.hintClickHighlight], label: t.hintMirror },
+    { keys: [t.hintClickHighlight], label: t.renameLabel },
+    { keys: [t.hintClickHighlight], label: t.hintClear },
   ];
 
   return (

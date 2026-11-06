@@ -334,23 +334,31 @@ export function App() {
   // one: clamp both to the current viewport. Narrow FIRST launches collapse
   // the panels outright (the old resize-crossing logic never fired on load,
   // so a 900px window opened with both panels open and a sliver of canvas).
+  // Thresholds keep ≥ ~700px of canvas: at 1024 with both panels open the
+  // legend, stats pill and hint chip collided three-way.
   useEffect(() => {
     setSidebarWidth((w) => Math.min(w, Math.max(360, window.innerWidth - 420)));
     setRightPanelWidth((w) => Math.min(w, Math.max(320, window.innerWidth - 720)));
     const w = window.innerWidth;
-    if (w < 1000) useStore.getState().closePanel();
-    if (w < 820) useStore.getState().setSidebarOpen(false);
+    if (w < 1180) useStore.getState().closePanel();
+    if (w < 920) useStore.getState().setSidebarOpen(false);
   }, []);
 
   // Presentation mode always collapses the panels on entry and restores them
-  // on exit, so Esc gives the user their workspace back.
+  // on exit, so Esc gives the user their workspace back. The restore branch is
+  // gated on an actual presenting→false TRANSITION: run on mount it re-opened
+  // both panels right after the narrow-viewport effect had collapsed them,
+  // defeating the 1024px launch policy.
   const prevPanelState = useRef({ sidebar: true, panel: true });
+  const wasPresenting = useRef(false);
   useEffect(() => {
     if (presenting) {
       prevPanelState.current = { sidebar: useStore.getState().sidebarOpen, panel: useStore.getState().rightPanelOpen };
+      wasPresenting.current = true;
       setSidebarOpen(false);
       closePanel();
-    } else {
+    } else if (wasPresenting.current) {
+      wasPresenting.current = false;
       setSidebarOpen(prevPanelState.current.sidebar);
       if (prevPanelState.current.panel) openPanel(rightPanelTab);
     }
@@ -605,9 +613,23 @@ export function App() {
                     locate={locate}
                   />
                 </div>
+                {/* Orientation toggle for the nested split: the ⇔ button lives
+                    in the compare status bar, so without this the nested view
+                    had NO reachable way to switch stacked/side-by-side (the
+                    preference is shared, but only discoverable in compare). */}
+                <button
+                  className="btn ghost split-orient-btn"
+                  aria-label={splitRow ? t.splitSideBySide : t.splitStacked}
+                  aria-pressed={!splitRow}
+                  title={splitRow ? t.splitSideBySide : t.splitStacked}
+                  onClick={() => setSplitRowPersist(!splitRow)}
+                >
+                  {splitRow ? "⇔" : "⇕"}
+                </button>
                 {showLegend && <Legend theme={theme} recon={recon} />}
               </div>
             ) : compareResult && compare && diff ? (
+              <div className="split-outer">
               <div className={splitClass}>
                 <div className="split-pane">
                   <Canvas
@@ -647,9 +669,11 @@ export function App() {
                     onViewChange={compareLinked ? onCompareView : undefined}
                   />
                 </div>
-                {/* One bottom status bar instead of three absolutely-positioned
-                    overlays that used to cover each other. */}
-                <div className="compare-status" role="status">
+              </div>
+              {/* One bottom status bar below the pane row — a sibling of the
+                  split, never an overlay: as an absolute strip it covered the
+                  bottom pane's interaction-hint chip. */}
+              <div className="compare-status" role="status">
                   {(() => {
                     const pct = agreementPct(diff);
                     const spct = speciesAgreementPct(diff);
@@ -784,6 +808,10 @@ export function App() {
               </div>
             </div>
           )}
+          {/* NodeInspector renders INSIDE .main on purpose: it is absolutely
+              positioned bottom-left, and from the app root that anchor is the
+              viewport — the card used to cover the sidebar's controls. */}
+          <NodeInspector />
         </main>
         {rightPanelOpen && (
           <div
@@ -822,7 +850,6 @@ export function App() {
         )}
       </div>
       <AnnotationEditor />
-      <NodeInspector />
       <HelpOverlay />
       <Settings open={settingsOpen} onClose={() => setSettingsOpen(false)} />
       <Onboarding visible={onboardVisible} onClose={() => setOnboardVisible(false)} />

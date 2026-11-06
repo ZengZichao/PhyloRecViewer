@@ -844,7 +844,12 @@ function NetworkTab() {
   }
   return (
     <div className="rp-section">
-      <p className="rp-empty">{t.networkHint}</p>
+      {/* Left-aligned note text like the scope note below: the hint used to be
+          a centred .rp-empty while the note was left-aligned, so the two
+          adjacent lines started at different x. */}
+      <p className="rp-note" style={{ margin: "0 0 2px", fontSize: 12.5 }}>
+        {t.networkHint}
+      </p>
       <p className="rp-note">{t.scopeNote}</p>
       <NetworkView
         matrix={stats.transferMatrix}

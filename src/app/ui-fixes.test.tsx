@@ -64,6 +64,20 @@ async function unmount(root: ReturnType<typeof createRoot>, host: HTMLDivElement
   host.remove();
 }
 
+/** jsdom defaults to a 1024px window: below the 1180 launch threshold App now
+ *  starts with the analysis panel closed, so tests that need it open stub a
+ *  desktop viewport for their duration. */
+async function withDesktopWidth(run: () => Promise<void>): Promise<void> {
+  const w = window as { innerWidth: number };
+  const original = w.innerWidth;
+  w.innerWidth = 1440;
+  try {
+    await run();
+  } finally {
+    w.innerWidth = original;
+  }
+}
+
 /** jsdom's Blob has no text(); read the downloaded CSV through FileReader. */
 function readBlob(blob: Blob): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -82,32 +96,34 @@ function loadNestedSample() {
 
 describe("located nodes get a canvas outline, not just a pan", () => {
   it("outlines the node when a search match row is clicked", async () => {
-    const s = samples.find((x) => x.id === "showcase")!;
-    await act(async () => {
-      useStore.getState().loadXml(s.xml, "showcase");
-    });
-    const recon = useStore.getState().recon!;
-    const named = recon.geneTrees.flatMap((t) => t.nodes).find((g) => g.name);
-    expect(named).toBeDefined();
+    await withDesktopWidth(async () => {
+      const s = samples.find((x) => x.id === "showcase")!;
+      await act(async () => {
+        useStore.getState().loadXml(s.xml, "showcase");
+      });
+      const recon = useStore.getState().recon!;
+      const named = recon.geneTrees.flatMap((t) => t.nodes).find((g) => g.name);
+      expect(named).toBeDefined();
 
-    await act(async () => {
-      useStore.setState({ rightPanelOpen: true, rightPanelTab: "search" });
-    });
-    const host = document.createElement("div");
-    const root = await mount(host);
-    await act(async () => {
-      useStore.getState().setSearchQuery(named!.name!);
-    });
+      await act(async () => {
+        useStore.setState({ rightPanelOpen: true, rightPanelTab: "search" });
+      });
+      const host = document.createElement("div");
+      const root = await mount(host);
+      await act(async () => {
+        useStore.getState().setSearchQuery(named!.name!);
+      });
 
-    const row = host.querySelector(".rp-result-row");
-    expect(row).not.toBeNull();
-    expect(host.querySelector(".locate-layer")).toBeNull();
+      const row = host.querySelector(".rp-result-row");
+      expect(row).not.toBeNull();
+      expect(host.querySelector(".locate-layer")).toBeNull();
 
-    await act(async () => {
-      row!.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+      await act(async () => {
+        row!.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+      });
+      expect(host.querySelector(".locate-layer circle.locate-ring")).not.toBeNull();
+      await unmount(root, host);
     });
-    expect(host.querySelector(".locate-layer circle.locate-ring")).not.toBeNull();
-    await unmount(root, host);
   });
 
   it("draws the outline ring for the node a locate request targeted", async () => {
@@ -210,41 +226,43 @@ describe("settings is a menu-bar destination, not a View menu entry", () => {
 
 describe("QC report export", () => {
   it("writes rows for a document whose checks all pass", async () => {
-    await act(async () => loadNestedSample());
-    await act(async () => {
-      useStore.setState({ rightPanelOpen: true, rightPanelTab: "check" });
-    });
-    const host = document.createElement("div");
-    const root = await mount(host);
-
-    const captured: Blob[] = [];
-    const original = URL.createObjectURL;
-    URL.createObjectURL = ((blob: Blob) => {
-      captured.push(blob);
-      return "blob:captured";
-    }) as typeof URL.createObjectURL;
-    try {
-      const btn = Array.from(host.querySelectorAll("button")).find((b) =>
-        /质检报告|CSV|report/i.test(b.textContent ?? ""),
-      );
-      expect(btn).toBeDefined();
+    await withDesktopWidth(async () => {
+      await act(async () => loadNestedSample());
       await act(async () => {
-        btn!.click();
-        await new Promise((r) => setTimeout(r, 0));
+        useStore.setState({ rightPanelOpen: true, rightPanelTab: "check" });
       });
-    } finally {
-      URL.createObjectURL = original;
-    }
-    expect(captured).toHaveLength(1);
-    const csv = (await readBlob(captured[0])).replace(/^/, "");
-    const lines = csv.split("\n").filter(Boolean);
-    // The bug was a header-only file: a clean document exported nothing.
-    expect(lines.length).toBeGreaterThan(16);
-    expect(lines[0]).toBe("tree,level,code,count,examples,node_ids");
-    const trees = new Set(lines.slice(1).map((l) => l.split(",")[0]));
-    // Both reconciliation levels of the nested sample are represented.
-    expect(trees.size).toBeGreaterThanOrEqual(2);
-    await unmount(root, host);
+      const host = document.createElement("div");
+      const root = await mount(host);
+
+      const captured: Blob[] = [];
+      const original = URL.createObjectURL;
+      URL.createObjectURL = ((blob: Blob) => {
+        captured.push(blob);
+        return "blob:captured";
+      }) as typeof URL.createObjectURL;
+      try {
+        const btn = Array.from(host.querySelectorAll("button")).find((b) =>
+          /质检报告|CSV|report/i.test(b.textContent ?? ""),
+        );
+        expect(btn).toBeDefined();
+        await act(async () => {
+          btn!.click();
+          await new Promise((r) => setTimeout(r, 0));
+        });
+      } finally {
+        URL.createObjectURL = original;
+      }
+      expect(captured).toHaveLength(1);
+      const csv = (await readBlob(captured[0])).replace(/^/, "");
+      const lines = csv.split("\n").filter(Boolean);
+      // The bug was a header-only file: a clean document exported nothing.
+      expect(lines.length).toBeGreaterThan(16);
+      expect(lines[0]).toBe("tree,level,code,count,examples,node_ids");
+      const trees = new Set(lines.slice(1).map((l) => l.split(",")[0]));
+      // Both reconciliation levels of the nested sample are represented.
+      expect(trees.size).toBeGreaterThanOrEqual(2);
+      await unmount(root, host);
+    });
   });
 });
 
