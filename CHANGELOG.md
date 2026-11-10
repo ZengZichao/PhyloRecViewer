@@ -4,9 +4,8 @@ All notable changes to PhyloRecViewer are documented in this file. Released
 versions are archived on Zenodo: the **concept DOI**
 (`10.5281/zenodo.23053317`) always resolves to the newest deposit, and each
 archived version carries its own immutable **version DOI**: v0.1.0 is
-`10.5281/zenodo.23053318` and v0.1.2 is `10.5281/zenodo.23653805`. There is no
-archived v0.1.1 release. v0.2.0 is the current release; its version DOI is
-recorded below once the Zenodo deposit is published.
+`10.5281/zenodo.23053318`, v0.1.2 is `10.5281/zenodo.23653805` and v0.2.0 is
+`10.5281/zenodo.24108315`. There is no archived v0.1.1 release.
 
 ## [Unreleased]
 
@@ -150,9 +149,8 @@ Full report with evidence: `docs/UI-REVIEW-2026-11-06.md`.
 
 ## 0.2.0 (2026-11-10)
 
-Released as GitHub release v0.2.0. The Zenodo deposit is created by the
-release webhook; its immutable version DOI is recorded here once published
-(until then CITATION.cff cites the concept DOI).
+Released as GitHub release v0.2.0 and archived on Zenodo with version DOI
+`10.5281/zenodo.24108315`.
 
 A large review round: comparison, export, session/autosave and analysis
 behaviour were reworked, and the documentation was brought back in step with

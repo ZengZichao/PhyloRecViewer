@@ -126,13 +126,13 @@ src/
 
 If you use PhyloRecViewer in your research, please cite the current release:
 
-> Zeng, Z., & Wang, Y. (2026). *PhyloRecViewer* (v0.2.0) [Computer software]. Zenodo. https://doi.org/10.5281/zenodo.23053317
+> Zeng, Z., & Wang, Y. (2026). *PhyloRecViewer* (v0.2.0) [Computer software]. Zenodo. https://doi.org/10.5281/zenodo.24108315
 
-v0.2.0 was released on 2026-11-10. That DOI is the archive's **concept** DOI and
-resolves to the newest archived version. Each archived version also has its own
-immutable **version** DOI — v0.1.0 is `10.5281/zenodo.23053318` and v0.1.2 is
-`10.5281/zenodo.23653805`; there is no archived v0.1.1 release. The v0.2.0
-version DOI is recorded in `CHANGELOG.md` once its Zenodo deposit is published.
+v0.2.0 was released on 2026-11-10; `10.5281/zenodo.24108315` is its immutable
+**version** DOI. The archive's **concept** DOI,
+https://doi.org/10.5281/zenodo.23053317, always resolves to the newest archived
+version. Earlier version DOIs are v0.1.0 = `10.5281/zenodo.23053318` and
+v0.1.2 = `10.5281/zenodo.23653805`; there is no archived v0.1.1 release.
 
 The machine-readable form is [CITATION.cff](./CITATION.cff).
 

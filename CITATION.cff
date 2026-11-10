@@ -5,9 +5,8 @@
 #     version DOI 10.5281/zenodo.23053318;
 #   * v0.1.2 — GitHub release 2026-10-26; Zenodo record deposited 2026-10-26,
 #     version DOI 10.5281/zenodo.23653805;
-#   * v0.2.0 — GitHub release 2026-11-10; the Zenodo deposit is created by the
-#     release webhook. The version DOI is recorded in CHANGELOG.md once the
-#     deposit exists; this file cites the concept DOI until then.
+#   * v0.2.0 — GitHub release 2026-11-10; Zenodo record deposited 2026-11-10,
+#     version DOI 10.5281/zenodo.24108315.
 # The concept DOI 10.5281/zenodo.23053317 resolves to the newest archived
 # version. There is no archived v0.1.1 release. The initial source commit
 # a65c8f3 (the revision behind the first measurement tables) is preserved by
@@ -15,7 +14,7 @@
 cff-version: 1.2.0
 message: >-
   Please cite: Zeng, Z., & Wang, Y. (2026). PhyloRecViewer (v0.2.0)
-  [Computer software]. Zenodo. https://doi.org/10.5281/zenodo.23053317
+  [Computer software]. Zenodo. https://doi.org/10.5281/zenodo.24108315
 title: PhyloRecViewer
 abstract: "Offline, interactive recPhyloXML / NHX phylogenetic-reconciliation
   viewer: gene trees embedded in species tube-maps, three-level nesting,
@@ -31,11 +30,11 @@ authors:
     email: wyz@sjtu.edu.cn
     orcid: "https://orcid.org/0000-0001-8715-1386"
 repository-code: "https://github.com/ZengZichao/PhyloRecViewer"
-repository-artifact: "https://doi.org/10.5281/zenodo.23053317"
+repository-artifact: "https://doi.org/10.5281/zenodo.24108315"
 license: MIT
 version: "0.2.0"
 date-released: "2026-11-10"
-doi: "10.5281/zenodo.23053317"
+doi: "10.5281/zenodo.24108315"
 keywords:
   - phylogenetics
   - gene tree reconciliation
