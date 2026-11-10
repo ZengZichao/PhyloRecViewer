@@ -149,7 +149,7 @@ out of the installed tree at the versions the lockfile resolves to:
 | `jspdf` | 4.2.1 | MIT |
 | `svg2pdf.js` | 2.9.0 | MIT |
 | `d3-selection`, `d3-zoom` (and the `d3-*` closure) | 3.0.0 | ISC; one leaf, `d3-ease`, BSD-3-Clause |
-| `@tauri-apps/api` | 2.12.4 | Apache-2.0 OR MIT |
+| `@tauri-apps/api` | 2.11.1 | Apache-2.0 OR MIT |
 
 Two packages in that closure carry a **dual** licence, and the option taken is
 recorded here rather than left to the reader:

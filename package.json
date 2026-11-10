@@ -42,7 +42,7 @@
     "tauri": "tauri"
   },
   "dependencies": {
-    "@tauri-apps/api": "^2.12.4",
+    "@tauri-apps/api": "2.11.1",
     "d3-selection": "^3.0.0",
     "d3-zoom": "^3.0.0",
     "fast-xml-parser": "^5.11.2",

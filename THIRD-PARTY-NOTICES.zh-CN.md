@@ -121,7 +121,7 @@ XML 里加一段头注释，复核者所依赖的那两个数字就会失效。�
 | `jspdf` | 4.2.1 | MIT |
 | `svg2pdf.js` | 2.9.0 | MIT |
 | `d3-selection`、`d3-zoom`（含 `d3-*` 闭包） | 3.0.0 | ISC；其中 `d3-ease` 为 BSD-3-Clause |
-| `@tauri-apps/api` | 2.12.4 | Apache-2.0 OR MIT |
+| `@tauri-apps/api` | 2.11.1 | Apache-2.0 OR MIT |
 
 该依赖树中有两个包带**双重**许可证，本文件明确记录采用的是哪一选项，而不留给读者猜：
 
