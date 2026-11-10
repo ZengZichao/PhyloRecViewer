@@ -111,28 +111,27 @@ XML 里加一段头注释，复核者所依赖的那两个数字就会失效。�
 *源码*，而不是 `.dmg` / `.msi` / `.AppImage` 的内容。
 
 用已提交的 `package-lock.json` 与 `npm ls --prod --all --parseable` 统计，随附发布的
-运行时依赖树为 **57 个包**。直接从已安装树中读出的直接依赖（版本以锁文件解析结果为准）：
+运行时依赖树为 **56 个包**。直接从已安装树中读出的直接依赖（版本以锁文件解析结果为准）：
 
 | 包 | 解析版本 | 许可证 |
 |---|---|---|
 | `react`、`react-dom` | 18.3.1 | MIT |
 | `zustand` | 4.5.7 | MIT |
-| `fast-xml-parser`（含其 `strnum`） | 5.7.0 | MIT |
+| `fast-xml-parser`（含其 `strnum`） | 5.11.2 | MIT |
 | `jspdf` | 4.2.1 | MIT |
-| `svg2pdf.js` | 2.7.0 | MIT |
+| `svg2pdf.js` | 2.9.0 | MIT |
 | `d3-selection`、`d3-zoom`（含 `d3-*` 闭包） | 3.0.0 | ISC；其中 `d3-ease` 为 BSD-3-Clause |
-| `@tauri-apps/api` | 2.11.1 | Apache-2.0 OR MIT |
-| `@tauri-apps/plugin-dialog` | 2.7.2 | MIT OR Apache-2.0 |
+| `@tauri-apps/api` | 2.12.4 | Apache-2.0 OR MIT |
 
 该依赖树中有两个包带**双重**许可证，本文件明确记录采用的是哪一选项，而不留给读者猜：
 
-* `dompurify@3.4.16`（经 `jspdf`）——`(MPL-2.0 OR Apache-2.0)`，按 **Apache-2.0** 选项采用，
+* `dompurify@3.4.17`（经 `jspdf`）——`(MPL-2.0 OR Apache-2.0)`，按 **Apache-2.0** 选项采用，
   因此 MPL 的文件级条款不附加到发布物上；
 * `rgbcolor@1.0.1`（经 `canvg` ← `jspdf`）——`MIT OR SEE LICENSE IN FEEL-FREE.md`，
   按 **MIT** 选项采用。
 
 其余以 MIT 为主，其中 `pako@2.2.0` 为 `MIT AND Zlib`（两个条款都是宽松许可）。
-对所有已安装 `package.json`（333 个，`node_modules/**/package.json`）的许可证字段扫描
+对所有已安装 `package.json`（329 个，`npm ls --all --parseable`）的许可证字段扫描
 显示**没有 GPL / AGPL / LGPL / SSPL / EPL / CPOL / 非商业条款**；两个需要点名的条目只在
 构建期出现、不进入发布物——`caniuse-lite@1.0.30001806`（CC-BY-4.0，经 `browserslist`）
 与 `argparse@2.0.1`（Python-2.0，经 `js-yaml`）。复现扫描：

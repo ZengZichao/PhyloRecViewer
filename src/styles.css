@@ -2911,7 +2911,7 @@ margin: 0 2px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.anno-text {
+.anno-preview {
   font-size: 12px;
   color: var(--text-2);
   margin-top: 2px;

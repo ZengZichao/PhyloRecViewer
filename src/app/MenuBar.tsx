@@ -32,7 +32,7 @@ import { useStore } from "../state/store";
 import { restoreSessionData, sessionDataOfStore } from "../state/autosave";
 import { useGlobalShortcuts, isTextInput, useFocusTrap } from "./hooks";
 import { baseName } from "./export-names";
-import { APP_NAME, APP_VERSION } from "../version";
+import { APP_CITATION, APP_NAME, APP_VERSION } from "../version";
 
 /** Platform-aware modifier key label: "⌘" on macOS, "Ctrl" elsewhere. */
 const modKey = (() => {
@@ -1024,7 +1024,7 @@ export function MenuBar({
             <p>
               <strong>{t.aboutCitation}:</strong>
               <br />
-              Zeng, Z. (2026). {APP_NAME} (v{APP_VERSION}) [Computer software]. https://github.com/ZengZichao/PhyloRecViewer
+              {APP_CITATION}
             </p>
             <div className="multi-open-actions">
               <button

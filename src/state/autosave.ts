@@ -436,14 +436,6 @@ export function unrecoveredSnapshotText(): string | null {
   return readItem(UNRECOVERED_KEY);
 }
 
-/** Forget the module-level bookkeeping (signature cache, pin, notices). Used by
- *  tests and after a deliberate "start over"; it does not touch stored data. */
-export function resetAutosaveBookkeeping(): void {
-  lastSignature = "";
-  snapshotPinned = false;
-  unavailableNoted = false;
-}
-
 /** Tell the user, by name, that part (or all) of the crash snapshot is gone. */
 function reportRestoreFailure(names: string[], total: boolean): void {
   const zh = useStore.getState().locale === "zh";
@@ -622,7 +614,7 @@ export function restoreAutosave(): boolean {
   } catch (e) {
     console.warn("PhyloRecViewer: autosave restore crashed", e);
     quarantine(text);
-    reportRestoreFailure([friendlyParseError(e).split("\n")[0]], true);
+    reportRestoreFailure([friendlyParseError(e, useStore.getState().locale).split("\n")[0]], true);
     return false;
   }
 

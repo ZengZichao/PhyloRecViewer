@@ -3,6 +3,9 @@
 [English](./README.md) | **中文**
 
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.23053317.svg)](https://doi.org/10.5281/zenodo.23053317)
+[![CI](https://github.com/ZengZichao/PhyloRecViewer/actions/workflows/ci.yml/badge.svg)](https://github.com/ZengZichao/PhyloRecViewer/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![ORCID](https://img.shields.io/badge/ORCID-0000--0001--6553--970X-a6ce39?logo=orcid&logoColor=white)](https://orcid.org/0000-0001-6553-970X)
 
 美观、离线、交互式的 **recPhyloXML / NHX** 系统发育调和可视化工具。基于 Tauri v2（Rust + React 18 / TypeScript 严格模式）构建，采用纯函数式 SVG 渲染器。
 
@@ -71,7 +74,9 @@ npm run cli           # 无头导出（输入为保存的会话文件 .rpvsessio
 ```
 
 `npm run measure` 走一遍真实的解析器 → 布局 → 渲染器路径，把基准 CSV 写入 `_build/`
-（已被 git 忽略）。CI 在 Linux 上运行它，以免脚本悄悄腐坏。
+（已被 git 忽略）。CI 在 Linux 上运行它，以免脚本悄悄腐坏。手稿引用的冻结基准表位于
+`data/`；`scripts/aggregate-measurements.py` 可将多次运行折叠到该目录（或写入
+`_build/aggregates/` 进行非破坏性重放）。
 
 ## 使用方法
 
@@ -88,7 +93,7 @@ npm run cli           # 无头导出（输入为保存的会话文件 .rpvsessio
 
 ## 文档与社区
 
-所有文档均提供英文与中文两个版本，英文为主版本，`.zh-CN.md` 为其中文翻译并与英文版保持一致。
+所有面向用户的文档均提供英文与中文两个版本，英文为主版本，`.zh-CN.md` 为其中文翻译并与英文版保持一致。`docs/` 下的编辑说明（界面术语表、风格指南与带日期的 UI 审查）面向维护者，目前仅有中文。
 
 - [使用手册](./docs/USER_MANUAL.zh-CN.md) · [User manual](./docs/USER_MANUAL.md)
 - [贡献指南](./CONTRIBUTING.zh-CN.md) · [Contributing guide](./CONTRIBUTING.md)——开发环境、检查项与发布流程
@@ -113,13 +118,15 @@ src/
 
 ## 引用
 
-如果您在研究中使用 PhyloRecViewer，请引用已归档的发布版本：
+如果您在研究中使用 PhyloRecViewer，请引用最新归档版本：
 
-> Zeng, Z., & Wang, Y. (2026). *PhyloRecViewer* (v0.2.0) [Computer software]. Zenodo. https://doi.org/10.5281/zenodo.23053317
+> Zeng, Z., & Wang, Y. (2026). *PhyloRecViewer* (v0.1.2) [Computer software]. Zenodo. https://doi.org/10.5281/zenodo.23653805
 
-上面这个 DOI 是归档的**概念 DOI**：它始终解析到当前最新的已发布版本。每个已归档版本
-另有自己不可变的**版本 DOI**——v0.1.0 是 `10.5281/zenodo.23053318`——各版本对应的版本
-DOI 记录在 `CHANGELOG.md` 中。若您需要引用自己实际运行的那个快照，请引用版本 DOI。
+这是 v0.1.2（2026-10-26 发布）不可变的**版本 DOI**。归档的**概念 DOI**
+https://doi.org/10.5281/zenodo.23053317 始终解析到最新的归档版本。v0.1.0 的版本 DOI 是
+`10.5281/zenodo.23053318`；不存在已归档的 v0.1.1 版本。仓库工作树当前为 v0.2.0
+（尚未发布），因此 `package.json` 可能领先于最新归档版本；各版本及其 DOI 记录在
+`CHANGELOG.md` 中。
 
 机器可读版本见 [CITATION.cff](./CITATION.cff)。
 

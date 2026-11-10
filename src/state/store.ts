@@ -107,7 +107,6 @@ const HISTORY_LIMIT = 100;
 /** Shared open-size limit (bytes). The Tauri shell enforces the same value in
  *  lib.rs; the browser path enforces it here. */
 export const MAX_FILE_BYTES = 64 * 1024 * 1024;
-export const MAX_FILE_MIB = 64;
 
 /** How long a toast stays up, and how long a heavy task is willing to wait for
  *  an animation frame it may never get. */

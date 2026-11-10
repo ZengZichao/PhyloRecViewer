@@ -15,3 +15,7 @@
 *.ico binary
 *.woff binary
 *.woff2 binary
+
+# Frozen benchmark tables: their SHA-256 values are recorded in
+# data/MANIFEST.json, so git must treat them as binary and never rewrite bytes.
+data/*.csv binary

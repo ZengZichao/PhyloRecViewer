@@ -138,31 +138,30 @@ licence is Apache-2.0 or ISC in several places. "Released under the MIT license"
 therefore describes the *source*, not the contents of a `.dmg` / `.msi` / `.AppImage`.
 
 The runtime tree that ships, counted from the committed `package-lock.json` with
-`npm ls --prod --all --parseable`, is **57 packages**. The direct dependencies, read
+`npm ls --prod --all --parseable`, is **56 packages**. The direct dependencies, read
 out of the installed tree at the versions the lockfile resolves to:
 
 | Package | Resolved version | Licence |
 |---|---|---|
 | `react`, `react-dom` | 18.3.1 | MIT |
 | `zustand` | 4.5.7 | MIT |
-| `fast-xml-parser` (and its `strnum`) | 5.7.0 | MIT |
+| `fast-xml-parser` (and its `strnum`) | 5.11.2 | MIT |
 | `jspdf` | 4.2.1 | MIT |
-| `svg2pdf.js` | 2.7.0 | MIT |
+| `svg2pdf.js` | 2.9.0 | MIT |
 | `d3-selection`, `d3-zoom` (and the `d3-*` closure) | 3.0.0 | ISC; one leaf, `d3-ease`, BSD-3-Clause |
-| `@tauri-apps/api` | 2.11.1 | Apache-2.0 OR MIT |
-| `@tauri-apps/plugin-dialog` | 2.7.2 | MIT OR Apache-2.0 |
+| `@tauri-apps/api` | 2.12.4 | Apache-2.0 OR MIT |
 
 Two packages in that closure carry a **dual** licence, and the option taken is
 recorded here rather than left to the reader:
 
-* `dompurify@3.4.16` (via `jspdf`) — `(MPL-2.0 OR Apache-2.0)`, taken under the
+* `dompurify@3.4.17` (via `jspdf`) — `(MPL-2.0 OR Apache-2.0)`, taken under the
   **Apache-2.0** option, so no MPL file-level terms attach to the bundle;
 * `rgbcolor@1.0.1` (via `canvg` ← `jspdf`) — `MIT OR SEE LICENSE IN FEEL-FREE.md`,
   taken under the **MIT** option.
 
 The rest of the closure is MIT, with `pako@2.2.0` under `MIT AND Zlib` (both terms
 permissive). Scanning the licence field of every installed
-`package.json` (333 packages, `node_modules/**/package.json`) turns up **no
+`package.json` (329 packages, `npm ls --all --parseable`) turns up **no
 GPL / AGPL / LGPL / SSPL / EPL / CPOL / non-commercial term**; the two terms worth
 naming are build-time only and never enter the bundle — `caniuse-lite@1.0.30001806`
 (CC-BY-4.0, via `browserslist`) and `argparse@2.0.1` (Python-2.0, via `js-yaml`). Re-run either

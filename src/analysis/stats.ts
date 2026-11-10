@@ -254,14 +254,6 @@ export function computeStats(recon: Reconciliation): ReconStats {
   return { total, families, transferMatrix, perSpecies, nodes, leafCount, lossCount, internalCount, unassigned };
 }
 
-/** Max non-loss node count across species (scales the stats table's density
- *  column only; the copy-number heatmap scales by layout `laneCount`). */
-export function maxCopies(stats: ReconStats): number {
-  let m = 0;
-  for (const s of stats.perSpecies) m = Math.max(m, s.copies);
-  return m;
-}
-
 function csvCell(v: string | number): string {
   let s = String(v);
   // Neutralize CSV formula / DDE injection: a cell beginning with a formula

@@ -1,19 +1,24 @@
 # Citation metadata for PhyloRecViewer (Citation CFF 1.2.0).
 #
-# The three dates that exist for this software, stated once so they no longer
-# have to be guessed from different places:
-#   * the source revision behind the first archive (commit a65c8f3, tag v0.1.0)
-#     was published as a GitHub release on 2026-09-29 (published_at
-#     2026-09-29T14:45:25Z);
-#   * the Zenodo record archiving that tag carries publication_date 2026-09-30,
-#     i.e. the day the *record* was deposited (version DOI 10.5281/zenodo.23053318)
-#     — the archive, not the commit, sets that date;
-#   * `date-released` below is the release date of the version THIS FILE SHIPS IN,
-#     which is the only date a reader of the repository needs.
+# The archived releases and their immutable version DOIs:
+#   * v0.1.0 — GitHub release 2026-09-29; Zenodo record deposited 2026-09-30,
+#     version DOI 10.5281/zenodo.23053318;
+#   * v0.1.2 — GitHub release 2026-10-26; Zenodo record deposited 2026-10-26,
+#     version DOI 10.5281/zenodo.23653805.
+# The concept DOI 10.5281/zenodo.23053317 resolves to the newest archived
+# version (currently v0.1.2). There is no archived v0.1.1 release. The initial
+# source commit a65c8f3 (the revision behind the first measurement tables) is
+# preserved by the archive/initial-commit tag; the public v0.1.0 tag points to
+# dd0d0b1.
+#
+# The repository working tree can be ahead of the archive: package.json is
+# 0.2.0 (unreleased). This file describes the latest archived release so that
+# a citation always resolves to a real DOI. When 0.2.0 is archived, update
+# `version`, `date-released` and the DOI fields here together with the release.
 cff-version: 1.2.0
 message: >-
-  Please cite: Zeng, Z., & Wang, Y. (2026). PhyloRecViewer (v0.2.0)
-  [Computer software]. Zenodo. https://doi.org/10.5281/zenodo.23053317
+  Please cite: Zeng, Z., & Wang, Y. (2026). PhyloRecViewer (v0.1.2)
+  [Computer software]. Zenodo. https://doi.org/10.5281/zenodo.23653805
 title: PhyloRecViewer
 abstract: "Offline, interactive recPhyloXML / NHX phylogenetic-reconciliation
   viewer: gene trees embedded in species tube-maps, three-level nesting,
@@ -29,17 +34,11 @@ authors:
     email: wyz@sjtu.edu.cn
     orcid: "https://orcid.org/0000-0001-8715-1386"
 repository-code: "https://github.com/ZengZichao/PhyloRecViewer"
-# The concept DOI is version-agnostic: it resolves to the newest published version
-# of the archive (checked 2026-10-08: 302 from doi.org, landing HTTP 200 on
-# https://zenodo.org/records/23053318, which is v0.1.0 until a newer version is
-# published). Every archived version also has its own immutable version DOI,
-# recorded in CHANGELOG.md; cite the version DOI when a specific snapshot matters
-# and this concept DOI when "the latest release" is what you used.
-repository-artifact: "https://doi.org/10.5281/zenodo.23053317"
+repository-artifact: "https://doi.org/10.5281/zenodo.23653805"
 license: MIT
-version: "0.2.0"
-date-released: "2026-11-01"
-doi: "10.5281/zenodo.23053317"
+version: "0.1.2"
+date-released: "2026-10-26"
+doi: "10.5281/zenodo.23653805"
 keywords:
   - phylogenetics
   - gene tree reconciliation
@@ -58,6 +57,6 @@ preferred-citation:
       family-names: Wang
       orcid: "https://orcid.org/0000-0001-8715-1386"
   repository-code: "https://github.com/ZengZichao/PhyloRecViewer"
-  version: "0.2.0"
-  date-released: "2026-11-01"
+  version: "0.1.2"
+  date-released: "2026-10-26"
   license: MIT

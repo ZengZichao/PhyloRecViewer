@@ -29,7 +29,8 @@ places:
 
 | Version | Supported |
 |---|---|
-| 0.1.x (current) | ✅ |
+| 0.2.x (development) | ✅ |
+| 0.1.x (archived releases) | ✅ |
 
 The project is maintained by a single maintainer rather than by a company, so
 fixes are published as ordinary releases. There is no back-port guarantee once

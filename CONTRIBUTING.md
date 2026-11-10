@@ -6,7 +6,7 @@ Thank you for your interest in contributing to PhyloRecViewer! This document des
 
 ## Prerequisites
 
-- **Node.js** 20+ and npm 9+ (`engines` in `package.json`; CI pins Node 20). The
+- **Node.js** 20+ and npm 9+ (`engines` in `package.json`; CI pins Node 22). The
   lockfile is `lockfileVersion: 3` and `packageManager` pins the npm 10 line that
   maintains it — with Corepack enabled (`corepack enable`) you get that version
   automatically; any npm 9+ also reads the lockfile fine.
@@ -71,18 +71,23 @@ src/
 ├── export/        | SVG / PNG / PDF / HTML / NHX exporters
 ├── state/         | Zustand store, autosave, session, prefs
 ├── platform/      | Tauri desktop bridge (file open/save, fs)
-├── samples/       # Bundled example reconciliations (four menu entries)
+├── samples/       # Bundled example reconciliations (three menu entries)
 ├── i18n.ts        # zh/en dictionary (compile-time type-checked)
 ├── session.ts     # Session file serialization (current schema version lives here)
 └── styles.css     # Global CSS (TRAE Minimalist design system)
 src-tauri/
 └── src/           # Rust shell (file association, dialogs, atomic save)
+data/              # frozen benchmark tables and MANIFEST.json (v0.1.0 measurement)
 scripts/
 ├── measure.ts                  # parse / layout / render benchmarks -> _build/*.csv
+├── aggregate-measurements.py   # fold benchmark runs into data/ or _build/aggregates
 └── check-tracked-files.mjs     # repo self-consistency guard (npm run check:tracked)
+docs/coverage-v0.1.2.json       # frozen v0.1.2 coverage summary cited by the manuscript
 .github/workflows/
 ├── ci.yml         # lint / typecheck / test / build on Ubuntu + macOS + Windows
-└── release.yml    # installers: draft release on a v* tag, artifacts on a manual run
+├── release.yml    # installers: draft release on a v* tag, artifacts on a manual run
+├── codeql.yml     # CodeQL for JavaScript/TypeScript and Rust
+└── pages.yml      # GitHub Pages deployment of the web build
 tsconfig.json      # solution file (references app / node / test projects)
 tsconfig.app.json  # src/ for the browser build
 tsconfig.node.json # vite.config.ts + scripts/ (also what `tsc -b` checks the scripts with)
@@ -137,7 +142,7 @@ suite, so CI reports green while testing less than the repository appears to.
 `npm run check:tracked` (`scripts/check-tracked-files.mjs`) catches that whole
 class: it resolves every relative import in tracked source, checks the
 test/source files git reports as untracked, and verifies relative links inside
-tracked Markdown. CI runs it in every job, and also **builds a
+tracked Markdown. CI runs it in the `web` job, and also **builds a
 tracked-files-only export of the commit** so a regression cannot slip through.
 
 To get the same check locally before you commit:
@@ -226,7 +231,7 @@ from there.
   so they are a deliberate, separate piece of work rather than a config edit. Do
   not describe the codebase as "fully strict" in documentation.
 - **Immutable model**: `Reconciliation`, `Positions`, and `LayoutResult` are never mutated. New state produces new objects.
-- **No hardcoded UI strings in components**: all user-facing text in `src/app/`, `src/state/` and `src/export/` goes through `src/i18n.ts`, and the `Dict` interface enforces compile-time completeness for both `zh` and `en`. Two exceptions are known: the bundled sample titles in `src/samples/index.ts` are Chinese constants that reach the menu and the export file names, and the parse-failure text in `friendlyParseError` is English-only.
+- **No hardcoded UI strings in components**: all user-facing text in `src/app/`, `src/state/` and `src/export/` goes through `src/i18n.ts`, and the `Dict` interface enforces compile-time completeness for both `zh` and `en`. The known exceptions are the About-dialog citation constant in `src/version.ts` (author names and a DOI are language-neutral) and parser diagnostics, which are translated through `i18nDiagnostics.ts`.
 - **Single store**: all application state lives in one Zustand store (`src/state/store.ts`). The store layer should not import from `app/` or contain i18n strings.
 - **Session file trust boundary**: all options read from session files or prefs must pass through `sanitizeLayoutOptions` / `sanitizeRenderOptions` before reaching the layout/render engine.
 - **Session schema version**: `CURRENT_SESSION_VERSION` in `src/session.ts` is the
@@ -262,8 +267,10 @@ refactor: extract slider component into shared controls
 Releases are built by CI; nothing has to be compiled or uploaded by hand.
 
 1. Land the change on `main` with the version set consistently in
-   `package.json`, `src-tauri/tauri.conf.json`, `src-tauri/Cargo.toml`,
-   `CITATION.cff` and the version line in both manuals.
+   `package.json`, `src/version.ts`, `src-tauri/tauri.conf.json`,
+   `src-tauri/Cargo.toml` and the version line in both manuals. `CITATION.cff`
+   describes the latest archived release and is updated with its version DOI
+   only after the deposit exists (the working tree may be ahead of it).
 2. Tag and push:
    ```bash
    git tag -a vX.Y.Z -m "PhyloRecViewer vX.Y.Z"

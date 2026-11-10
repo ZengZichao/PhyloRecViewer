@@ -77,7 +77,9 @@ npm run cli           # headless export from a saved session (.rpvsession.json):
 
 `npm run measure` exercises the real parser → layout → renderer path and writes
 benchmark CSVs into `_build/` (git-ignored). CI runs it on Linux so the script
-cannot rot silently.
+cannot rot silently. The frozen benchmark tables the manuscript cites are under
+`data/`; `scripts/aggregate-measurements.py` folds repeated runs into that
+directory (or into `_build/aggregates/` for a non-destructive replay).
 
 ## Usage
 
@@ -94,8 +96,10 @@ See the [full user manual (English)](./docs/USER_MANUAL.md) or [详细使用手�
 
 ## Documentation & community
 
-Every document ships in English and in Chinese. The English file is the primary
-one; the `.zh-CN.md` file is its translation and is kept in step with it.
+Every user-facing document ships in English and in Chinese. The English file is
+the primary one; the `.zh-CN.md` file is its translation and is kept in step
+with it. Editorial notes under `docs/` (UI glossary, style guide and dated UI
+review) are maintainer-facing and currently Chinese-only.
 
 - [User manual](./docs/USER_MANUAL.md) · [使用手册](./docs/USER_MANUAL.zh-CN.md)
 - [Contributing guide](./CONTRIBUTING.md) · [贡献指南](./CONTRIBUTING.zh-CN.md) — toolchain, checks, release process
@@ -120,15 +124,16 @@ src/
 
 ## Citation
 
-If you use PhyloRecViewer in your research, please cite the archived release:
+If you use PhyloRecViewer in your research, please cite the latest archived release:
 
-> Zeng, Z., & Wang, Y. (2026). *PhyloRecViewer* (v0.2.0) [Computer software]. Zenodo. https://doi.org/10.5281/zenodo.23053317
+> Zeng, Z., & Wang, Y. (2026). *PhyloRecViewer* (v0.1.2) [Computer software]. Zenodo. https://doi.org/10.5281/zenodo.23653805
 
-That DOI is the archive's **concept** DOI: it resolves to whichever version of the
-deposit is current. Each archived version also has its own immutable **version**
-DOI — v0.1.0 is `10.5281/zenodo.23053318` — and the version DOI that belongs to
-each release is recorded in `CHANGELOG.md`. Cite the version DOI when a specific
-snapshot is what you ran.
+That is the immutable **version DOI** for v0.1.2 (released 2026-10-26). The
+archive's **concept** DOI, https://doi.org/10.5281/zenodo.23053317, always resolves
+to the newest archived version. v0.1.0 is `10.5281/zenodo.23053318`; there is no
+archived v0.1.1 release. The repository working tree is at v0.2.0 (unreleased), so
+`package.json` can be ahead of the latest archived version; `CHANGELOG.md` records
+each release and its DOI.
 
 The machine-readable form is [CITATION.cff](./CITATION.cff).
 

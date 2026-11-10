@@ -61,10 +61,9 @@ export default defineConfig({
     // default report also sweeps in unrelated generated .js assets.
     // `npm run coverage` is the entry point (see package.json) — the reporters
     // give a console summary for local runs plus html/lcov for CI artifacts.
-    // coverage-summary.json is tracked because the documentation cites it; the
-    // html/lcov renderings beside it are regenerated on every run and stay
-    // ignored (see .gitignore). `json-summary` is what the CI step reads to
-    // publish that report as a build artifact.
+    // The generated coverage/ directory is git-ignored; the frozen summary the
+    // manuscript cites lives under docs/coverage-v0.1.2.json. CI uploads
+    // coverage/ as a build artifact.
     coverage: {
       provider: "v8",
       reporter: ["text", "text-summary", "html", "lcov", "json-summary"],

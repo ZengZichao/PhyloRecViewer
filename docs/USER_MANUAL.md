@@ -2,7 +2,7 @@
 
 **English** | [中文](./USER_MANUAL.zh-CN.md)
 
-> **Applicable version**: v0.2.0
+> **Applicable version**: v0.2.0 (working tree; latest archived release is v0.1.2)
 > **Purpose**: An offline, interactive desktop viewer for recPhyloXML / NHX gene–species reconciliations
 > **Platforms**: macOS / Windows / Linux desktop (Tauri 2), plus a browser build (Web Build)
 > **Application identifier**: `org.recphyloxml.viz`
@@ -79,9 +79,9 @@ PhyloRecViewer is an **interactive gene–species reconciliation viewer** for ev
 - Statistics (with CSV export), transfer-network diagram, sixteen structural data-consistency checks (every check is listed in [Section 7.4](#74-data-checks))
 - Batch label renaming and per-node annotations (with a dedicated annotations mode)
 - Undo / redo (100 steps), session save/load, multiple document tabs
-- One-click export to PNG (600–4800 DPI selectable) / SVG / PDF / interactive HTML / NHX; the headless CLI additionally exports a lossless recPhyloXML round-trip (see [Section 9.2](#92-data))
+- One-click export to PNG (Screen 2× / 300 / 600 / 1200 / 2400 / 4800 DPI or custom) / SVG / PDF / interactive HTML / NHX; the headless CLI additionally exports a lossless recPhyloXML round-trip (see [Section 9.2](#92-data))
 - Bilingual UI (中文 / English) with light / dark / system themes
-- Four bundled samples: showcase reconciliation, all-event-types sample, nested gene/symbiont/host view, comparison demo (see [Section 4.5](#45-loading-bundled-samples))
+- Three bundled samples: showcase reconciliation, nested gene/symbiont/host view, comparison demo (see [Section 4.5](#45-loading-bundled-samples))
 
 ### 1.2 Quick start
 
@@ -211,7 +211,7 @@ The desktop build registers file associations for `.recphyloxml` / `.recphylo` a
 
 ### 4.5 Loading bundled samples
 
-**File → Open session… sample…** offers the bundled samples (each menu label describes the events the sample shows and follows the UI language):
+**File → Samples** offers the bundled samples (each menu label describes the events the sample shows and follows the UI language):
 
 | Sample | Description |
 |--------|-------------|
@@ -727,7 +727,7 @@ Closing a tab with unsaved annotations / swaps / colours asks for confirmation (
 ## 18. Known limitations
 
 - **No XSD validation**: recPhyloXML files are parsed structurally, not validated against the official schema; the data checks (7.4) catch common mistakes but are not a schema validator.
-- **Parser diagnostics are English-only**, regardless of the UI language.
+- **Parser diagnostics are English canonical strings**: the UI translates the messages it knows through `i18nDiagnostics.ts`; a message without a translation is shown in English.
 - **Zoom / pan camera is not saved**: neither sessions nor the autosave store each canvas's zoom/pan state; restored views re-fit to the content.
 - **PDF font embedding depends on the environment**: the PDF is vector, with text embedded using the fonts available to the converter; the full-page raster fallback kicks in only when the converter errors.
 - **The headless CLI (`npm run cli`) exports SVG / HTML / recPhyloXML / NHX and JSON stats + checks, but no PNG** (rasterization needs a browser canvas).

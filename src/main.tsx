@@ -68,7 +68,7 @@ startAutosave();
 const reportAsyncError = (e: unknown): void => {
   console.error("PhyloRecViewer: unhandled error", e);
   if (useStore.getState().error) return; // only the first, most relevant cause is shown
-  useStore.setState({ error: friendlyParseError(e) });
+  useStore.setState({ error: friendlyParseError(e, useStore.getState().locale) });
 };
 window.addEventListener("error", (ev) => {
   if (ev.error) reportAsyncError(ev.error);

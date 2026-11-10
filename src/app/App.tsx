@@ -13,7 +13,7 @@ import { agreementPct, speciesAgreementPct, computeDiff } from "../analysis/comp
 import { desktopTakePendingFiles, onDesktopOpenFile, onDesktopOpenFailed } from "../platform/desktop";
 import { themes } from "../render/theme";
 import { useStore, type ToastData } from "../state/store";
-import { loadPrefs, savePrefs } from "../state/prefs";
+import { isOnboarded, loadPrefs, savePrefs } from "../state/prefs";
 import { restoreAutosave, clearAutosaveSnapshot } from "../state/autosave";
 import { samples } from "../samples";
 import { Canvas, type ViewSync } from "./Canvas";
@@ -420,12 +420,8 @@ export function App() {
   // First-run tour: shown ONCE automatically (skippable) so a new user ever
   // sees it; afterwards it is opt-in from Help / Preferences.
   useEffect(() => {
-    try {
-      if (localStorage.getItem("rpv.onboarded") !== "1") {
-        setOnboardVisible(true);
-      }
-    } catch {
-      // ignore
+    if (!isOnboarded()) {
+      setOnboardVisible(true);
     }
     const onReplay = () => setOnboardVisible(true);
     document.addEventListener("rpv:replay-tour", onReplay);

@@ -6,7 +6,7 @@
 
 ## 前置条件
 
-- **Node.js** 20+ 与 npm 9+（`package.json` 中的 `engines`；CI 锁定 Node 20）。锁文件是
+- **Node.js** 20+ 与 npm 9+（`package.json` 中的 `engines`；CI 锁定 Node 22）。锁文件是
   `lockfileVersion: 3`，`packageManager` 则锁定维护该锁文件的 npm 10 版本线——启用
   Corepack（`corepack enable`）后会自动使用那个版本；任何 npm 9+ 也都能正常读取锁文件。
 - **Rust** 工具链 1.77+（用于 Tauri 桌面壳）
@@ -67,18 +67,23 @@ src/
 ├── export/        | SVG / PNG / PDF / HTML / NHX 导出器
 ├── state/         | Zustand store、自动保存、会话、偏好设置
 ├── platform/      | Tauri 桌面桥接（文件打开/保存、fs）
-├── samples/       # 随附示例调和（四个菜单项）
+├── samples/       # 随附示例调和（三个菜单项）
 ├── i18n.ts        # 中英词典（编译期类型检查）
 ├── session.ts     # 会话文件序列化（当前 schema 版本定义于此）
 └── styles.css     # 全局 CSS（TRAE Minimalist 设计系统）
 src-tauri/
 └── src/           # Rust 桌面壳（文件关联、对话框、原子保存）
+data/              # 冻结的基准表与 MANIFEST.json（v0.1.0 测量）
 scripts/
 ├── measure.ts                  # 解析 / 布局 / 渲染基准 -> _build/*.csv
+├── aggregate-measurements.py   # 将多次基准运行折叠到 data/ 或 _build/aggregates
 └── check-tracked-files.mjs     # 仓库自洽性守卫（npm run check:tracked）
+docs/coverage-v0.1.2.json       # 手稿引用的 v0.1.2 覆盖率冻结摘要
 .github/workflows/
 ├── ci.yml         # lint / typecheck / test / build，覆盖 Ubuntu + macOS + Windows
-└── release.yml    # 安装包：在 v* 标签上创建草稿发布，手动运行时产出工作流构件
+├── release.yml    # 安装包：在 v* 标签上创建草稿发布，手动运行时产出工作流构件
+├── codeql.yml     # JavaScript/TypeScript 与 Rust 的 CodeQL 扫描
+└── pages.yml      # 网页版的 GitHub Pages 部署
 tsconfig.json      # solution 文件（引用 app / node / test 三个项目）
 tsconfig.app.json  # 面向浏览器构建的 src/
 tsconfig.node.json # vite.config.ts + scripts/（`tsc -b` 检查脚本时用的也是它）
@@ -130,7 +135,7 @@ hooks/refresh 插件）是唯一的风格工具，因此 `npm run lint:fix` 就�
 
 `npm run check:tracked`（`scripts/check-tracked-files.mjs`）捕获这一整类问题：它解析被
 跟踪源码里的每一个相对导入，检查 git 报告为未跟踪的测试/源文件，并校验被跟踪 Markdown
-中的相对链接。CI 在每个 job 里都运行它，并且会**构建仅含被跟踪文件的 commit 导出**，
+中的相对链接。CI 在 `web` job 中运行它，并且会**构建仅含被跟踪文件的 commit 导出**，
 所以回归无法蒙混过关。
 
 要在提交之前于本地得到同样的检查：
@@ -208,7 +213,7 @@ npm run coverage    # + 覆盖率报告（控制台摘要、html、lcov）
 
 - **TypeScript 严格模式**：每个文件都做类型检查；`noUnusedLocals` 已开启。`noUncheckedIndexedAccess` 与 `exactOptionalPropertyTypes` **未**开启：目前打开其中任一个都会在 `src/` 各处报出数十条新诊断，所以它们是一件有意独立安排的工作，而不是改一次配置的事。不要在文档中把代码库描述为"完全严格"。
 - **不可变模型**：`Reconciliation`、`Positions` 和 `LayoutResult` 永不就地修改。新状态产生新对象。
-- **组件中不写硬编码 UI 字符串**：`src/app/`、`src/state/` 和 `src/export/` 中所有面向用户的文本都经由 `src/i18n.ts`，且 `Dict` 接口强制 `zh` 与 `en` 在编译期完整。已知两处例外：`src/samples/index.ts` 中的随附示例标题是中文常量，会进入菜单和导出文件名；`friendlyParseError` 中的解析失败文案仅有英文。
+- **组件中不写硬编码 UI 字符串**：`src/app/`、`src/state/` 和 `src/export/` 中所有面向用户的文本都经由 `src/i18n.ts`，且 `Dict` 接口强制 `zh` 与 `en` 在编译期完整。已知例外是 `src/version.ts` 中 About 对话框的引用常量（作者名与 DOI 与语言无关），以及解析器诊断消息——后者经 `i18nDiagnostics.ts` 翻译。
 - **单一 store**：全部应用状态都存放在一个 Zustand store（`src/state/store.ts`）中。store 层不应从 `app/` 导入，也不应包含 i18n 字符串。
 - **会话文件信任边界**：从会话文件或偏好设置中读入的所有选项，在到达布局/渲染引擎之前必须经过 `sanitizeLayoutOptions` / `sanitizeRenderOptions`。
 - **会话 schema 版本**：`src/session.ts` 中的 `CURRENT_SESSION_VERSION` 是唯一事实
@@ -240,8 +245,10 @@ refactor: extract slider component into shared controls
 
 发布由 CI 构建；没有任何东西需要手工编译或上传。
 
-1. 让改动带着一致的版本落到 `main`：`package.json`、`src-tauri/tauri.conf.json`、
-   `src-tauri/Cargo.toml`、`CITATION.cff`，以及两份手册中的版本行。
+1. 让改动带着一致的版本落到 `main`：`package.json`、`src/version.ts`、
+   `src-tauri/tauri.conf.json`、`src-tauri/Cargo.toml`，以及两份手册中的版本行。
+   `CITATION.cff` 描述最新归档版本，只有归档完成并取得版本 DOI 后才更新
+   （工作树版本可以领先于归档版本）。
 2. 打标签并推送：
    ```bash
    git tag -a vX.Y.Z -m "PhyloRecViewer vX.Y.Z"

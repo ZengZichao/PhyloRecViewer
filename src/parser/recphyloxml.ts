@@ -653,11 +653,3 @@ function buildGeneNode(
   }
   return node;
 }
-
-/** Utility: resolve the species node a gene node lives in (or null). */
-export function hostSpecies(
-  gene: GeneNode,
-  species: SpeciesTree,
-): SpeciesNode | null {
-  return species.byName.get(gene.speciesId) ?? null;
-}

@@ -4,7 +4,7 @@
  * ignores them and falls back to standard browser file I/O.
  *
  * Security note: the open/save dialogs are run *by the Rust shell* here, not by
- * `@tauri-apps/plugin-dialog` in this window. That is deliberate: the Rust file
+ * the dialog plugin's JavaScript API in this window. That is deliberate: the Rust file
  * commands accept only paths a native dialog issued during this session, so a
  * script injected into the webview cannot aim the reader/writer at an arbitrary
  * file. Were the dialog to run here and only the read/write happen in Rust, the

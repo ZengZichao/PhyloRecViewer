@@ -1056,7 +1056,7 @@ function AnnotationsTab() {
               {nameOf.get(id) ?? id}
               <span className="ni-pane"> · {paneLabel(id)}</span>
             </div>
-            <div className="anno-text">{ann.text}</div>
+            <div className="anno-preview">{ann.text}</div>
           </button>
           <button
             className="btn ghost anno-btn"
