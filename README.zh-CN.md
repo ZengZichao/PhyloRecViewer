@@ -118,15 +118,14 @@ src/
 
 ## 引用
 
-如果您在研究中使用 PhyloRecViewer，请引用最新归档版本：
+如果您在研究中使用 PhyloRecViewer，请引用当前发布版本：
 
-> Zeng, Z., & Wang, Y. (2026). *PhyloRecViewer* (v0.1.2) [Computer software]. Zenodo. https://doi.org/10.5281/zenodo.23653805
+> Zeng, Z., & Wang, Y. (2026). *PhyloRecViewer* (v0.2.0) [Computer software]. Zenodo. https://doi.org/10.5281/zenodo.23053317
 
-这是 v0.1.2（2026-10-26 发布）不可变的**版本 DOI**。归档的**概念 DOI**
-https://doi.org/10.5281/zenodo.23053317 始终解析到最新的归档版本。v0.1.0 的版本 DOI 是
-`10.5281/zenodo.23053318`；不存在已归档的 v0.1.1 版本。仓库工作树当前为 v0.2.0
-（尚未发布），因此 `package.json` 可能领先于最新归档版本；各版本及其 DOI 记录在
-`CHANGELOG.md` 中。
+v0.2.0 于 2026-11-10 发布。上面这个 DOI 是归档的**概念 DOI**，始终解析到最新的归档版本。
+每个已归档版本另有自己不可变的**版本 DOI**——v0.1.0 是 `10.5281/zenodo.23053318`，
+v0.1.2 是 `10.5281/zenodo.23653805`；不存在已归档的 v0.1.1 版本。v0.2.0 的版本 DOI
+将在其 Zenodo 存档发布后记录到 `CHANGELOG.md`。
 
 机器可读版本见 [CITATION.cff](./CITATION.cff)。
 

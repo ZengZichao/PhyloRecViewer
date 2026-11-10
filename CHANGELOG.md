@@ -5,7 +5,8 @@ versions are archived on Zenodo: the **concept DOI**
 (`10.5281/zenodo.23053317`) always resolves to the newest deposit, and each
 archived version carries its own immutable **version DOI**: v0.1.0 is
 `10.5281/zenodo.23053318` and v0.1.2 is `10.5281/zenodo.23653805`. There is no
-archived v0.1.1 release; v0.2.0 below is the current unreleased working tree.
+archived v0.1.1 release. v0.2.0 is the current release; its version DOI is
+recorded below once the Zenodo deposit is published.
 
 ## [Unreleased]
 
@@ -147,10 +148,11 @@ Full report with evidence: `docs/UI-REVIEW-2026-11-06.md`.
   stays inside its host species tube (the property the tube-routing fix
   `7f645f8` introduced is preserved).
 
-## 0.2.0 (unreleased)
+## 0.2.0 (2026-11-10)
 
-The working tree declares 0.2.0, but no v0.2.0 tag or GitHub/Zenodo release
-exists yet; CITATION.cff therefore still cites the latest archive (v0.1.2).
+Released as GitHub release v0.2.0. The Zenodo deposit is created by the
+release webhook; its immutable version DOI is recorded here once published
+(until then CITATION.cff cites the concept DOI).
 
 A large review round: comparison, export, session/autosave and analysis
 behaviour were reworked, and the documentation was brought back in step with
@@ -316,9 +318,8 @@ the code.
   support, support values, statistics/CSV format, sixteen data checks, format
   table (plain PhyloXML removed), default language, drag & drop tab claim, and
   a new "Known limitations" section.
-- README (English and 中文) updated to v0.2.0 (working tree); `CITATION.cff`
-  kept on the latest archived release (v0.1.2, DOI
-  `10.5281/zenodo.23653805`) until 0.2.0 is deposited. This changelog created.
+- README (English and 中文) and `CITATION.cff` updated to v0.2.0
+  (2026-11-10); this changelog created.
 
 ## 0.1.2 (2026-10-26)
 

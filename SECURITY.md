@@ -29,7 +29,7 @@ places:
 
 | Version | Supported |
 |---|---|
-| 0.2.x (development) | ✅ |
+| 0.2.x (current) | ✅ |
 | 0.1.x (archived releases) | ✅ |
 
 The project is maintained by a single maintainer rather than by a company, so
