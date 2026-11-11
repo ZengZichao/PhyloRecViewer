@@ -83,7 +83,7 @@ a version is superseded.
 * Vulnerabilities in upstream libraries (`fast-xml-parser`, `jspdf`,
   `svg2pdf.js`, Tauri, …) — report them upstream and in a normal issue so this
   project can pin a fixed version; Tauri itself has its own
-  [security policy](https://www.tauri.app).
+  [security policy](https://v2.tauri.app/security/).
 * Findings produced by automated scanners without a concrete reproducible case.
 
 ## Hardening already in place (for reference)

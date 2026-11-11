@@ -4,11 +4,11 @@
 
 ## PhyloRecViewer 是什么，以及这意味着什么
 
-PhyloRecViewer 是一款**离线**桌面查看器（Tauri v2），同时提供 Web 构建版本，用于查看基因－物种调和（reconciliation）文件（recPhyloXML、NHX / Newick）。它没有服务器、没有账号、没有遥测，运行时不发起任何网络请求；`src-tauri/tauri.conf.json` 中的 Content Security Policy（内容安全策略，CSP）把 `connect-src` 限制为本地 IPC 端点。因此安全风险集中在以下三处：
+PhyloRecViewer 是一款**离线**桌面查看器（Tauri v2），同时提供 Web 构建版本，用于查看基因－物种调和（reconciliation）文件（recPhyloXML、NHX / Newick）。它没有服务器、没有账号、没有遥测，运行时不发起任何网络请求；`src-tauri/tauri.conf.json` 中的 Content Security Policy（内容安全策略，CSP）把 `connect-src` 限制为本地 IPC 端点。因此安全风险面（security surface）集中在以下三处：
 
 1. **解析不可信输入。** 格式错误或恶意的 `.recphyloxml` / `.xml` / `.nhx` / `.nwk` / `.newick` 文件，或恶意的 `.rpvsession.json` 会话文件，都是攻击者可控的数据，会进入解析器、布局流水线（layout pipeline）和 `localStorage`。
-2. **导出。** 导出的交互式 HTML 与 SVG 文档会在别处被打开（浏览器、图像查看器、编辑排版软件），因此输入文档中的文件名、基因／物种标签与标注不得变成输出文档中的可执行内容。
-3. **原生桥接层。** webview（桌面壳内承载前端的 Web 视图）被刻意**不**授予任何 `fs:*` capability（文件系统能力）；文件读写都要经过应用自身的 Rust 命令，即 `src-tauri/src/lib.rs`，路径校验逻辑就在其中。任何削弱"用户在原生对话框中选择的路径"与"由 Web 内容提供的路径"之间边界的做法，都属于安全缺陷。
+2. **导出。** 导出的交互式 HTML 与 SVG 文档会在别处被打开（浏览器、图像查看器、编辑排版软件），因此输入文档中的文件名、基因 / 物种标签与批注不得变成输出文档中的可执行内容。
+3. **原生桥接层。** webview（桌面壳内承载前端的 Web 视图）被刻意**不**授予任何 `fs:*` capability（文件系统能力）；文件读写都要经过应用自身的 Rust 命令，即 `src-tauri/src/lib.rs`，路径校验逻辑就在其中。任何削弱「用户在原生对话框中选择的路径」与「由 Web 内容提供的路径」之间边界的做法，都属于安全缺陷。
 
 ## 受支持的版本
 
@@ -47,15 +47,15 @@ PhyloRecViewer 是一款**离线**桌面查看器（Tauri v2），同时提供 W
 
 **不在范围内**
 
-* 加载体量极大但格式良好的文件所造成的拒绝服务（denial of service）：PhyloRecViewer 是供用户查看自己数据的桌面查看器，"喂给它一棵超大树时机器变慢"是性能反馈，而不是漏洞。（但*导致未保存会话丢失的崩溃*仍然值得报告。）
+* 加载体量极大但格式良好的文件所造成的拒绝服务（denial of service）：PhyloRecViewer 是供用户查看自己数据的桌面查看器，「喂给它一棵超大树时机器变慢」是性能反馈，而不是漏洞。（但*导致未保存会话丢失的崩溃*仍然值得报告。）
 * 需要物理接触机器，或在已被攻陷的浏览器配置文件中读取用户 `localStorage` / 会话文件的攻击。
-* 上游库（`fast-xml-parser`、`jspdf`、`svg2pdf.js`、Tauri 等）中的漏洞——请向上游报告，并在本仓库同时开一个普通 issue，以便本项目锁定（pin）修复版本；Tauri 自身另有[安全策略](https://www.tauri.app)。
+* 上游库（`fast-xml-parser`、`jspdf`、`svg2pdf.js`、Tauri 等）中的漏洞——请向上游报告，并在本仓库同时开一个普通 issue，以便本项目锁定（pin）修复版本；Tauri 自身另有[安全策略](https://v2.tauri.app/security/)。
 * 由自动化扫描工具产生、却没有具体可复现用例的发现。
 
 ## 已具备的加固措施（供参考）
 
 * webview 未被授予 `fs:*` capability；对话框由 Rust 侧处理。
-* 严格的 CSP（Content Security Policy），并设置 `object-src 'none'`、`base-uri 'none'`、`frame-ancestors 'none'`。
+* 严格的 CSP，并设置 `object-src 'none'`、`base-uri 'none'`、`frame-ancestors 'none'`。
 * 打包产物中不包含生产环境的 source map。
 * 原子保存（先写入临时文件，再重命名），使被中断的导出不会留下写了一半的文件。
 * 会话 / 自动保存的输入在选项抵达布局与渲染引擎之前，会先经过取值钳制与净化（`sanitizeLayoutOptions`、`sanitizeRenderOptions`）。

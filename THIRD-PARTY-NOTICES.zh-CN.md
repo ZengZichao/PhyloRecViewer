@@ -2,15 +2,15 @@
 
 [English](./THIRD-PARTY-NOTICES.md) | **中文**
 
-本文件说明 MIT [LICENSE](./LICENSE) **不**覆盖的内容：
+本文件涵盖的内容，以及 MIT [LICENSE](./LICENSE) **不**覆盖的部分：
 
 1. 随源码归档再分发的一个第三方**数据**文件，其上游仓库未声明任何许可证（§1）；
-2. 应用链接的第三方**代码**，以及为什么"以 MIT 许可证发布"并不足以描述一个安装器的
+2. 应用链接的第三方**代码**，以及为什么「以 MIT 许可证发布」并不足以描述一个安装器的
    构成（§2）；
 3. 属于作者自己的随附数据，明确列出以示不在讨论范围（§3）；
 4. 影响再分发的未决事项（§4）。
 
-以下所有结论都可用给出的命令复现。字节数与哈希是直接引用的实测值，因为它们是任何人
+以下所有结论都可用给出的命令复现。字节数与哈希系直接引用而非断言：它们是任何人
 无需征求许可即可核对的锚点。
 
 ---
@@ -24,7 +24,7 @@
 显示的数字就是对这个文件调用 `computeStats()` 的输出）。它是我们在源码树中识别出的唯一
 非作者产出的**数据**文件，也是本文件存在的原因。仍有一处出处问题需由作者确认：
 `src-tauri/icons/` 中的图标集与 Tauri 脚手架一同进入初始提交，提交历史无法区分它是
-作者自绘还是脚手架自带的占位图标；若属后者，其自身的许可条款同样应当并入本文件。
+作者自绘还是脚手架自带的占位图标；若属后者，其自身的许可条款同样适用，并应并入本文件。
 
 ### 1.2 出处与可供第三方固定的锚点
 
@@ -32,7 +32,7 @@
 |---|---|
 | 上游仓库 | <https://github.com/WandrilleD/recPhyloXML>（Duchemin 等，2018；recPhyloXML 项目） |
 | 上游路径 | `testFiles/9999.nhx.xml` |
-| 上游提交锚点（默认分支 `master` 的 HEAD） | `8c6b2849e219923b9e5da21df4483466724b09c2`——作者时间 2021-01-08T08:27:44Z，提交信息 *"python converter from NOTUNG to xml : proper handling of events following a transferBack"*；仓库 `pushed_at` 2021-01-08T08:28:09Z |
+| 上游提交锚点（默认分支 `master` 的 HEAD） | `8c6b2849e219923b9e5da21df4483466724b09c2`——作者时间 2021-01-08T08:27:44Z，提交信息 *「python converter from NOTUNG to xml : proper handling of events following a transferBack」*；仓库 `pushed_at` 2021-01-08T08:28:09Z |
 | 上游 git blob id | `93e85800837ccd02277421090efc668110e629fb` |
 | 上游文件 | **22,307 字节**，SHA-256 `972579ea48696152c8b0d2ca7b49ab0c707bbef73b9924b8271b1051fe2063a8` |
 | 本仓库归档副本 | **22,321 字节**，SHA-256 `fd7ebfc5190268d45cda867440c31d4ca6fdd8f40d672cb186f8d0d8d9ecde34` |
@@ -88,11 +88,11 @@ XML 里加一段头注释，复核者所依赖的那两个数字就会失效。�
 * 上游仓库**完全没有声明许可证**：GitHub API 返回 `license: null`，且上述提交下的仓库
   根目录只有 `README.md cpp python python3 recPhyloXML-Bioinformatics.pdf testFiles xsd`，
   没有 `LICENSE`、`COPYING` 或任何等价文件。recPhyloXML 的论文与项目页面分发这些测试
-  文件，但"分发"不等于"授权他人再分发"。
+  文件，但「分发」不等于「授权他人再分发」。
 * **正在向权利持有人申请授权**（Wandrille Duchemin 与 recPhyloXML 项目作者），请求允许
   在本仓库的 MIT 许可证下再分发该文件并注明出处。在该授权正式存档之前，本仓库
-  的 MIT 许可证不覆盖 §1 这个文件，任何"本仓库全部材料均已在许可下公开可得"的说法都会
-  强于已知事实。本文件就是记录这个缺口的位置。
+  的 MIT 许可证不覆盖 §1 这个文件，任何「本仓库全部材料均已在许可下公开可得」的说法都会
+  夸大现状。本文件就是记录这个缺口的位置。
 * **备选方案**（若授权未获批准）：以许可证清晰的等价文件替换该夹具——要么由作者生成一份
   合成 NHX/PhyloXML 调和结果（`scripts/measure.ts` 里已有用固定种子确定性生成合成调和树
   的做法），要么改用明确声明了数据许可证的来源。替换件必须保持 §1.2 记录的量
@@ -107,7 +107,7 @@ XML 里加一段头注释，复核者所依赖的那两个数字就会失效。�
 ## 2. 第三方代码，以及安装器的实际构成
 
 应用自身的代码以 MIT 许可证写作，但编译出的二进制并不只含本仓库的代码：它静态链接了一
-整个依赖树，其中若干组件的许可证是 Apache-2.0 或 ISC。因此"以 MIT 许可证发布"描述的是
+整个依赖树，其中若干组件的许可证是 Apache-2.0 或 ISC。因此「以 MIT 许可证发布」描述的是
 *源码*，而不是 `.dmg` / `.msi` / `.AppImage` 的内容。
 
 用已提交的 `package-lock.json` 与 `npm ls --prod --all --parseable` 统计，随附发布的
@@ -149,7 +149,7 @@ crates.io 索引，无法只靠已提交内容离线生成。分发二进制前�
 
 在 Linux 上，桌面版还会链接系统的 WebKitGTK / GTK / GLib 栈。这些由发行版本身提供
 （GNU LGPL 以及 BSD/MIT 类条款），不由本仓库再分发，也正是文档把 Linux 前提写成
-"WebKitGTK 4.1+"而不是"自带运行时"的原因。
+「WebKitGTK 4.1+」而不是「自带运行时」的原因。
 
 ---
 
@@ -160,8 +160,8 @@ crates.io 索引，无法只靠已提交内容离线生成。分发二进制前�
 * `src/samples/` 下的五份演示调和结果（`showcase`、三层演示的
   `nested-*` 一对，以及 `compare-tool-a` / `compare-tool-b` 一对）；
 * `src/parser/__fixtures__/conformant-minimal.recphyloxml`（2,380 字节），其自带的头部
-  注释就说明这是一份手写的、严格符合模式的最小文档，用于钉住解析器读取
-  recGeneTreeXML / recSpeciesTreeXML 一致方言的方式。
+  注释就说明这是一份手写的、符合模式的最小文档，用于钉住解析器读取
+  该一致方言的方式。
 
 ---
 

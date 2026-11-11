@@ -14,7 +14,7 @@ Beautiful, offline, interactive **recPhyloXML / NHX** phylogenetic-reconciliatio
 - **Format support**: recPhyloXML and NHX/Newick parsing (probed by content; unknown input falls back to recPhyloXML), multi-file merge. NHX import reconstructs the species tree from `S=` annotations — reliable for self-contained files, but horizontal transfers that are unmarked in the input cannot be distinguished, so prefer recPhyloXML for results that contain HGT
 - **Visualization**: species + gene-tree reconciliation drawing, four orientations, tidy/rectangular layouts
 - **Nested view**: three-level nesting (gene → symbiont → host), plus a compare view whose panes stack vertically by default with a side-by-side toggle
-- **Analysis**: search / filter / statistics / consistency checks, transfer network
+- **Analysis**: search / filter / statistics / data checks, transfer network
 - **Export**: SVG / PNG / PDF / interactive HTML / NHX; session save & restore with workspace-wide autosave across all open tabs. The headless CLI additionally exports **recPhyloXML** — the fully lossless, self-describing round-trip. NHX is an extended dialect: it now carries every transfer arrival, timeSlice, confidence, support and branch lengths, but still loses the species tree itself, species branch lengths, gene-tree names and species never sampled by any gene tree
 - **Platform**: bilingual (中文 / English), light & dark themes; runs fully offline
 - **Open source**: MIT license; installers for macOS, Windows, and Linux
@@ -89,7 +89,7 @@ directory (or into `_build/aggregates/` for a non-destructive replay).
    not reconciliations and are refused) or a `.nhx` / `.nwk` / `.newick` gene
    tree via **File → Open**, drag & drop, or OS file association.
 3. Use the left panel to adjust layout, style, and labels.
-4. Use the right panel for search, statistics, transfer network, and consistency checks.
+4. Use the right panel for search, statistics, transfer network, and data checks.
 5. Export to SVG / PNG / PDF / HTML via the **Export** menu.
 
 See the [full user manual (English)](./docs/USER_MANUAL.md) or [详细使用手册 (中文)](./docs/USER_MANUAL.zh-CN.md) for detailed instructions.

@@ -67,7 +67,7 @@ src/
 ├── layout/        # Six-pass layout pipeline (species/gene/transfers/…)
 ├── model/         | Immutable reconciliation model (Reconciliation, GeneNode, …)
 ├── parser/        # recPhyloXML / NHX / Newick parsers
-├── analysis/      | Focus matches, stats, consistency checks, diff
+├── analysis/      | Focus matches, stats, data checks, diff
 ├── export/        | SVG / PNG / PDF / HTML / NHX exporters
 ├── state/         | Zustand store, autosave, session, prefs
 ├── platform/      | Tauri desktop bridge (file open/save, fs)

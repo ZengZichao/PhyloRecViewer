@@ -12,7 +12,7 @@
 - **Rust** 工具链 1.77+（用于 Tauri 桌面壳）
 - **macOS**：Xcode Command Line Tools
 - **Linux**：`libwebkit2gtk-4.1-dev`（WebKitGTK 4.1）以及其他 Tauri 系统库（参见
-  [Tauri prerequisites](https://v2.tauri.app/start/prerequisites/)）
+  [Tauri 前置条件](https://v2.tauri.app/start/prerequisites/)）
 - **Windows**：Microsoft C++ Build Tools
 
 ## CI 运行哪些检查
@@ -23,7 +23,7 @@ Windows 上运行：
 | Job | 做的事情 |
 |---|---|
 | `web`（3 系统矩阵） | 三套系统上都执行 `npm ci` → `check:tracked` → `lint`（`--max-warnings 0`）→ `typecheck` → `test` → `build`；`coverage` 与 `npm run measure` 仅在 Linux 执行；`npm run preview` 冒烟测试在 Linux 和 macOS 执行（`windows-latest` 不在此列） |
-| `tracked-only-build` | 从 commit 中**只导出 git 跟踪的文件**到一个干净目录，把 `node_modules` 链接进去，然后在那里运行 `npm run build`、`npm run typecheck`、`npm test`——因此"被跟踪的文件引入了一个未跟踪的文件"不可能通过 CI |
+| `tracked-only-build` | 从 commit 中**只导出 git 跟踪的文件**到一个干净目录，把 `node_modules` 链接进去，然后在那里运行 `npm run build`、`npm run typecheck`、`npm test`——因此「被跟踪的文件引入了一个未跟踪的文件」不可能通过 CI |
 | `rust`（Ubuntu + macOS） | 针对 Tauri 桌面壳执行 `cargo fmt --all -- --check`、`cargo check --all-targets`、`cargo test --all-targets`、`cargo clippy --all-targets -- -D warnings`，在 Ubuntu 和 macOS 上 |
 
 发布打包（三个平台的安装包）是另一个独立的工作流——见[版本发布](#版本发布)。
@@ -31,7 +31,7 @@ Windows 上运行：
 ## 快速开始
 
 ```bash
-git clone <仓库 URL>
+git clone <repository-url>
 cd PhyloRecViewer
 npm install
 npm run tauri dev   # 以开发模式启动桌面应用
@@ -42,7 +42,7 @@ npm run tauri dev   # 以开发模式启动桌面应用
 ```bash
 npm run dev         # http://localhost:5173
 npm run build       # 生产构建包 -> dist/
-npm run preview     # 以 http://localhost:4173 伺服 dist/
+npm run preview     # 在 http://localhost:4173 本地预览 dist/
 ```
 
 `npm run preview` 是在浏览器中查看生产构建包的唯一受支持方式：构建包以
@@ -63,11 +63,11 @@ src/
 ├── layout/        # 六步布局流水线（物种/基因/转移/……）
 ├── model/         | 不可变调和模型（Reconciliation、GeneNode、……）
 ├── parser/        # recPhyloXML / NHX / Newick 解析器
-├── analysis/      | 聚焦匹配、统计、一致性检查、差异
+├── analysis/      | 聚焦匹配、统计、数据检查、差异
 ├── export/        | SVG / PNG / PDF / HTML / NHX 导出器
 ├── state/         | Zustand store、自动保存、会话、偏好设置
 ├── platform/      | Tauri 桌面桥接（文件打开/保存、fs）
-├── samples/       # 随附示例调和（三个菜单项）
+├── samples/       # 随附示例调和结果（三个菜单项）
 ├── i18n.ts        # 中英词典（编译期类型检查）
 ├── session.ts     # 会话文件序列化（当前 schema 版本定义于此）
 └── styles.css     # 全局 CSS（TRAE Minimalist 设计系统）
@@ -183,8 +183,8 @@ npm run coverage    # + 覆盖率报告（控制台摘要、html、lcov）
 不要在文档或提交信息里引用测试数量：它一天之内就会过期。运行 `npm test`，读 Vitest 打印
 的摘要。
 
-新增功能时，请添加对应的测试。优先领域：
-- 解析器边界情况（畸形 XML、深树、空文件、recPhyloXML 的 XSD 所允许的"属性 vs 元素"
+新增功能时，请添加对应的测试。重点覆盖领域：
+- 解析器边界情况（畸形 XML、深树、空文件、recPhyloXML 的 XSD 所允许的「属性 vs 元素」
   两种写法）
 - 状态转换（载入/卸载、撤销/重做、标签页切换）
 - 会话往返（序列化 → 解析 → 恢复）
@@ -200,24 +200,24 @@ npm run coverage    # + 覆盖率报告（控制台摘要、html、lcov）
 顺序一致、表格一致。GitHub 会把英文文件识别为仓库的社区文档，因此新文件沿用 `.zh-CN.md`
 后缀约定，而不是移入 `docs/`。
 
-有三处刻意保持单语言：`LICENSE` 原样收录 MIT 许可文本，因为译文并不承载相同的法律措辞；
+有三个文件刻意保持单语言：`LICENSE` 原样收录 MIT 许可文本，因为译文并不承载相同的法律措辞；
 `CITATION.cff` 是机器可读的记录而非叙述性正文；`.github/` 下的 GitHub 表单
 （`PULL_REQUEST_TEMPLATE.md`、`ISSUE_TEMPLATE/*`）只有一份英文来源，因为 GitHub 对每种
 表单只解析一个文件。
 
 手册描述的是代码，因此写作前先对照源码校验。当某个数字很可能变动时，优先描述行为而非
-魔法数字（例如"面板会列出它运行的每一项结构检查"，而不是"六项检查"）：必须精确的计数
+魔法数字（例如「面板会列出它运行的每一项结构检查」，而不是「六项检查」）：必须精确的计数
 ——会话 schema 版本、DPI 档位——归属 `src/`，并从中引用。
 
 ### 代码规范
 
-- **TypeScript 严格模式**：每个文件都做类型检查；`noUnusedLocals` 已开启。`noUncheckedIndexedAccess` 与 `exactOptionalPropertyTypes` **未**开启：目前打开其中任一个都会在 `src/` 各处报出数十条新诊断，所以它们是一件有意独立安排的工作，而不是改一次配置的事。不要在文档中把代码库描述为"完全严格"。
+- **TypeScript 严格模式**：每个文件都做类型检查；`noUnusedLocals` 已开启。`noUncheckedIndexedAccess` 与 `exactOptionalPropertyTypes` **未**开启：目前打开其中任一个都会在 `src/` 各处报出数十条新诊断，所以它们是一件有意独立安排的工作，而不是改一次配置的事。不要在文档中把代码库描述为「完全严格」。
 - **不可变模型**：`Reconciliation`、`Positions` 和 `LayoutResult` 永不就地修改。新状态产生新对象。
 - **组件中不写硬编码 UI 字符串**：`src/app/`、`src/state/` 和 `src/export/` 中所有面向用户的文本都经由 `src/i18n.ts`，且 `Dict` 接口强制 `zh` 与 `en` 在编译期完整。已知例外是 `src/version.ts` 中 About 对话框的引用常量（作者名与 DOI 与语言无关），以及解析器诊断消息——后者经 `i18nDiagnostics.ts` 翻译。
 - **单一 store**：全部应用状态都存放在一个 Zustand store（`src/state/store.ts`）中。store 层不应从 `app/` 导入，也不应包含 i18n 字符串。
 - **会话文件信任边界**：从会话文件或偏好设置中读入的所有选项，在到达布局/渲染引擎之前必须经过 `sanitizeLayoutOptions` / `sanitizeRenderOptions`。
 - **会话 schema 版本**：`src/session.ts` 中的 `CURRENT_SESSION_VERSION` 是唯一事实
-  来源。仅当持久化的结构发生变化时才递增它，并让两份用户手册里的"会话包含什么"清单与
+  来源。仅当持久化的结构发生变化时才递增它，并让两份用户手册里的「会话包含什么」清单与
   版本说明和代码保持同步（手册引用该数值；别处不定义它）。
 
 ### 提交信息
@@ -254,8 +254,8 @@ refactor: extract slider component into shared controls
    git tag -a vX.Y.Z -m "PhyloRecViewer vX.Y.Z"
    git push origin vX.Y.Z
    ```
-3. `.github/workflows/release.yml` 构建 macOS / Windows / Linux 安装包，并创建一个附带
-   bundles 的 **草稿** GitHub Release。安装包未签名：macOS 用户需放行一次（右键 →
+3. `.github/workflows/release.yml` 构建 macOS / Windows / Linux 安装包，并创建一个附带安装包的
+   **草稿** GitHub Release。安装包未签名：macOS 用户需放行一次（右键 →
    打开），Linux 的 `.AppImage` 需要 `chmod +x`。
 4. 检查草稿——在它面向的每个平台上打开每个安装包，载入一个示例和一个真实文件，导出
    PNG/SVG/PDF/HTML/NHX，保存并重新载入会话——然后发布它。
