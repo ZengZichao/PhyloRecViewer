@@ -5,7 +5,7 @@
 What this file covers, and what the MIT [LICENSE](./LICENSE) does *not* cover:
 
 1. one third-party **data** file that is redistributed inside the source archive,
-   whose upstream repository declares no licence (§1);
+   whose upstream repository declares no license (§1);
 2. the third-party **code** the application links, and why "released under the MIT
    license" is not a complete description of an installer (§2);
 3. the bundled data that is the authors' own, so it is visibly not at issue (§3);
@@ -29,7 +29,7 @@ output). It is the only non-author-made
 exists. One provenance question stays open and is the authors' to close: the icon set
 in `src-tauri/icons/` entered the repository together with the initial Tauri
 scaffold, so nothing in the history distinguishes author-made artwork from the
-scaffold's placeholder icons; if they are the scaffold defaults, their own licence
+scaffold's placeholder icons; if they are the scaffold defaults, their own license
 terms apply and belong in this file too.
 
 ### 1.2 Provenance, with anchors a third party can fix
@@ -98,9 +98,9 @@ SHA-256 are quoted in the provenance table above, so adding a header comment to 
 XML would break the numbers anyone re-checking them relies on. Provenance therefore
 lives here.
 
-### 1.4 Licence status, and the two ways it will be closed out
+### 1.4 License status, and the two ways it will be closed out
 
-* The upstream repository **declares no licence at all**: the GitHub API returns
+* The upstream repository **declares no license at all**: the GitHub API returns
   `license: null`, and the repository root at the commit above contains
   `README.md cpp python python3 recPhyloXML-Bioinformatics.pdf testFiles xsd` —
   no `LICENSE`, `COPYING` or equivalent. The recPhyloXML article and the project
@@ -108,16 +108,16 @@ lives here.
   licensing their redistribution.
 * **Permission is being requested** from the rights holders (Wandrille Duchemin and
   the recPhyloXML project authors) for redistribution of this file under the MIT
-  licence of this repository, with attribution. Until that permission is on file,
-  this repository's MIT licence does not cover §1's
+  license of this repository, with attribution. Until that permission is on file,
+  this repository's MIT license does not cover §1's
   file, and any statement that *all* material in this repository is freely
-  available under a licence would overstate the position. This file is the place
+  available under a license would overstate the position. This file is the place
   that gap is recorded.
 * **Fallback plan**, if permission is not granted: replace the fixture with a
-  licence-clear equivalent — either a synthetic NHX/PhyloXML reconciliation generated
+  license-clear equivalent — either a synthetic NHX/PhyloXML reconciliation generated
   by the authors (the recipe already exists in `scripts/measure.ts`, which emits
   deterministic synthetic reconciliations from a fixed seed), or a file from a
-  source that does declare a data licence. The replacement must preserve the
+  source that does declare a data license. The replacement must preserve the
   quantities recorded in §1.2 (63 species leaves, 125 species
   clades, one gene family, 23 gene nodes, 12 gene leaves, no transfer events) and
   reproduce the statistics card, and the new size, SHA-256 and provenance
@@ -132,16 +132,16 @@ lives here.
 
 ## 2. Third-party code, and what an installer is made of
 
-The application's own code is written under the MIT licence, but a built binary is
+The application's own code is written under the MIT license, but a built binary is
 not only this repository's code: it statically links a dependency tree whose
-licence is Apache-2.0 or ISC in several places. "Released under the MIT license"
+license is Apache-2.0 or ISC in several places. "Released under the MIT license"
 therefore describes the *source*, not the contents of a `.dmg` / `.msi` / `.AppImage`.
 
 The runtime tree that ships, counted from the committed `package-lock.json` with
 `npm ls --prod --all --parseable`, is **56 packages**. The direct dependencies, read
 out of the installed tree at the versions the lockfile resolves to:
 
-| Package | Resolved version | Licence |
+| Package | Resolved version | License |
 |---|---|---|
 | `react`, `react-dom` | 18.3.1 | MIT |
 | `zustand` | 4.5.7 | MIT |
@@ -151,7 +151,7 @@ out of the installed tree at the versions the lockfile resolves to:
 | `d3-selection`, `d3-zoom` (and the `d3-*` closure) | 3.0.0 | ISC; one leaf, `d3-ease`, BSD-3-Clause |
 | `@tauri-apps/api` | 2.11.1 | Apache-2.0 OR MIT |
 
-Two packages in that closure carry a **dual** licence, and the option taken is
+Two packages in that closure carry a **dual** license, and the option taken is
 recorded here rather than left to the reader:
 
 * `dompurify@3.4.17` (via `jspdf`) — `(MPL-2.0 OR Apache-2.0)`, taken under the
@@ -160,7 +160,7 @@ recorded here rather than left to the reader:
   taken under the **MIT** option.
 
 The rest of the closure is MIT, with `pako@2.2.0` under `MIT AND Zlib` (both terms
-permissive). Scanning the licence field of every installed
+permissive). Scanning the license field of every installed
 `package.json` (329 packages, `npm ls --all --parseable`) turns up **no
 GPL / AGPL / LGPL / SSPL / EPL / CPOL / non-commercial term**; the two terms worth
 naming are build-time only and never enter the bundle — `caniuse-lite@1.0.30001806`
@@ -169,12 +169,12 @@ scan with:
 
 ```bash
 npm ls --prod --all --parseable | sed 's#.*/node_modules/##' | sort -u   # the shipped closure
-npx --yes license-checker --production --summary                          # same, with licence strings
+npx --yes license-checker --production --summary                          # same, with license strings
 ```
 
 **Not verified here, and tracked as an open item:** the Rust side. `src-tauri/Cargo.lock`
-pins 433 `[[package]]` entries, but a Cargo lockfile records no licence field, so a
-crate-licence report needs the crates.io index and cannot be produced offline from
+pins 433 `[[package]]` entries, but a Cargo lockfile records no license field, so a
+crate-license report needs the crates.io index and cannot be produced offline from
 what is committed. Generate it before distribution with
 `cargo install cargo-about` and `cargo about generate <template.hbs>`; Tauri's own
 build output can embed the resulting notice file.
@@ -189,7 +189,7 @@ is "WebKitGTK 4.1+" rather than a bundled runtime.
 ## 3. Bundled data that is the authors' own
 
 No third-party claim attaches to any of these; they are written by the authors and
-are covered by the MIT licence with the rest of the repository:
+are covered by the MIT license with the rest of the repository:
 
 * the five demonstration reconciliations in `src/samples/`
   (`showcase`, the two `nested-*` levels of the 3-level demo, and the
@@ -205,7 +205,7 @@ are covered by the MIT licence with the rest of the repository:
 | # | Item | Status | Where it is tracked |
 |---|---|---|---|
 | 1 | Written permission to redistribute `9999.nhx.xml` (§1.4) | requested, not yet on file | this file |
-| 2 | Replace the fixture with a licence-clear equivalent if permission is refused | plan recorded, not started | §1.4 |
-| 3 | A generated crate-by-crate licence report for the 433 entries in `src-tauri/Cargo.lock` (§2) — not derivable offline | open; needed before binaries are distributed | §2 |
+| 2 | Replace the fixture with a license-clear equivalent if permission is refused | plan recorded, not started | §1.4 |
+| 3 | A generated crate-by-crate license report for the 433 entries in `src-tauri/Cargo.lock` (§2) — not derivable offline | open; needed before binaries are distributed | §2 |
 
 *Last reviewed 2026-10-19.*

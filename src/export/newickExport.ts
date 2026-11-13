@@ -64,7 +64,7 @@ function nodeToNhx(node: GeneNode): string {
   if (type === "loss") tags.push("L=Y");
   if (type === "branchingOut") tags.push("BO=Y");
   if (type === "bifurcationOut") tags.push("BC=Y");
-  // Every arrival gets its own tag: TB= carries the first, TB2..TB9 the rest,
+  // Every arrival gets its own tag: TB= carries the first, TB2, TB3, … the rest,
   // so a node with multiple transfer arrivals round-trips one-for-one. Donor
   // and recipient are encoded SEPARATELY and joined with a bare `|`, so a
   // species value containing a pipe cannot corrupt the donor/recipient split.

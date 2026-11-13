@@ -231,7 +231,7 @@ from there.
   so they are a deliberate, separate piece of work rather than a config edit. Do
   not describe the codebase as "fully strict" in documentation.
 - **Immutable model**: `Reconciliation`, `Positions`, and `LayoutResult` are never mutated. New state produces new objects.
-- **No hardcoded UI strings in components**: all user-facing text in `src/app/`, `src/state/` and `src/export/` goes through `src/i18n.ts`, and the `Dict` interface enforces compile-time completeness for both `zh` and `en`. The known exceptions are the About-dialog citation constant in `src/version.ts` (author names and a DOI are language-neutral) and parser diagnostics, which are translated through `i18nDiagnostics.ts`.
+- **No hardcoded UI strings in components**: all user-facing text in `src/app/`, `src/state/`, `src/export/` and `src/platform/` goes through `src/i18n.ts`, and the `Dict` interface enforces compile-time completeness for both `zh` and `en`. The known exceptions are the About-dialog citation constant in `src/version.ts` (author names and a DOI are language-neutral) and parser diagnostics, which are translated through `i18nDiagnostics.ts`.
 - **Single store**: all application state lives in one Zustand store (`src/state/store.ts`). The store layer should not import from `app/` or contain i18n strings.
 - **Session file trust boundary**: all options read from session files or prefs must pass through `sanitizeLayoutOptions` / `sanitizeRenderOptions` before reaching the layout/render engine.
 - **Session schema version**: `CURRENT_SESSION_VERSION` in `src/session.ts` is the

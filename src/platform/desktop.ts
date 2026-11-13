@@ -11,8 +11,12 @@
  * path would still be attacker-supplied and the capability model
  * (`capabilities/default.json` grants no `fs:*` permission) would be moot. The
  * accepted consequence is that the list of accepted file extensions lives in
- * exactly one place — `OPEN_EXTENSIONS` in `src-tauri/src/lib.rs`.
+ * exactly one place — `OPEN_EXTENSIONS` in `src-tauri/src/lib.rs`. The labels
+ * the dialog shows for those filters, on the other hand, are handed over per
+ * call: they are copy, and the OS draws them in the language the app is in.
  */
+
+import { currentDict } from "../i18n";
 
 interface TauriWindow {
   __TAURI_INTERNALS__?: unknown;
@@ -63,6 +67,7 @@ async function openViaDialog(multiple: boolean): Promise<RustOpenResult> {
   const { invoke } = await import("@tauri-apps/api/core");
   const res = await invoke<Partial<RustOpenResult> | null>("open_text_files", {
     multi: multiple,
+    filterLabel: currentDict().filterAllTrees,
   });
   return { files: res?.files ?? [], failed: res?.failed ?? [] };
 }
@@ -113,6 +118,7 @@ export async function desktopSaveText(
     defaultName,
     ext,
     contents: content,
+    fileLabel: currentDict().filterAnyFile,
   });
 }
 
@@ -132,6 +138,7 @@ export async function desktopSaveBinary(
     ext,
     // Tauri deserializes a `Vec<u8>` from a plain number array.
     data: Array.from(data),
+    fileLabel: currentDict().filterAnyFile,
   });
 }
 

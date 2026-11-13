@@ -188,6 +188,58 @@ describe("the transfer-excluded note only fires when transfers exist", () => {
   });
 });
 
+describe("numbered transfer arrivals", () => {
+  // The exporter numbers every arrival a node carries, so a node with twelve of
+  // them arrives here as TB= plus TB2= through TB12=. Reading the whole
+  // numbering - in numeric order, and without reporting the numbered tags as
+  // keys this reader does not interpret - is what lets such a node round-trip.
+  const donorOf = (arrival: number): string => (arrival === 10 ? "B" : "A");
+  const tags = Array.from({ length: 12 }, (_, i) =>
+    i === 0 ? `TB=${donorOf(1)}|R` : `TB${i + 1}=${donorOf(i + 1)}|R`,
+  ).join(":");
+  const TWELVE =
+    `((A[&&NHX:S=A],B[&&NHX:S=B][&&NHX:${tags}])R[&&NHX:S=R])root[&&NHX:S=root];`;
+
+  const arrivalsOf = (r: Reconciliation): RecEvent[] =>
+    r.geneTrees[0].nodes
+      .find((n) => n.name === "B")!
+      .events.filter((e) => e.type === "transferBack");
+
+  it("models every arrival, past the ninth", () => {
+    const recon = parseNhxReconciliation(TWELVE);
+    expect(arrivalsOf(recon)).toHaveLength(12);
+    expect(recon.warnings.some((w) => w.includes("does not interpret"))).toBe(false);
+  });
+
+  it("orders the arrivals by the number, not by the key text", () => {
+    // `TB10` is the TENTH arrival. Sorting the keys as text would put it second.
+    const recon = parseNhxReconciliation(TWELVE);
+    expect(arrivalsOf(recon).map((e) => e.speciesLocation)).toEqual(
+      Array.from({ length: 12 }, (_, i) => donorOf(i + 1)),
+    );
+  });
+
+  it("round-trips all twelve through the exporter", () => {
+    const recon = parseNhxReconciliation(TWELVE);
+    const again = parseNhxReconciliation(reconToNhx(recon));
+    expect(arrivalsOf(again)).toHaveLength(12);
+    expect(arrivalsOf(again).map((e) => e.speciesLocation)).toEqual(
+      arrivalsOf(recon).map((e) => e.speciesLocation),
+    );
+  });
+
+  it("still reports a numbered tag it cannot read", () => {
+    // TB1 is not part of this dialect (the exporter writes the first arrival as
+    // plain TB=), so it must surface as a dropped key rather than a second
+    // first arrival.
+    const recon = parseNhxReconciliation(
+      "((A[&&NHX:S=A],B[&&NHX:S=B][&&NHX:TB=A|R:TB1=A|R])R[&&NHX:S=R])root[&&NHX:S=root];",
+    );
+    expect(arrivalsOf(recon)).toHaveLength(1);
+    expect(recon.warnings.some((w) => w.includes("TB1"))).toBe(true);
+  });
+});
+
 describe("BL= vs Newick length conflicts", () => {
   it("warns when the two spellings of the branch length disagree", () => {
     const recon = parseNhxReconciliation(

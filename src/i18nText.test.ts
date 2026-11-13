@@ -574,7 +574,7 @@ describe("UI copy style guide", () => {
  * document can contradict the app while every code path stays green: the
  * Chinese manual announced 「已将 N 个文件合并为 1 个文档」 long after the toast
  * had become 「已将 N 个文件合并为一个文档」. Only sentences the doc introduces
- * as verbatim UI text are read — a section title, a licence clause or a product
+ * as verbatim UI text are read — a section title, a license clause or a product
  * name in quotes is not a claim about copy, and guessing at those drowns the
  * signal in exceptions.
  */

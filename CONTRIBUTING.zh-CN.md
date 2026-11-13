@@ -217,8 +217,9 @@ npm run coverage    # + 覆盖率报告（控制台摘要、html、lcov）
   而不是改一次配置的事。不要在文档中把代码库描述为「完全严格」。
 - **不可变模型**：`Reconciliation`、`Positions` 和 `LayoutResult` 永不就地修改。
   新状态产生新对象。
-- **组件中不写硬编码 UI 字符串**：`src/app/`、`src/state/` 和 `src/export/` 中所有
-  面向用户的文本都经由 `src/i18n.ts`，且 `Dict` 接口强制 `zh` 与 `en` 在编译期完整。
+- **组件中不写硬编码 UI 字符串**：`src/app/`、`src/state/`、`src/export/` 和
+  `src/platform/` 中所有面向用户的文本都经由 `src/i18n.ts`，且 `Dict` 接口强制
+  `zh` 与 `en` 在编译期完整。
   已知例外是 `src/version.ts` 中 About 对话框的引用常量（作者名与 DOI 与语言
   无关），以及解析器诊断消息——后者经 `i18nDiagnostics.ts` 翻译。
 - **单一 store**：全部应用状态都存放在一个 Zustand store（`src/state/store.ts`）中。

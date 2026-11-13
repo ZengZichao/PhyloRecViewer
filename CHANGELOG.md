@@ -140,18 +140,39 @@ Full report with evidence: `docs/UI-REVIEW-2026-11-06.md`.
   write as a digit — which is the largest single class the audit found. A
   document that names another one's section also has to name a heading that
   exists. Working through those two rules corrected CONTRIBUTING's stale section
-  name, the `TB2=`…`TB9=` range the manual credited the exporter with (it is the
-  reader's ceiling, and the exporter has none), an agreement score the English
-  edition paraphrased where the Chinese one gave 100%, and a missing pair of
-  spaces around `=`. Two examples in `docs/STYLE-GUIDE-UI.md` were corrected to
-  quote real shipped copy, and the language menu's own entries — 「中文」 and
-  "English", names that must not move with the locale — went into the catalogue
-  as `langNameZh` / `langNameEn` so that no Chinese literal is written in a
-  component any more and the guard that used to excuse them has no exception
-  left to abuse. A fixed class cannot silently reopen.
+  name, the `TB2=`…`TB9=` range the manual credited the exporter with (only the
+  reader had a ceiling, and that ceiling is now gone — see the entry below), an
+  agreement score the English edition paraphrased where the Chinese one gave
+  100%, and a missing pair of spaces around `=`. Two examples in
+  `docs/STYLE-GUIDE-UI.md` were corrected to quote real shipped copy, and the
+  language menu's own entries — 「中文」 and "English", names that must not move
+  with the locale — went into the catalogue as `langNameZh` / `langNameEn` so
+  that no Chinese literal is written in a component any more and the guard that
+  used to excuse them has no exception left to abuse. The term table now marks
+  its notation rows — `donor → recipient`, the `—` empty mark,
+  `Confidence (0–1)` — as symbols rather than copy, so a sweep cannot report a
+  dash rule or a banned alias where the row prescribes a sign, and
+  `THIRD-PARTY-NOTICES.md` spells "license" the way the About panel and the
+  README do. A fixed class cannot silently reopen.
 
 ### Fixed
 
+- **Every transfer arrival survives the NHX round trip** (`src/parser/nhx.ts`):
+  the exporter numbers a node's arrivals `TB=`, `TB2=`, `TB3=` and onward with no
+  ceiling, but the reader interpreted only `TB` plus `TB2=`…`TB9=`, so a node
+  with ten arrivals modelled nine of them and listed the rest among the "tag
+  keys this reader does not interpret". Any `TB<n>` is read now, in numeric
+  order — `TB10` is the tenth arrival, not the second, which is why the tags are
+  sorted by their number rather than as text. Four parser tests cover the count,
+  the order, the round trip and the `TB1=` key the exporter never writes.
+- **Native file dialogs follow the interface language** (`src/i18n.ts`,
+  `src/platform/desktop.ts`, `src-tauri/src/lib.rs`): the open dialog's filter
+  read "All supported trees" and the save dialog's fallback filter read "File"
+  whatever the locale, because both were Rust string literals handed to the
+  operating system by the shell. They are catalogue copy now (`filterAllTrees` /
+  `filterAnyFile`), passed with each dialog request. The per-format names a save
+  dialog offers — `recPhyloXML`, `NHX`, `PNG`, … — are format names, not copy,
+  and stay.
 - **The full-labels switch had gone missing** (`src/app/Sidebar.tsx`): the
   option, the canvas cap it lifts (`renderOptions.fullLabels`, `LABEL_MAX` in
   `src/render/Scene.tsx`) and its session round-trip all existed, but the

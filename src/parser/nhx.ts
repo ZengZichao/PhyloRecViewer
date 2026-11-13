@@ -76,20 +76,35 @@ const speciesOf = (node: NewickNode): string | undefined =>
 
 /**
  * NHX keys this reader interprets. Anything else is kept but reported.
- * TB2..TB9 hold the SECOND and further transfer arrivals of a node (the
- * exporter numbers every arrival it writes, so a node with more than nine
- * arrivals round-trips its first nine); B= carries a
- * clade support value, TS= a time slice and CN= an event confidence.
+ * `TB` and every `TB<n>` hold the first and the further transfer arrivals of a
+ * node (the exporter numbers every arrival it writes and this reader recognises
+ * the whole numbering, so a node's arrivals round-trip one-for-one); `B=` carries
+ * a clade support value, `TS=` a time slice and `CN=` an event confidence.
  */
 const INTERPRETED_NHX_KEYS = new Set<string>([
   "S", "SP", "D", "L", "BO", "BC", "TB", "BL", "TS", "CN", "B",
-  "TB2", "TB3", "TB4", "TB5", "TB6", "TB7", "TB8", "TB9",
 ]);
 
-/** All transfer-arrival tags of a node, in written order (TB, then TB2..TB9). */
+/** A numbered transfer-arrival tag: `TB2`, `TB3`, and so on without an upper cap. */
+const ARRIVAL_TAG = /^TB([2-9]|[1-9]\d+)$/;
+
+/** Whether a tag key carries a transfer arrival: `TB` the first, `TB<n>` the n-th. */
+const isArrivalTag = (key: string): boolean => key === "TB" || ARRIVAL_TAG.test(key);
+
+/** Which arrival a tag carries, so a node's arrivals keep their written order. */
+const arrivalIndex = (key: string): number =>
+  key === "TB" ? 1 : Number(key.slice(2));
+
+/**
+ * All transfer-arrival tags of a node, in written order (`TB`, then `TB2`,
+ * `TB3`, …). Ordered by the number rather than by key order: a file may list its
+ * tags in any order, and `TB10` sorts before `TB2` as text.
+ */
 function arrivalTags(nd: NewickNode): { key: string; value: string }[] {
+  const keys = Object.keys(nd.nhx)
+    .filter(isArrivalTag)
+    .sort((a, b) => arrivalIndex(a) - arrivalIndex(b));
   const out: { key: string; value: string }[] = [];
-  const keys = ["TB", "TB2", "TB3", "TB4", "TB5", "TB6", "TB7", "TB8", "TB9"];
   for (const k of keys) {
     const v = nd.nhx[k];
     if (v != null && v !== "") out.push({ key: k, value: v });
@@ -285,7 +300,9 @@ export function parseNhxReconciliation(
       flag(t.D) || flag(t.L) || flag(t.BO) || flag(t.BC) || arrivalTags(nd).length > 0
     ) sawDOrOther = true;
     if (flag(t.L) || flag(t.BO) || flag(t.BC) || arrivalTags(nd).length > 0) sawLossOrTransfer = true;
-    for (const k of Object.keys(t)) if (!INTERPRETED_NHX_KEYS.has(k)) ignoredKeys.add(k);
+    for (const k of Object.keys(t)) {
+      if (!INTERPRETED_NHX_KEYS.has(k) && !isArrivalTag(k)) ignoredKeys.add(k);
+    }
     for (const c of nd.children) walkTags(c);
   };
   for (const root of forest) walkTags(root);

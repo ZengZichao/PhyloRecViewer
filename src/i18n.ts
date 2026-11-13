@@ -203,6 +203,13 @@ export interface Dict {
   mirrorHint: string;
   /** Toast naming the file-association files the OS could not read ({names} = list). */
   openFailedToast: string;
+  /** The open dialog's filter name for the extensions the app accepts. The OS
+   *  draws this label itself, so the app hands it over in the current language;
+   *  the extensions live in `OPEN_EXTENSIONS` in `src-tauri/src/lib.rs`. */
+  filterAllTrees: string;
+  /** The save dialog's fallback filter name, for an extension with no display
+   *  name of its own — see `filter_display_name` in `src-tauri/src/lib.rs`. */
+  filterAnyFile: string;
   /** Toast for a PNG export scaled down to fit the canvas limit ({dpi} = effective DPI). */
   pngScaledToast: string;
   /** Toast for a PDF whose vector conversion failed, so a raster PDF was written. */
@@ -678,6 +685,8 @@ const en: Dict = {
   hintMirror: "Click a species branch to mirror it",
   mirrorHint: "Click to mirror this subtree",
   openFailedToast: "Could not open: {names}",
+  filterAllTrees: "All supported trees",
+  filterAnyFile: "File",
   pngScaledToast: "Drawing is very large: resolution was scaled down (≈ {dpi} DPI) to fit the canvas limit",
   pdfRasterToast: "Vector PDF conversion failed; a full-page raster PDF was written instead",
   viewShortcuts: "Shortcuts & help",
@@ -1127,6 +1136,8 @@ const zh: Dict = {
   hintMirror: "点击物种枝镜像",
   mirrorHint: "点击镜像此子树",
   openFailedToast: "无法打开：{names}",
+  filterAllTrees: "所有受支持的树文件",
+  filterAnyFile: "文件",
   pngScaledToast: "图形过大，分辨率已降低（约 {dpi} DPI）以适应画布上限",
   pdfRasterToast: "矢量 PDF 转换失败，已改为输出整页位图 PDF",
   viewShortcuts: "快捷键与帮助",

@@ -413,50 +413,60 @@ fn attach_parent<R: tauri::Runtime>(
 
 /// The dialog plugin is driven from Rust only, so a missing plugin handle (or a
 /// dialog the platform refused to open) has to surface as an error rather than
-/// a silently empty result.
+/// a silently empty result. `filter_label` is the name the frontend's dictionary
+/// gives this group of extensions; the OS prints it verbatim.
 fn file_picker<R: tauri::Runtime>(
     app: &tauri::AppHandle<R>,
+    filter_label: &str,
 ) -> tauri_plugin_dialog::FileDialogBuilder<R> {
     let names: Vec<String> = OPEN_EXTENSIONS
         .iter()
         .map(|e| e.trim_start_matches('.').to_string())
         .collect();
     let extensions: Vec<&str> = names.iter().map(String::as_str).collect();
-    attach_parent(app, app.dialog().file()).add_filter("All supported trees", &extensions)
+    attach_parent(app, app.dialog().file()).add_filter(filter_label, &extensions)
 }
 
-/// Human-readable save-filter names. `to_uppercase()` used to produce
-/// "RECPHYLOXML", contradicting the product's own spelling of recPhyloXML.
-fn filter_display_name(ext: &str) -> &'static str {
+/// Human-readable save-filter names, or None when the extension has no name of
+/// its own and the caller's generic label should stand. The return borrows `ext`
+/// instead of being `'static` so that fallback costs no lifetime juggling.
+/// `to_uppercase()` used to produce "RECPHYLOXML", contradicting the product's
+/// own spelling of recPhyloXML.
+fn filter_display_name(ext: &str) -> Option<&str> {
     match ext {
-        "recphyloxml" | "recphylo" | "phyloxml" | "xml" => "recPhyloXML",
-        "nhx" => "NHX",
-        "nwk" | "newick" => "Newick",
-        "svg" => "SVG",
-        "png" => "PNG",
-        "pdf" => "PDF",
-        "html" => "HTML",
-        "csv" => "CSV",
-        "json" => "JSON",
-        _ => "File",
+        "recphyloxml" | "recphylo" | "phyloxml" | "xml" => Some("recPhyloXML"),
+        "nhx" => Some("NHX"),
+        "nwk" | "newick" => Some("Newick"),
+        "svg" => Some("SVG"),
+        "png" => Some("PNG"),
+        "pdf" => Some("PDF"),
+        "html" => Some("HTML"),
+        "csv" => Some("CSV"),
+        "json" => Some("JSON"),
+        _ => None,
     }
 }
 
 /// Show a native open dialog and read what the user picked. Runs the whole
 /// dialog round-trip in Rust, so the only paths that end up granted are the ones
 /// the OS dialog actually returned. `multi` is the frontend's single-select vs
-/// multi-select open flag.
+/// multi-select open flag; `filter_label` names the accepted extensions in the
+/// language the frontend is showing.
 #[tauri::command]
-async fn open_text_files(app: tauri::AppHandle, multi: bool) -> Result<PendingOpenResult, String> {
+async fn open_text_files(
+    app: tauri::AppHandle,
+    multi: bool,
+    filter_label: String,
+) -> Result<PendingOpenResult, String> {
     let picked: Vec<PathBuf> = if multi {
-        file_picker(&app)
+        file_picker(&app, &filter_label)
             .blocking_pick_files()
             .unwrap_or_default()
             .into_iter()
             .filter_map(|p| p.into_path().ok())
             .collect()
     } else {
-        file_picker(&app)
+        file_picker(&app, &filter_label)
             .blocking_pick_file()
             .and_then(|p| p.into_path().ok())
             .map(|p| vec![p])
@@ -475,17 +485,19 @@ async fn open_text_files(app: tauri::AppHandle, multi: bool) -> Result<PendingOp
 }
 
 /// Show a native save dialog for `default_name` filtered to `ext` and return the
-/// chosen path, or None when the user cancels.
+/// chosen path, or None when the user cancels. `file_label` is the generic
+/// dictionary label used when `ext` has no display name of its own.
 fn pick_save_target<R: tauri::Runtime>(
     app: &tauri::AppHandle<R>,
     default_name: &str,
     ext: &str,
+    file_label: &str,
 ) -> Option<PathBuf> {
     let builder = app.dialog().file().set_file_name(default_name);
     let builder = if ext.is_empty() {
         builder
     } else {
-        builder.add_filter(filter_display_name(ext), &[ext])
+        builder.add_filter(filter_display_name(ext).unwrap_or(file_label), &[ext])
     };
     attach_parent(app, builder)
         .blocking_save_file()
@@ -499,8 +511,9 @@ async fn save_text_via_dialog(
     default_name: String,
     ext: String,
     contents: String,
+    file_label: String,
 ) -> Result<bool, String> {
-    let Some(path) = pick_save_target(&app, &default_name, &ext) else {
+    let Some(path) = pick_save_target(&app, &default_name, &ext, &file_label) else {
         return Ok(false);
     };
     let grants = app.state::<PathGrants>().inner().clone();
@@ -517,8 +530,9 @@ async fn save_binary_via_dialog(
     default_name: String,
     ext: String,
     data: Vec<u8>,
+    file_label: String,
 ) -> Result<bool, String> {
-    let Some(path) = pick_save_target(&app, &default_name, &ext) else {
+    let Some(path) = pick_save_target(&app, &default_name, &ext, &file_label) else {
         return Ok(false);
     };
     let grants = app.state::<PathGrants>().inner().clone();
