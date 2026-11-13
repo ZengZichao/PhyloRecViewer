@@ -38,7 +38,7 @@ const KEY = "rpv.autosave.v1";
 /** Copy of a snapshot the app failed to restore. */
 const UNRECOVERED_KEY = "rpv.autosave.v1.unrecovered";
 /** Wall-clock time of the last successful snapshot write (advisory, for the
- *  "restore last workspace?" prompt). */
+ *  "Restore last session?" prompt - GLOSSARY: session, never workspace). */
 const TIME_KEY = "rpv.autosave.v1.time";
 const DEBOUNCE_MS = 1000;
 
@@ -228,7 +228,11 @@ let restoredTabIds = new Set<string>();
 function lazyDocFrom(tab: SavedTab): DocState {
   return {
     xml: tab.xml,
-    fileName: tab.title ?? "tab",
+    // A tab saved without a name stays nameless: the tab bar and the pane
+    // headers fall back to their localized labels, so no English placeholder
+    // is ever shown or persisted (STYLE-GUIDE-UI 5.3). An empty string is
+    // nameless too, and must never reach the parser as that tab's id seed.
+    fileName: tab.title || null,
     sourceFiles: tab.sourceFiles ?? null,
     recon: null,
     error: null,
@@ -294,7 +298,7 @@ export function restoreTabs(
     .filter((t): t is SavedTab => !!t && !!t.xml)
     .map((tab) => {
       const id = `autosave-${docsSeq++}`;
-      return { id, title: tab.title ?? "tab", doc: lazyDocFrom(tab) };
+      return { id, title: tab.title || null, doc: lazyDocFrom(tab) };
     });
   if (entries.length === 0) return [];
   const wanted = opts.activeTabIndex ?? tabsActiveTabIndex(tabs);
@@ -438,18 +442,10 @@ export function unrecoveredSnapshotText(): string | null {
 
 /** Tell the user, by name, that part (or all) of the crash snapshot is gone. */
 function reportRestoreFailure(names: string[], total: boolean): void {
-  const zh = useStore.getState().locale === "zh";
-  const listed =
-    names.filter(Boolean).join(zh ? "、" : ", ") ||
-    translations[zh ? "zh" : "en"].unknownFile;
-  const msg = total
-    ? zh
-      ? translations.zh.restoreFailed.replace("{names}", listed)
-      : translations.en.restoreFailed.replace("{names}", listed)
-    : zh
-      ? translations.zh.someDocsFailed.replace("{names}", listed)
-      : translations.en.someDocsFailed.replace("{names}", listed);
-  useStore.getState().showToast(msg, "error");
+  const dict = translations[useStore.getState().locale];
+  const listed = names.filter(Boolean).join(dict.listSeparator) || dict.unknownFile;
+  const template = total ? dict.restoreFailed : dict.someDocsFailed;
+  useStore.getState().showToast(template.replace("{names}", listed), "error");
 }
 
 /** Serialize the active document to localStorage (best effort). */
@@ -517,13 +513,7 @@ export function writeAutosave(): void {
     useStore.setState({ autosaveFailed: true });
     if (!unavailableNoted) {
       unavailableNoted = true;
-      const zh = st.locale === "zh";
-      st.showToast(
-        zh
-          ? translations.zh.autosaveUnavailable
-          : translations.en.autosaveUnavailable,
-        "error",
-      );
+      st.showToast(translations[st.locale].autosaveUnavailable, "error");
     }
     return;
   }
@@ -552,11 +542,17 @@ export function restoreSessionData(data: SessionData): void {
     if (data.sourceFiles && data.sourceFiles.length > 1) {
       st.loadMany(data.sourceFiles);
     } else {
-      st.loadXml(data.xml, data.fileName ?? "session");
+      // A session without a file name restores an unnamed document: the pane
+      // header then shows the localized pane label, never an internal field
+      // name (GLOSSARY-UI rule 1). The id namespace seed is a separate value,
+      // derived inside loadXml (PARSE_SEEDS), so node ids survive the restore.
+      st.loadXml(data.xml, data.fileName ?? null);
     }
   }
-  if (data.nestedXml) st.loadNestedXml(data.nestedXml, data.nestedName ?? "nested");
-  if (data.compareXml) st.loadCompareXml(data.compareXml, data.compareName ?? "compare");
+  // Same split for the two optional layers: null here means "no displayed
+  // name", not "no seed" - loadNestedXml / loadCompareXml supply the seed.
+  if (data.nestedXml) st.loadNestedXml(data.nestedXml, data.nestedName ?? null);
+  if (data.compareXml) st.loadCompareXml(data.compareXml, data.compareName ?? null);
   st.applyViewState({
     layoutOptions: data.layoutOptions,
     renderOptions: data.renderOptions,
@@ -619,10 +615,15 @@ export function restoreAutosave(): boolean {
   }
 
   const after = useStore.getState();
+  // Name the parts that failed exactly the way the interface labels them:
+  // an internal field name (xml / nestedXml / compareXml) is not something
+  // the user can look for (GLOSSARY-UI rule 1).
+  const paneNames = translations[after.locale];
   const failed: string[] = [];
-  if (data.xml && !after.recon) failed.push(after.fileName ?? data.fileName ?? "session");
-  if (data.nestedXml && !after.nested) failed.push(data.nestedName ?? "nested");
-  if (data.compareXml && !after.compare) failed.push(data.compareName ?? "compare");
+  if (data.xml && !after.recon)
+    failed.push(after.fileName ?? data.fileName ?? paneNames.paneTagA);
+  if (data.nestedXml && !after.nested) failed.push(data.nestedName ?? paneNames.paneSymbiontHost);
+  if (data.compareXml && !after.compare) failed.push(data.compareName ?? paneNames.paneComparison);
   const usable = !(data.xml && !after.recon);
 
   if (!usable) {

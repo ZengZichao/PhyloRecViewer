@@ -1,21 +1,21 @@
 # PhyloRecViewer
 
-[English](./README.md) | **中文**
+**中文** | [English](./README.md)
 
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.23053317.svg)](https://doi.org/10.5281/zenodo.23053317)
 [![CI](https://github.com/ZengZichao/PhyloRecViewer/actions/workflows/ci.yml/badge.svg)](https://github.com/ZengZichao/PhyloRecViewer/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![ORCID](https://img.shields.io/badge/ORCID-0000--0001--6553--970X-a6ce39?logo=orcid&logoColor=white)](https://orcid.org/0000-0001-6553-970X)
 
-美观、离线、交互式的 **recPhyloXML / NHX** 系统发育调和可视化工具。基于 Tauri v2（Rust + React 18 / TypeScript 严格模式）构建，采用确定性、纯样式属性驱动的 SVG 渲染器。
+美观、离线、交互式的 **recPhyloXML / NHX** 系统发育调和可视化工具。基于 Tauri v2（Rust + React 18 / TypeScript 严格模式）构建，采用确定性、纯样式的 SVG 渲染器。
 
 ## 功能特性
 
-- **格式支持**：recPhyloXML 和 NHX/Newick 格式解析（按内容自动检测，无法识别时回退为 recPhyloXML），多文件合并。NHX 导入依靠 `S=` 标签重建物种树——对自包含文件可靠，但输入中未加标注的水平转移无法被辨别，因此含 HGT 的结果请优先使用 recPhyloXML
+- **格式支持**：recPhyloXML 和 NHX/Newick 格式解析（按内容自动检测，无法识别时回退为 recPhyloXML），多文件合并。NHX 导入依靠 `S=` 批注重建物种树——对自包含文件可靠，但输入中未标记的水平转移无法被辨别，因此含 HGT 的结果请优先使用 recPhyloXML
 - **可视化**：物种 + 基因树调和绘制，四种方向，紧凑/矩形布局
-- **嵌套视图**：三级嵌套（基因 → 共生体 → 宿主），以及对比视图（画布默认上下堆叠，可切换为左右并排）
+- **嵌套视图**：三层嵌套（基因 → 共生体 → 宿主），以及对比视图（画布默认上下堆叠，可切换为左右并排）
 - **分析**：搜索 / 筛选 / 统计 / 数据检查，转移网络
-- **导出**：SVG / PNG / PDF / 交互式 HTML / NHX；会话保存与恢复（自动保存覆盖全部标签页）。无头命令行还可导出 **recPhyloXML**——完全无损、自描述的往返格式。NHX 是扩展方言：现已携带全部转移到达、时间片、置信度、支持度与枝长，但仍会丢失物种树本身、物种枝长、基因树名称以及从未被任何基因树取样的物种
+- **导出**：SVG / PNG / PDF / 交互式 HTML / NHX；会话保存与恢复，会话级自动保存覆盖所有打开的标签页。无头命令行还可导出 **recPhyloXML**——完全无损、自描述的往返格式。NHX 是扩展方言：现已携带全部转移到达、时间片、置信度、支持度与枝长，但仍会丢失物种树本身、物种枝长、基因树名称以及从未被任何基因树取样的物种
 - **平台**：中英双语（中文 / English），浅色和深色主题；完全离线运行
 - **开源**：MIT 许可证；提供 macOS、Windows 和 Linux 安装包
 
@@ -68,20 +68,20 @@ npm run typecheck     # tsc -b
 npm run lint          # eslint . --max-warnings 0
 npm test              # vitest
 npm run coverage      # vitest 并输出覆盖率报告
-npm run check:tracked # 确认被引用的文件都已纳入版本控制（见 CONTRIBUTING.zh-CN.md）
+npm run check:tracked # 确保被导入的文件均已提交（见 CONTRIBUTING.zh-CN.md）
 npm run cli           # 无头导出（输入为保存的会话文件 .rpvsession.json）：
                       # 统计 CSV、检查 JSON、SVG / HTML / recPhyloXML / NHX
 ```
 
 `npm run measure` 走一遍真实的解析器 → 布局 → 渲染器路径，把基准 CSV 写入 `_build/`
 （已被 git 忽略）。CI 在 Linux 上运行它，以免脚本悄悄腐坏。手稿引用的冻结基准表位于
-`data/`；`scripts/aggregate-measurements.py` 可将多次运行汇总到该目录（或写入
+`data/`；`scripts/aggregate-measurements.py` 可将多次运行归并到该目录（或写入
 `_build/aggregates/` 进行非破坏性重放）。
 
 ## 使用方法
 
 1. 启动 PhyloRecViewer。
-2. 通过 **文件 → 打开**、拖放或系统文件关联，打开 `.recphyloxml` / `.recphylo` /
+2. 通过 **文件 → 打开文件**、拖放或系统文件关联，打开 `.recphyloxml` / `.recphylo` /
    `.xml` / `.phyloxml` 文件（软件读取的是 **recPhyloXML 内容**；不含 `<recPhylo>`
    根元素的普通 PhyloXML 树不是调和结果，会被拒绝），或 `.nhx` / `.nwk` /
    `.newick` 基因树文件。
@@ -93,10 +93,12 @@ npm run cli           # 无头导出（输入为保存的会话文件 .rpvsessio
 
 ## 文档与社区
 
-所有面向用户的文档都提供英文和中文两个版本。英文文件是主版本；`.zh-CN.md` 是它的译文，并与英文版保持同步。`docs/` 下的编辑说明（界面术语表、风格指南与带日期的 UI 审查）面向维护者，目前仅有中文。
+所有面向用户的文档都提供英文和中文两个版本。英文文件是主版本；`.zh-CN.md`
+是它的译文，并与英文版保持同步。`docs/` 下的编辑说明（界面术语表、风格指南
+与带日期的 UI 审查）面向维护者，目前仅有中文。
 
 - [使用手册](./docs/USER_MANUAL.zh-CN.md) · [User manual](./docs/USER_MANUAL.md)
-- [贡献指南](./CONTRIBUTING.zh-CN.md) · [Contributing guide](./CONTRIBUTING.md)——开发环境、检查项与发布流程
+- [贡献指南](./CONTRIBUTING.zh-CN.md) · [Contributing guide](./CONTRIBUTING.md)——工具链、检查项与发布流程
 - [安全策略](./SECURITY.zh-CN.md) · [Security policy](./SECURITY.md)
 - [行为准则](./CODE_OF_CONDUCT.zh-CN.md) · [Code of conduct](./CODE_OF_CONDUCT.md)
 
@@ -118,7 +120,7 @@ src/
 
 ## 引用
 
-如果您在研究中使用 PhyloRecViewer，请引用当前发布版本：
+如果你在研究中使用 PhyloRecViewer，请引用当前发布版本：
 
 > Zeng, Z., & Wang, Y. (2026). *PhyloRecViewer* (v0.2.0) [Computer software]. Zenodo. https://doi.org/10.5281/zenodo.24108315
 

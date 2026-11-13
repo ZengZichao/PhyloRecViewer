@@ -11,6 +11,62 @@ import type { ThemePref } from "./render/theme";
 export const CURRENT_SESSION_VERSION = 2;
 
 /**
+ * Parse-time namespace seeds for a document that has no name. Node ids hash
+ * this string (model/stableId.ts), so each value is load-bearing for every
+ * session written by an earlier build and must never be displayed: a nameless
+ * document is labelled from the dictionary instead (`untitledTab`, pane tags).
+ * `title` and `fileName` are deliberately ONE value: the same nameless document
+ * is restored either as the session's front document (`fileName`, via `loadXml`)
+ * or as a background tab (`title`, via `materializeDoc`), and two seeds would
+ * give it two id sets, so merely switching tabs between saves would orphan its
+ * persisted collapse / swap / annotation sets. Ids must not depend on the
+ * document's role.
+ */
+export const PARSE_SEEDS = {
+  /** `SavedTab.title`: a restored tab that carried no name, front or background. */
+  title: "session",
+  /** `SessionData.fileName`: the front document of a nameless session. */
+  fileName: "session",
+  /** `nestedName`: the nested (host) layer loaded without a file name. */
+  nestedName: "nested",
+  /** `compareName`: the compare layer loaded without a file name. */
+  compareName: "compare",
+} as const;
+
+/** A session field that holds a document / layer / tab name. */
+export type NameField = keyof typeof PARSE_SEEDS;
+
+/** Seeds an earlier build hashed per role before `title` and `fileName` were
+ *  unified (it used `"tab"` for a nameless tab title). Read back as no name like
+ *  the seed itself, but never hashed again: one nameless document, one namespace. */
+const SUPERSEDED_SEEDS: Record<NameField, readonly string[]> = {
+  title: ["tab"],
+  fileName: [],
+  nestedName: [],
+  compareName: [],
+};
+
+/**
+ * Read one name field back out of a session document, turning every spelling of
+ * "no name" into null so the localized label is shown: a missing field, the
+ * EMPTY STRING a build that never normalized one persisted, that field's own
+ * placeholder seed (`"fileName": "session"`, `"title": "session" / "tab"`,
+ * `"nestedName": "nested"`, `"compareName": "compare"`) and the superseded seed
+ * of `SUPERSEDED_SEEDS`.
+ * Cost, accepted deliberately: a document really opened from a file named
+ * exactly that field's placeholder (no extension) now shows the localized
+ * label - hence exact whole-string compares against that field's own seeds,
+ * never substring or case-insensitive. Node ids are untouched: the seed still
+ * reaches the parser (PARSE_SEEDS above), which is what keeps them stable.
+ */
+function readName(field: NameField, value: unknown): string | null {
+  if (typeof value !== "string" || value === "") return null;
+  return value === PARSE_SEEDS[field] || SUPERSEDED_SEEDS[field].includes(value)
+    ? null
+    : value;
+}
+
+/**
  * A saved session holds everything needed to reproduce a drawing offline: the
  * source file(s) plus all view state (options, theme, swaps, collapses,
  * per-tree colors). It is a plain JSON document.
@@ -297,12 +353,12 @@ function sanitizeSavedTab(v: unknown): SavedTab | null {
   const r = asRecord(v);
   if (!r || typeof r.xml !== "string") return null;
   return {
-    title: typeof r.title === "string" ? r.title : null,
+    title: readName("title", r.title),
     xml: r.xml,
     sourceFiles: sanitizeSourceFiles(r.sourceFiles),
-    nestedName: typeof r.nestedName === "string" ? r.nestedName : null,
+    nestedName: readName("nestedName", r.nestedName),
     nestedXml: typeof r.nestedXml === "string" ? r.nestedXml : null,
-    compareName: typeof r.compareName === "string" ? r.compareName : null,
+    compareName: readName("compareName", r.compareName),
     compareXml: typeof r.compareXml === "string" ? r.compareXml : null,
     layoutOptions: r.layoutOptions !== undefined ? sanitizeLayoutOptions(r.layoutOptions) : undefined,
     renderOptions: r.renderOptions !== undefined ? sanitizeRenderOptions(r.renderOptions) : undefined,
@@ -374,12 +430,12 @@ export function parseSession(text: string): SessionData {
 
   return {
     version: CURRENT_SESSION_VERSION,
-    fileName: typeof obj.fileName === "string" ? obj.fileName : null,
+    fileName: readName("fileName", obj.fileName),
     xml: obj.xml,
     sourceFiles: sanitizeSourceFiles(obj.sourceFiles),
-    nestedName: typeof obj.nestedName === "string" ? obj.nestedName : null,
+    nestedName: readName("nestedName", obj.nestedName),
     nestedXml: typeof obj.nestedXml === "string" ? obj.nestedXml : null,
-    compareName: typeof obj.compareName === "string" ? obj.compareName : null,
+    compareName: readName("compareName", obj.compareName),
     compareXml: typeof obj.compareXml === "string" ? obj.compareXml : null,
     layoutOptions: sanitizeLayoutOptions(obj.layoutOptions),
     renderOptions: sanitizeRenderOptions(obj.renderOptions),

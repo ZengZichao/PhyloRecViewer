@@ -64,8 +64,8 @@ export function NodeInspector() {
                 gene: g,
                 family: tree.name ?? `#${tree.index + 1}`,
                 transfer: {
-                  donor: arr.speciesLocation ?? g.parent?.speciesId ?? "?",
-                  recipient: arr.destinationSpecies ?? g.speciesId ?? "?",
+                  donor: arr.speciesLocation || g.parent?.speciesId || t.inspNone,
+                  recipient: arr.destinationSpecies || g.speciesId || t.inspNone,
                 },
               };
             }
@@ -94,7 +94,7 @@ export function NodeInspector() {
     if (e.type === "transferBack") {
       rows.push([
         t.event.transferBack,
-        `${e.speciesLocation ?? t.inspNone} → ${e.destinationSpecies ?? t.inspNone}` +
+        `${e.speciesLocation || t.inspNone} → ${e.destinationSpecies || t.inspNone}` +
           (e.timeSlice != null ? ` · ${t.inspTimeSlice} ${e.timeSlice}` : "") +
           (e.confidence != null ? ` · ${e.confidence}` : ""),
       ]);
@@ -106,7 +106,7 @@ export function NodeInspector() {
 
   const copyDetails = () => {
     const text = [
-      `${APP_NAME} ${APP_VERSION} — ${t.inspectorTitle}`,
+      `${APP_NAME} ${APP_VERSION} · ${t.inspectorTitle}`,
       `id: ${g.id}`,
       ...rows.map(([k, v]) => `${k}: ${v}`),
       ...(note ? [`${t.inspAnnotation}: ${note.text}`] : []),
@@ -117,7 +117,7 @@ export function NodeInspector() {
   return (
     <div className="node-inspector" role="complementary" aria-label={t.inspectorTitle}>
       <div className="ni-head">
-        <strong>{g.name || g.endEvent.geneName || g.id}</strong>
+        <strong>{g.name || g.endEvent.geneName || t.inspNone}</strong>
         <span className="ni-event">{t.event[g.endEvent.type]}</span>
         <span className="ni-pane">{info.pane}</span>
         <span className="ni-spacer" />

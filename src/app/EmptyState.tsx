@@ -24,7 +24,7 @@ export function EmptyState() {
   const setHelpOpen = useStore((s) => s.setHelpOpen);
   const fileInput = useRef<HTMLInputElement>(null);
 
-  const loadSample = (s: (typeof samples)[number]) => {
+  const openSample = (s: (typeof samples)[number]) => {
     void runHeavy(() => {
       loadXml(s.xml, t[s.labelKey]);
       if (s.nestedXml)
@@ -85,7 +85,7 @@ export function EmptyState() {
             <button
               key={s.id}
               className="btn ghost empty-sample-btn"
-              onClick={() => loadSample(s)}
+              onClick={() => openSample(s)}
             >
               <span className="empty-sample-arrow" aria-hidden="true">▸</span>
               <span className="empty-sample-name">{t[s.labelKey]}</span>

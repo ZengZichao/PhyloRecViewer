@@ -7,7 +7,7 @@
 | 元素 | 规则 | 例 |
 |---|---|---|
 | 按钮、菜单项、标签页、分区标题、开关标签、表头 | sentence case（仅首词与专有名词大写） | `Reduce crossings`、`Transfer matrix`、`Load sample` |
-| 句子（tooltip、说明、错误、Toast） | 首词大写、句末带标点 | `Show the legend on the canvas and in exported images.` |
+| 句子（tooltip、说明、错误、Toast） | 首词大写、句末带标点 | `Click a label on the canvas to rename it individually.` |
 | 格式名与缩写 | 按其规范拼写，不得二次大写化 | `recPhyloXML`、`phyloXML`、`Newick`、`NHX`、`PNG`、`SVG`、`PDF`、`HTML`、`CSV`、`JSON`、`DPI` |
 | 程序名 | 唯一形式 `PhyloRecViewer`（`phylorecviewer` 仅用于包/二进制标识） | — |
 | 插值数据（文件名、物种名、用户标签） | 原样保留大小写，禁止 CSS `text-transform` 或 JS 改写 | `Mammals.nwk` 不得显示为 `MAMMALS.NWK` |
@@ -57,7 +57,7 @@
 ## 6. 提交前自检
 
 - [ ] 界面截图（中/英）中无全大写小标题、无英文夹入
-- [ ] 计数为 1 时读作单数（`1 gene tree`、`1 leaf`）
+- [ ] 计数为 1 时读作单数（`1 gene tree`、`1 extant gene`）
 - [ ] 所有 `{x}` 占位符均已替换
 - [ ] 导出图图例与界面图例逐字一致
 - [ ] `npm run typecheck`、`npm test`、`npm run lint` 全绿

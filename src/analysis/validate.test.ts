@@ -118,4 +118,41 @@ describe("checkConsistency", () => {
           <clade><eventsRec><leaf speciesLocation="A" geneName="b"/></eventsRec></clade>
         </clade></phylogeny></recGeneTree></recPhylo>`);
   });
+
+  /**
+   * GLOSSARY-UI row 36 (空值) / STYLE-GUIDE-UI §3.7: the mark for "this node has
+   * no name" is `—`, never `?`. Gene-node examples are not inert diagnostics —
+   * app/RightPanel.tsx renders `iss.examples` in the 数据检查 panel and writes
+   * them into the exported QC report CSV, so the label here is user-facing.
+   */
+  describe("a gene node with no name is labelled with the glossary em dash", () => {
+    // One clade with neither <name> nor geneName: it is simultaneously unnamed
+    // (negative branch length), species-less (noSpecies) and low-confidence, so
+    // it exercises all three call sites that build a label from `g.name`.
+    const unnamed = `<recPhylo>${SP}<recGeneTree><phylogeny>
+      <clade><branch_length>-2</branch_length><eventsRec><speciation confidence="42"/></eventsRec>
+        <clade><eventsRec><leaf speciesLocation="A" geneName="a"/></eventsRec></clade>
+        <clade><eventsRec><leaf speciesLocation="B" geneName="b"/></eventsRec></clade>
+      </clade></phylogeny></recGeneTree></recPhylo>`;
+    const issues = checkConsistency(parseRecPhyloXML(unnamed));
+    const of = (code: string) => issues.find((i) => i.code === code);
+
+    it("reaches the three unnamed-node diagnostics it means to", () => {
+      expect(of("noSpecies")).toBeDefined();
+      expect(of("negativeBranchLength")).toBeDefined();
+      expect(of("confidenceScaleSuspect")).toBeDefined();
+    });
+
+    it("uses `—` and not `?` in every one of them", () => {
+      for (const code of ["noSpecies", "negativeBranchLength", "confidenceScaleSuspect"]) {
+        const iss = of(code);
+        expect(iss, code).toBeDefined();
+        // Exact: a re-introduced "?" fallback in validate.ts fails here.
+        expect(iss?.examples.some((e) => e.startsWith("\u2014")), code).toBe(true);
+        for (const ex of iss?.examples ?? []) {
+          expect(ex, code).not.toContain("?");
+        }
+      }
+    });
+  });
 });

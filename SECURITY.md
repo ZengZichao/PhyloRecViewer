@@ -1,6 +1,6 @@
 # Security Policy
 
-**English** | [中文](./SECURITY.zh-CN.md)
+[中文](./SECURITY.zh-CN.md) | **English**
 
 ## What PhyloRecViewer is, and what that implies
 
@@ -46,7 +46,8 @@ a version is superseded.
    **Settings → Security → Code security and analysis → Private vulnerability reporting**.
 2. If that form is unavailable, open a normal issue whose **title is only**
    `security report` (no details), then stop; a maintainer will reply and move the
-   conversation to a private channel.
+   conversation to a private channel. For code-of-conduct matters, use the private
+   channels listed in [CODE_OF_CONDUCT.md](./CODE_OF_CONDUCT.md) instead.
 3. Include: the app version and platform, whether you used the desktop bundle or
    the web build, and — most useful of all — the input file (or a reduced version
    of it) that triggers the problem.

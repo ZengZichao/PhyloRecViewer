@@ -1,6 +1,6 @@
 # Contributor Covenant Code of Conduct
 
-**English** | [中文](./CODE_OF_CONDUCT.zh-CN.md)
+[中文](./CODE_OF_CONDUCT.zh-CN.md) | **English**
 
 ## Our pledge
 
@@ -75,7 +75,7 @@ Details of the enforcement policy are on the Contributor Covenant
 ## Attribution
 
 This Code of Conduct is adapted from the [Contributor Covenant][cc], version 2.1,
-published at https://www.contributor-covenant.org/version/2/1/code_of_conduct/.
+published at <https://www.contributor-covenant.org/version/2/1/code_of_conduct/>.
 
 Community-impact guidelines for how to enforce this Code are adapted from the
 Mozilla Behaviour Enforcement Guidelines (v1.0) and the Geek Feminism Liberation

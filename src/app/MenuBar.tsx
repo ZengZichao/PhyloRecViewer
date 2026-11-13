@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { localizeDiagnostic } from "../i18nDiagnostics";
-import { countLabel, useT } from "../i18n";
+import { countLabel, htmlLang, useT } from "../i18n";
 import type { LayoutResult } from "../layout";
 import {
   DEFAULT_PNG_DPI,
@@ -353,10 +353,11 @@ export function MenuBar({
   const legendFor = (result: LayoutResult): ExportLegendConfig | null =>
     showLegend
       ? {
+          // Only the group titles and the family chips are passed: the event
+          // rows come from the shared LEGEND_ROWS table, which is what keeps the
+          // exported key word-for-word equal to the on-screen legend (STYLE §6).
           eventsTitle: t.events,
           familiesTitle: t.geneFamilies,
-          transferLabel: t.transferLegend,
-          collapsedLabel: t.collapsedClade,
           families: result.reconciliation.geneTrees.map((gt) => ({
             name: gt.name || `${t.geneTree} ${gt.index + 1}`,
             color: geneColors[gt.index] ?? geneColor(themes[resolvedThemeId], gt.index),
@@ -461,7 +462,7 @@ export function MenuBar({
     try {
       setBusy("html");
       const html = sceneToInteractiveHtml(doc, base, {
-        lang: locale === "zh" ? "zh-CN" : "en",
+        lang: htmlLang[locale],
         zoomIn: t.zoomIn,
         zoomOut: t.zoomOut,
         fit: t.fit,
@@ -481,7 +482,7 @@ export function MenuBar({
       }
       if (ok) showToast(`${t.exportedToast}: ${base}.html`, "success");
     } catch (e) {
-      showToast(`${t.exportFailed}: ${(e as Error).message}`, "error");
+      showToast(`${t.exportFailed}: ${localizeDiagnostic((e as Error).message, locale)}`, "error");
     } finally {
       setBusy(null);
     }
@@ -688,10 +689,14 @@ export function MenuBar({
               {nestedName ? (
                 <button
                   className="menu-item"
-                  title={`${t.nestedRemoveTitle}: ${nestedName}`}
+                  title={t.nestedRemoveTitle.replace("{name}", nestedName)}
                   onClick={() => { close(); clearNested(); }}
                 >
-                  {t.nestedPrefix} {nestedName.length > 20 ? nestedName.slice(0, 18) + "…" : nestedName} ✕
+                  {t.nestedPrefix.replace(
+                    "{name}",
+                    nestedName.length > 20 ? nestedName.slice(0, 18) + "…" : nestedName,
+                  )}{" "}
+                  ✕
                 </button>
               ) : (
                 <button className="menu-item" title={t.nestedTitle} onClick={() => { close(); void onNestedClick(); }}>
@@ -701,10 +706,14 @@ export function MenuBar({
               {compareName ? (
                 <button
                   className="menu-item"
-                  title={`${t.compareRemoveTitle}: ${compareName}`}
+                  title={t.compareRemoveTitle.replace("{name}", compareName)}
                   onClick={() => { close(); clearCompare(); }}
                 >
-                  {t.comparePrefix} {compareName.length > 20 ? compareName.slice(0, 18) + "…" : compareName} ✕
+                  {t.comparePrefix.replace(
+                    "{name}",
+                    compareName.length > 20 ? compareName.slice(0, 18) + "…" : compareName,
+                  )}{" "}
+                  ✕
                 </button>
               ) : (
                 <button className="menu-item" title={t.compareTitle} onClick={() => { close(); void onCompareClick(); }}>
@@ -832,8 +841,8 @@ export function MenuBar({
           {(close) => (
             <>
               <div className="menu-label">{t.menuLanguage}</div>
-              <RadioItem on={locale === "zh"} label="中文" onClick={() => { close(); setLocale("zh"); }} />
-              <RadioItem on={locale === "en"} label="English" onClick={() => { close(); setLocale("en"); }} />
+              <RadioItem on={locale === "zh"} label={t.langNameZh} onClick={() => { close(); setLocale("zh"); }} />
+              <RadioItem on={locale === "en"} label={t.langNameEn} onClick={() => { close(); setLocale("en"); }} />
               <div className="menu-divider" />
               <div className="menu-label">{t.theme}</div>
               {themeOptions.map((o) => (
@@ -971,7 +980,16 @@ export function MenuBar({
                 try {
                   applySessionText(t2);
                 } catch (err) {
-                  showToast(`${t.loadFailed}: ${(err as Error).message}`, "error");
+                  // Localised the way the export handlers above do it, and
+                  // deliberately NOT through `friendlyParseError`: that helper
+                  // appends its "Supported formats: recPhyloXML, NHX, Newick"
+                  // hint, which is wrong advice for a .rpvsession.json file - it
+                  // tells the user their session failed because it is not a tree
+                  // format.
+                  showToast(
+                    `${t.loadFailed}: ${localizeDiagnostic((err as Error).message, locale)}`,
+                    "error",
+                  );
                 }
               });
             e.target.value = "";

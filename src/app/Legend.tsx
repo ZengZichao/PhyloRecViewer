@@ -2,6 +2,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { useT } from "../i18n";
 import type { Reconciliation } from "../model/types";
 import { geneColor, type Theme } from "../render/theme";
+import { LEGEND_ROWS, type LegendKind } from "../render/legendRows";
 import { useStore } from "../state/store";
 
 const DIR_KEY = "rpv.legend.dir";
@@ -40,10 +41,73 @@ export function Legend({
     }
   }, [horizontal]);
 
+  // Speciation, the transfer arc and its arrival, and the extant gene are all
+  // painted in the FIRST family's colour by Scene.geneGlyph, so their keys carry
+  // that colour; the family group below documents the per-family mapping.
+  const firstFamilyColor = geneColors[0] ?? geneColor(theme, 0);
+
+  /** The swatch for one row of the shared `LEGEND_ROWS` table. */
+  const glyph = (kind: LegendKind): ReactNode => {
+    switch (kind) {
+      case "speciation":
+        return <circle cx={c} cy={c} r={2.5} fill={firstFamilyColor} opacity={0.85} />;
+      case "duplication":
+        return <rect x={c - 3} y={c - 3} width={6} height={6} rx={1} fill={theme.event.duplication} />;
+      case "loss":
+        return (
+          <g stroke={theme.event.loss} strokeWidth={1.6} strokeLinecap="round">
+            <line x1={c - 3} y1={c - 3} x2={c + 3} y2={c + 3} />
+            <line x1={c - 3} y1={c + 3} x2={c + 3} y2={c - 3} />
+          </g>
+        );
+      case "transfer":
+        return (
+          <g>
+            <line x1={1} y1={c} x2={s - 1} y2={c} stroke={firstFamilyColor} strokeWidth={1.6} strokeDasharray="1 3" />
+            <path d={`M${s - 4},${c - 2} L${s - 1},${c} L${s - 4},${c + 2} Z`} fill={firstFamilyColor} />
+          </g>
+        );
+      case "transferArrival":
+        return (
+          <g>
+            <line x1={1} y1={c} x2={s - 5} y2={c} stroke={firstFamilyColor} strokeWidth={1.6} strokeDasharray="1 3" />
+            <path d={`M${s - 8},${c - 3} L${s - 2},${c} L${s - 8},${c + 3} Z`} fill={firstFamilyColor} />
+            <circle cx={s - 1} cy={c} r={1.6} fill={firstFamilyColor} />
+          </g>
+        );
+      case "bifurcationOut":
+        return <path d={`M${c},${c - 3} L${c + 3},${c} L${c},${c + 3} L${c - 3},${c} Z`} fill={theme.event.bifurcationOut} />;
+      case "branchingOut":
+        return (
+          <circle
+            cx={c}
+            cy={c}
+            r={4}
+            fill={theme.background}
+            stroke={theme.event.branchingOut}
+            strokeWidth={2}
+          />
+        );
+      case "collapsed":
+        return <path d={`M${c - 4},${c + 3} L${c},${c - 4} L${c + 4},${c + 3} Z`} fill={theme.muted} />;
+      case "leaf":
+        return <circle cx={c} cy={c} r={3.5} fill={firstFamilyColor} />;
+      case "locate":
+        return <circle cx={c} cy={c} r={4.5} fill="none" stroke="var(--locate)" strokeWidth={2} />;
+    }
+  };
+
+  const familyNames = recon.geneTrees
+    .map((gt) => gt.name || `${t.geneTree} ${gt.index + 1}`)
+    .join(", ");
+  // Read from the same table the rows are drawn from, so the accessible name can
+  // never list a different set — or a different order — than the overlay shows.
+  const spokenRows = LEGEND_ROWS.map((r) => r.label({ t, events: t.event })).join(", ");
+
   return (
     <div
       className={`legend${horizontal ? " horizontal" : ""}`}
-      aria-label={`${t.events}: ${t.event.speciation}, ${t.event.duplication}, ${t.event.loss}, ${t.transferLegend}, ${t.event.bifurcationOut}, ${t.event.branchingOut}, ${t.event.transferBack}, ${t.collapsedClade}, ${t.event.leaf}, ${t.legendLocate}; ${t.geneFamilies}: ${recon.geneTrees.map((gt) => gt.name || `${t.geneTree} ${gt.index + 1}`).join(", ")}`}
+      aria-label={`${t.events}: ${spokenRows}; ${t.geneFamilies}: ${familyNames}`}
     >
       <button
         className="legend-dir"
@@ -55,66 +119,11 @@ export function Legend({
       </button>
       <div className="legend-group events">
         <div className="legend-title">{t.events}</div>
-        <LegendItem label={t.event.speciation}>
-          {/* Scene.geneGlyph draws speciation and extant genes in the GENE
-              FAMILY colour, not in a fixed event colour; a blue dot for
-              speciation would match nothing on screen. Both show the first
-              family's colour, and the family group below documents the
-              per-family mapping. */}
-          <circle cx={c} cy={c} r={2.5} fill={geneColors[0] ?? geneColor(theme, 0)} opacity={0.85} />
-        </LegendItem>
-        <LegendItem label={t.event.duplication}>
-          <rect x={c - 3} y={c - 3} width={6} height={6} rx={1} fill={theme.event.duplication} />
-        </LegendItem>
-        <LegendItem label={t.event.loss}>
-          <g stroke={theme.event.loss} strokeWidth={1.6} strokeLinecap="round">
-            <line x1={c - 3} y1={c - 3} x2={c + 3} y2={c + 3} />
-            <line x1={c - 3} y1={c + 3} x2={c + 3} y2={c - 3} />
-          </g>
-        </LegendItem>
-        <LegendItem label={t.transferLegend}>
-          {/* Arcs and their heads are drawn in the family colour (Scene), so the
-              key has to show that colour to decode the figure. */}
-          <g>
-            <line x1={1} y1={c} x2={s - 1} y2={c} stroke={geneColors[0] ?? geneColor(theme, 0)} strokeWidth={1.6} strokeDasharray="1 3" />
-            <path d={`M${s - 4},${c - 2} L${s - 1},${c} L${s - 4},${c + 2} Z`} fill={geneColors[0] ?? geneColor(theme, 0)} />
-          </g>
-        </LegendItem>
-        {/* The recipient end of a transfer is the arrowhead landing on a gene
-            lineage, not the arc itself — readers need both ends keyed. */}
-        <LegendItem label={t.event.transferBack}>
-          <g>
-            <line x1={1} y1={c} x2={s - 5} y2={c} stroke={geneColors[0] ?? geneColor(theme, 0)} strokeWidth={1.6} strokeDasharray="1 3" />
-            <path d={`M${s - 8},${c - 3} L${s - 2},${c} L${s - 8},${c + 3} Z`} fill={geneColors[0] ?? geneColor(theme, 0)} />
-            <circle cx={s - 1} cy={c} r={1.6} fill={geneColors[0] ?? geneColor(theme, 0)} />
-          </g>
-        </LegendItem>
-        <LegendItem label={t.event.bifurcationOut}>
-          <path d={`M${c},${c - 3} L${c + 3},${c} L${c},${c + 3} L${c - 3},${c} Z`} fill={theme.event.bifurcationOut} />
-        </LegendItem>
-        {/* The transfer donor is drawn as a hollow ring (Scene.geneGlyph) and a
-            collapsed clade as a wedge; without a key here, readers of the
-            figure would have no way to decode them. */}
-        <LegendItem label={t.event.branchingOut}>
-          <circle
-            cx={c}
-            cy={c}
-            r={4}
-            fill={theme.background}
-            stroke={theme.event.branchingOut}
-            strokeWidth={2}
-          />
-        </LegendItem>
-        <LegendItem label={t.collapsedClade}>
-          <path d={`M${c - 4},${c + 3} L${c},${c - 4} L${c + 4},${c + 3} Z`} fill={theme.muted} />
-        </LegendItem>
-        <LegendItem label={t.event.leaf}>
-          <circle cx={c} cy={c} r={3.5} fill={geneColors[0] ?? geneColor(theme, 0)} />
-        </LegendItem>
-        {/* The outline a search hit or a data-check "locate" leaves behind. */}
-        <LegendItem label={t.legendLocate}>
-          <circle cx={c} cy={c} r={4.5} fill="none" stroke="var(--locate)" strokeWidth={2} />
-        </LegendItem>
+        {LEGEND_ROWS.map((row) => (
+          <LegendItem key={row.kind} label={row.label({ t, events: t.event })}>
+            {glyph(row.kind)}
+          </LegendItem>
+        ))}
       </div>
 
       <div className="legend-group">

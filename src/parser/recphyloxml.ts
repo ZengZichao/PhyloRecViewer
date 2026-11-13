@@ -392,7 +392,7 @@ export function parseRecPhyloXML(xml: string, ns = ""): Reconciliation {
 
   if (missingRooted > 0) {
     warnings.push(
-      `${missingRooted} gene tree <phylogeny> element(s) omit the schema-required rooted="true" attribute; assuming rooted trees.`,
+      `${missingRooted} gene tree <phylogeny> ${missingRooted === 1 ? "element omits" : "elements omit"} the schema-required rooted="true" attribute; assuming rooted trees.`,
     );
   }
 
@@ -455,7 +455,7 @@ function buildSpeciesTree(rootRaw: RawClade, seq: number, warnings: string[]): S
       node.support = support;
       if (support.value > 1 && support.value <= 100 && support.type !== "bootstrap") {
         warnings.push(
-          `Species "${name}" carries support ${support.value}, which looks like a 0-100 percentage rather than a 0-1 probability.`,
+          `Species "${name}" carries support ${support.value}, which looks like a 0–100 percentage rather than a 0–1 probability.`,
         );
       }
     }
@@ -501,7 +501,7 @@ function parseEvents(
     // transfer arcs draw one per arrival). Say so instead of staying silent.
     warnings.push(
       `Gene node "${label}" carries ${arrivals.length} <transferBack> arrivals; ` +
-        `the node's species and the NHX export use the first (${str(arrivals[0]["@_destinationSpecies"]) ?? "?"}).`,
+        `the node's species and the NHX export use the first · ${str(arrivals[0]["@_destinationSpecies"]) ?? "—"}.`,
     );
   }
 
@@ -568,7 +568,7 @@ function buildGeneNode(
       "Gene tree is nested too deep (possible malformed input).",
     );
   }
-  const label = str(raw.name) ?? "?";
+  const label = str(raw.name) ?? "—";
   // fast-xml-parser collapses a single <eventsRec> to an object but yields an
   // array when a clade erroneously carries several; keep the first and say so.
   const eventsRecRaw = raw.eventsRec;
@@ -635,7 +635,7 @@ function buildGeneNode(
   if (support) node.support = support;
   if (node.support && node.support.value > 1 && node.support.value <= 100 && node.support.type !== "bootstrap") {
     warnings.push(
-      `Gene node "${label}" carries support ${node.support.value}, which looks like a 0-100 percentage rather than a 0-1 probability.`,
+      `Gene node "${label}" carries support ${node.support.value}, which looks like a 0–100 percentage rather than a 0–1 probability.`,
     );
   }
   if (node.branchLength != null && node.branchLength < 0) {

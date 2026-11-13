@@ -16,7 +16,11 @@ import {
   type RenderOptions,
 } from "../render/options";
 import type { ThemePref } from "../render/theme";
-import type { SavedTab } from "../session";
+// PARSE_SEEDS are the parse-time namespace seeds for a nameless document: they
+// feed the parser ONLY (node ids hash them, model/stableId.ts) and must never
+// reach a component, toast, title, export stem or file name. An unnamed
+// document is labelled from the dictionary instead.
+import { PARSE_SEEDS, type SavedTab } from "../session";
 import { loadPrefs, savePrefs } from "./prefs";
 import { SUPPORTED_FORMATS, translations } from "../i18n";
 import { localizeDiagnostic } from "../i18nDiagnostics";
@@ -294,11 +298,14 @@ interface AppState {
   /** Run a heavy (synchronous) task with the loading overlay visible on every
    *  entry point - the single "heavy task" contract. */
   runHeavy: (fn: () => void) => Promise<void>;
-  loadXml: (xml: string, fileName: string) => void;
+  /** `fileName` may be null: a document without a known name stays nameless,
+   *  and the UI shows its localized pane / tab label instead of an invented
+   *  internal identifier. */
+  loadXml: (xml: string, fileName: string | null) => void;
   loadMany: (files: { name: string; text: string }[]) => void;
-  loadNestedXml: (xml: string, fileName: string) => void;
+  loadNestedXml: (xml: string, fileName: string | null) => void;
   clearNested: () => void;
-  loadCompareXml: (xml: string, fileName: string) => void;
+  loadCompareXml: (xml: string, fileName: string | null) => void;
   clearCompare: () => void;
   newTab: () => void;
   switchTab: (id: string) => void;
@@ -502,29 +509,41 @@ type DocLoad =
  *  the background-tab write of `openFiles`) apply, so all three reset
  *  exactly the same per-document slice. On failure only `error`/`warnings` are
  *  reported, because a failed open must never clobber the previous document. */
-function loadDoc(files: { name: string; text: string }[]): DocLoad {
+function loadDoc(
+  files: { name: string; text: string }[],
+  /** Parse-time namespace seed for a nameless single-file load; it feeds the
+   *  id hash ONLY, never the tab title or the document's displayed name. */
+  seedName?: string,
+): DocLoad {
   try {
     const merged = files.length > 1;
     const first = files[0];
+    // The string every node id of this document is derived from
+    // (model/stableId.ts). It must stay exactly what earlier builds hashed,
+    // or a restored session loses its collapse / swap / annotation sets.
+    // An EMPTY single-file name is no name: it takes the seed its own snapshot restores with.
+    const seed = seedName ?? (first ? first.name || PARSE_SEEDS.fileName : "document");
     // A separately provided species tree takes over for NHX gene trees whose
     // internal nodes lack S= (the leaf-only annotation style real tools emit).
     const ext = useStore.getState().externalSpeciesTree;
     let recon: Reconciliation;
     if (!merged && first && ext && detectFormat(first.text, first.name) === "nhx") {
-      const ns = documentNamespace(first.name, first.text);
+      const ns = documentNamespace(seed, first.text);
       const species = parseSpeciesTree(ext.text);
       recon = parseNhxReconciliation(first.text, ns, species);
     } else {
       recon = merged
         ? parseMerged(files)
-        : parseReconciliation(first?.text ?? "", first?.name ?? "document");
+        : parseReconciliation(first?.text ?? "", seed);
     }
+    // An empty name is "no name", never a document name: a nameless document
+    // must carry null here or the session it writes re-seeds it on restore.
     const title = merged
       ? (translations[useStore.getState().locale] ?? translations.en).mergedTabTitle
           .replace("{n}", String(files.length))
           .replace("{name}", first?.name ?? "")
           .trim()
-      : first?.name ?? null;
+      : first?.name || null;
     // Apply the user's saved "default view" to every newly opened document so
     // layout/style preferences take effect immediately. Session/autosave
     // restore calls `applyViewState` afterwards to override with its own.
@@ -701,10 +720,12 @@ function docFieldsFrom(snap: HistorySnapshot): Pick<
   };
 }
 
-/** Tab metadata shown in the tab bar. */
+/** Tab metadata shown in the tab bar. `title` is null for a restored tab whose
+ *  session entry carried no name: the tab bar then shows the localized
+ *  "untitled" label, so an English placeholder must never be stored for it. */
 export interface TabMeta {
   id: string;
-  title: string;
+  title: string | null;
 }
 
 /** The per-document ("tab") slice. Theme, locale and panel open state are
@@ -935,7 +956,16 @@ export const useStore = create<AppState>((set, get) => ({
   loadXml: (xml, fileName) => {
     resetCommitMerge();
     const s = get();
-    const load = loadDoc([{ name: fileName, text: xml }]);
+    // A nameless load keeps the document nameless (fileName null): the pane
+    // header and the export stem then fall back to their localized labels.
+    // The seed below is a separate string and goes only to the parser, so the
+    // node ids stay those of the same document restored with a name. An EMPTY
+    // name is nameless too: hashing `""` would renumber the document on restore.
+    const name = fileName || null;
+    const load = loadDoc(
+      [{ name: name ?? "", text: xml }],
+      name ?? PARSE_SEEDS.fileName,
+    );
     if (!load.ok) {
       // Failure must NOT clobber the file name / previous good document: the
       // breadcrumb keeps showing the last good file, and the previous document
@@ -948,9 +978,10 @@ export const useStore = create<AppState>((set, get) => ({
     const hist = s.recon || s.error ? commit(s, "open", docSnapshot(s)) : { past: [], future: [] };
     set((st) => ({
       ...load.patch,
+      fileName: name,
       past: hist.past,
       future: [],
-      tabs: st.tabs.map((tb) => (tb.id === st.activeTabId ? { ...tb, title: load.title ?? "" } : tb)),
+      tabs: st.tabs.map((tb) => (tb.id === st.activeTabId ? { ...tb, title: load.title || null } : tb)),
     }));
   },
 
@@ -967,7 +998,7 @@ export const useStore = create<AppState>((set, get) => ({
       ...load.patch,
       past: hist.past,
       future: [],
-      tabs: st.tabs.map((tb) => (tb.id === st.activeTabId ? { ...tb, title: load.title ?? "" } : tb)),
+      tabs: st.tabs.map((tb) => (tb.id === st.activeTabId ? { ...tb, title: load.title || null } : tb)),
     }));
   },
 
@@ -976,14 +1007,16 @@ export const useStore = create<AppState>((set, get) => ({
     // an open slider-drag window (the ≤600ms merge would otherwise swallow the
     // pre-drag snapshot) and it must be undoable like every other edit.
     resetCommitMerge();
+    // An empty layer name is "no name", exactly like a missing one (see loadXml).
+    const name = fileName || null;
     try {
-      const nested = parseReconciliation(xml, fileName);
+      const nested = parseReconciliation(xml, name ?? PARSE_SEEDS.nestedName);
       // Nested and compare are mutually exclusive: loading one clears the
       // other so stale data doesn't linger. Inform the user via a toast.
       const hadCompare = get().compare !== null;
       set((st) => ({
         nested,
-        nestedName: fileName,
+        nestedName: name,
         nestedXml: xml,
         nestedError: null,
         nestedWarnings: nested.warnings,
@@ -1003,7 +1036,7 @@ export const useStore = create<AppState>((set, get) => ({
     } catch (e) {
       set((st) => ({
         nested: null,
-        nestedName: fileName,
+        nestedName: name,
         nestedXml: null,
         nestedError: friendlyParseError(e, useStore.getState().locale),
         nestedWarnings: [],
@@ -1031,14 +1064,16 @@ export const useStore = create<AppState>((set, get) => ({
   loadCompareXml: (xml, fileName) => {
     // Same contract as loadNestedXml: fresh history step, undoable.
     resetCommitMerge();
+    // An empty layer name is "no name", exactly like a missing one (see loadXml).
+    const name = fileName || null;
     try {
-      const compare = parseReconciliation(xml, fileName);
+      const compare = parseReconciliation(xml, name ?? PARSE_SEEDS.compareName);
       // Nested and compare are mutually exclusive: loading one clears the
       // other so stale data doesn't linger. Inform the user via a toast.
       const hadNested = get().nested !== null;
       set((st) => ({
         compare,
-        compareName: fileName,
+        compareName: name,
         compareXml: xml,
         compareError: null,
         compareWarnings: compare.warnings,
@@ -1056,7 +1091,7 @@ export const useStore = create<AppState>((set, get) => ({
     } catch (e) {
       set((st) => ({
         compare: null,
-        compareName: fileName,
+        compareName: name,
         compareXml: null,
         compareError: friendlyParseError(e, useStore.getState().locale),
         compareWarnings: [],
@@ -1201,10 +1236,9 @@ export const useStore = create<AppState>((set, get) => ({
     const oversized = files.filter((f) => (f.size ?? 0) > MAX_FILE_BYTES);
     if (oversized.length > 0) {
       const st = get();
+      const dict = translations[st.locale];
       st.showToast(
-        st.locale === "zh"
-          ? translations.zh.fileTooLarge.replace("{names}", oversized.map((f) => f.name).join("、"))
-          : translations.en.fileTooLarge.replace("{names}", oversized.map((f) => f.name).join(", ")),
+        dict.fileTooLarge.replace("{names}", oversized.map((f) => f.name).join(dict.listSeparator)),
         "error",
       );
       if (oversized.length === files.length) return;
@@ -1511,13 +1545,16 @@ export const useStore = create<AppState>((set, get) => ({
       };
       if (prev.doc) {
         // Full document restore (undo an open/load), updating the tab title.
+        const restoredDoc = prev.doc;
         return {
           ...next,
           ...docFieldsFrom(prev),
           ...editFieldsFrom(prev),
           annotating: null,
           tabs: s.tabs.map((tb) =>
-            tb.id === s.activeTabId ? { ...tb, title: prev.doc?.fileName ?? tb.title } : tb,
+            // The document's OWN name, null included: a stale tab title would
+            // be persisted as the id seed when this tab moves to the background.
+            tb.id === s.activeTabId ? { ...tb, title: restoredDoc.fileName } : tb,
           ),
         };
       }
@@ -1534,13 +1571,14 @@ export const useStore = create<AppState>((set, get) => ({
         past: [...s.past, { ...snapshot(s), doc: docSnapshot(s) }].slice(-HISTORY_LIMIT),
       };
       if (nextSnap.doc) {
+        const restoredDoc = nextSnap.doc;
         return {
           ...next,
           ...docFieldsFrom(nextSnap),
           ...editFieldsFrom(nextSnap),
           annotating: null,
           tabs: s.tabs.map((tb) =>
-            tb.id === s.activeTabId ? { ...tb, title: nextSnap.doc?.fileName ?? tb.title } : tb,
+            tb.id === s.activeTabId ? { ...tb, title: restoredDoc.fileName } : tb,
           ),
         };
       }
@@ -1735,7 +1773,7 @@ function writeFilesToTab(tabId: string, files: { name: string; text: string }[])
       },
     },
     tabs: load.ok
-      ? st.tabs.map((tb) => (tb.id === tabId ? { ...tb, title: load.title ?? "" } : tb))
+      ? st.tabs.map((tb) => (tb.id === tabId ? { ...tb, title: load.title || null } : tb))
       : st.tabs,
   }));
   if (!load.ok) reportLoadFailure(tabId, load.error);
@@ -1758,12 +1796,11 @@ function reportLoadFailure(tabId: string, message: string): void {
       docs: { ...st.docs, [tabId]: { ...doc, error: message, warnings: [] } },
     }));
   }
-  s.showToast(
-    s.locale === "zh"
-      ? translations.zh.tabFileOpenFailed.replace("{title}", meta?.title || tabId)
-      : translations.en.tabFileOpenFailed.replace("{title}", meta?.title || tabId),
-    "error",
-  );
+  // An unnamed tab is named by the dictionary; its internal id must not appear
+  // in human-readable text (GLOSSARY rule 1, STYLE-GUIDE 5.3).
+  const dict = translations[s.locale];
+  const shown = meta?.title || dict.untitledTab;
+  s.showToast(dict.tabFileOpenFailed.replace("{title}", shown), "error");
 }
 
 /* ------------------------------------------------------------------ *
@@ -1777,11 +1814,16 @@ function materializeDoc(doc: DocState): DocState {
   const saved = doc.lazyDoc;
   if (!saved) return doc;
   const next: DocState = { ...doc, lazyDoc: null };
+  // Each layer's ids are hashed from the name the session stored, or from the
+  // exact seed an earlier build used when it stored none (PARSE_SEEDS): a
+  // different seed would silently orphan that tab's persisted collapse, swap
+  // and annotation sets, which are keyed by node id. `title` shares `fileName`'s
+  // seed, so a nameless document's ids never depend on its role.
   try {
     const files = saved.sourceFiles ?? [];
     next.recon = files.length > 1
       ? parseMerged(files)
-      : parseReconciliation(saved.xml, saved.title ?? "tab");
+      : parseReconciliation(saved.xml, saved.title || PARSE_SEEDS.title);
     next.warnings = next.recon.warnings;
     next.error = null;
   } catch (e) {
@@ -1793,14 +1835,14 @@ function materializeDoc(doc: DocState): DocState {
   }
   if (saved.nestedXml) {
     try {
-      next.nested = parseReconciliation(saved.nestedXml, saved.nestedName ?? "nested");
+      next.nested = parseReconciliation(saved.nestedXml, saved.nestedName || PARSE_SEEDS.nestedName);
     } catch (e) {
       next.nestedError = friendlyParseError(e, useStore.getState().locale);
     }
   }
   if (saved.compareXml) {
     try {
-      next.compare = parseReconciliation(saved.compareXml, saved.compareName ?? "compare");
+      next.compare = parseReconciliation(saved.compareXml, saved.compareName || PARSE_SEEDS.compareName);
     } catch (e) {
       next.compareError = friendlyParseError(e, useStore.getState().locale);
     }
@@ -1814,15 +1856,12 @@ function materializeDoc(doc: DocState): DocState {
 function reportLazyFailure(raw: DocState, doc: DocState): void {
   if (!raw.lazyDoc || !doc.error) return;
   const s = useStore.getState();
+  const dict = translations[s.locale];
   const tabTitle = s.tabs.find((t) => t.id === s.activeTabId)?.title;
-  const title = tabTitle || raw.lazyDoc.title || raw.fileName || "untitled";
-  const zh = s.locale === "zh";
-  s.showToast(
-    zh
-      ? translations.zh.tabCorrupt.replace("{title}", title)
-      : translations.en.tabCorrupt.replace("{title}", title),
-    "error",
-  );
+  // An unnamed restored tab is named by the dictionary, never by an English
+  // placeholder that would show up verbatim in the Chinese UI (STYLE-GUIDE 5.3).
+  const title = tabTitle || raw.lazyDoc.title || raw.fileName || dict.untitledTab;
+  s.showToast(dict.tabCorrupt.replace("{title}", title), "error");
 }
 
 /* ------------------------------------------------------------------ *

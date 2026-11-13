@@ -30,6 +30,9 @@ export type IssueCode =
 
 export type IssueLevel = "error" | "warning" | "info";
 
+/** GLOSSARY-UI row 36 / STYLE §3.7: the empty mark, identical in both locales. */
+const EMPTY = "—";
+
 export interface ConsistencyIssue {
   code: IssueCode;
   level: IssueLevel;
@@ -89,14 +92,14 @@ export function checkConsistency(recon: Reconciliation): ConsistencyIssue[] {
   const seenNames = new Set<string>();
   for (const s of species.nodes) {
     if (seenNames.has(s.name)) {
-      push(issues, "duplicateSpecies", "warning", `${s.name || "(unnamed)"} @depth ${s.depth}`);
+      push(issues, "duplicateSpecies", "warning", `${s.name || EMPTY} @depth ${s.depth}`);
     }
     seenNames.add(s.name);
     if (s.branchLength != null && (!Number.isFinite(s.branchLength) || s.branchLength < 0)) {
-      push(issues, "negativeBranchLength", "warning", `${s.name || "(unnamed)"}: ${s.branchLength}`);
+      push(issues, "negativeBranchLength", "warning", `${s.name || EMPTY}: ${s.branchLength}`);
     }
     if (s.support != null && s.support.value > 1 && s.support.value <= 100 && s.support.type !== "bootstrap") {
-      push(issues, "confidenceScaleSuspect", "info", `${s.name || "(unnamed)"}: ${s.support.value}`);
+      push(issues, "confidenceScaleSuspect", "info", `${s.name || EMPTY}: ${s.support.value}`);
     }
   }
 
@@ -105,7 +108,7 @@ export function checkConsistency(recon: Reconciliation): ConsistencyIssue[] {
 
   for (const tree of recon.geneTrees) {
     for (const g of tree.nodes) {
-      const label = g.name || g.endEvent.geneName || "?";
+      const label = g.name || g.endEvent.geneName || EMPTY;
 
       if (g.branchLength != null && (!Number.isFinite(g.branchLength) || g.branchLength < 0)) {
         push(issues, "negativeBranchLength", "warning", label, g.id);
@@ -115,7 +118,7 @@ export function checkConsistency(recon: Reconciliation): ConsistencyIssue[] {
           push(issues, "confidenceScaleSuspect", "info", `${label}: ${ev.confidence}`, g.id);
         }
         if (ev.timeSlice != null && (!Number.isFinite(ev.timeSlice) || ev.timeSlice < 0)) {
-          push(issues, "negativeBranchLength", "warning", `${label}: timeSlice ${ev.timeSlice}`, g.id);
+          push(issues, "negativeBranchLength", "warning", `${label}: time slice ${ev.timeSlice}`, g.id);
         }
       }
       if (g.support != null && g.support.value > 1 && g.support.value <= 100 && g.support.type !== "bootstrap") {
@@ -204,7 +207,7 @@ export function checkConsistency(recon: Reconciliation): ConsistencyIssue[] {
             const recipTS = arr.timeSlice;
             if (donorTS != null && recipTS != null) {
               if (recipTS < donorTS) {
-                push(issues, "transferBackwardsInTime", "warning", `${label} (timeSlice ${recipTS} < ${donorTS})`, g.id);
+                push(issues, "transferBackwardsInTime", "warning", `${label} · time slice ${recipTS} < ${donorTS}`, g.id);
               }
             } else {
               push(issues, "transferTimeUnknown", "info", label, g.id);

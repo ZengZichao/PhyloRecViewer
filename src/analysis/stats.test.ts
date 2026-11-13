@@ -101,4 +101,82 @@ describe("computeStats", () => {
     const totalNodes = s.perSpecies.reduce((n, p) => n + p.total, 0) + s.unassigned.nodes;
     expect(totalNodes).toBe(s.nodes.length);
   });
+
+  /**
+   * GLOSSARY-UI row 36 (空值) / STYLE-GUIDE-UI §3.7: the ONLY empty-value mark
+   * is `—`, in both locales; `?`, `N/A`, `none`, `unnamed` and `no species` are
+   * banned aliases. The node table and the transfer matrix below are the values
+   * `statsToCsv` writes into the exported statistics CSV, so a re-introduced
+   * `?` here would reach the user's spreadsheet.
+   */
+  describe("empty value is marked with the glossary em dash, never `?`", () => {
+    // Every empty slot at once: `<bifurcationOut/>` legitimately has no
+    // speciesLocation attribute (the XSD's BifurcationOutRec carries none), a
+    // bare `<transferBack/>` names neither donor nor destination, and the
+    // arrival's `<leaf/>` names neither gene nor species.
+    const BLANK = `<recPhylo>
+      <spTree><phylogeny><clade><name>R</name><clade><name>A</name></clade><clade><name>B</name></clade></clade></phylogeny></spTree>
+      <recGeneTree><phylogeny><name>blank</name><clade>
+        <eventsRec><bifurcationOut/></eventsRec>
+        <clade><eventsRec><transferBack/><leaf/></eventsRec></clade>
+        <clade><eventsRec><leaf speciesLocation="B" geneName="kept"/></eventsRec></clade>
+      </clade></phylogeny></recGeneTree>
+    </recPhylo>`;
+    const blank = computeStats(parseRecPhyloXML(BLANK));
+    const arrival = blank.nodes.find((n) => n.donors !== "" || n.recipients !== "");
+
+    it("reaches the fixture it is meant to exercise", () => {
+      // Guards the other cases here: without an arrival row and empty species
+      // slots the assertions below would pass vacuously.
+      expect(arrival).toBeDefined();
+      expect(blank.transferMatrix.length).toBeGreaterThan(0);
+      expect(blank.nodes.some((n) => n.name === "")).toBe(true);
+      expect(blank.nodes.some((n) => n.species === "")).toBe(true);
+    });
+
+    it("marks a transfer with neither donor nor destination as `—`", () => {
+      expect(arrival?.donors).toBe("\u2014");
+      expect(arrival?.recipients).toBe("\u2014");
+    });
+
+    it("marks an unmapped transfer-matrix endpoint as `—`", () => {
+      for (const pair of blank.transferMatrix) {
+        expect(pair.from).not.toBe("?");
+        expect(pair.to).not.toBe("?");
+      }
+      // The bifurcation-out donor has no species and the arrival no destination.
+      expect(blank.transferMatrix).toContainEqual({
+        from: "\u2014",
+        to: "\u2014",
+        count: 1,
+      });
+    });
+
+    it("never writes `?` into the exported statistics CSV", () => {
+      const csv = statsToCsv(blank, {
+        sourceFile: "blank.xml",
+        generatedBy: "PhyloRecViewer test",
+      });
+      expect(csv).not.toContain("?");
+      expect(csv).not.toContain("N/A");
+      expect(csv).not.toContain("unnamed");
+      // The `—` mark actually reaches the file, so the empty cell is visible.
+      expect(csv).toContain("\u2014");
+    });
+
+    it("carries the `—` mark through the CSV nodes section verbatim", () => {
+      const csv = statsToCsv(blank, { sourceFile: "blank.xml", generatedBy: "x" });
+      const nodeSection = csv.slice(csv.indexOf("# section: nodes"));
+      // num,name,kind,event,species,family,donors,recipients,time_slice,...
+      const dataRows = nodeSection.split("\n").filter((l) => /^\d+,/.test(l));
+      expect(dataRows.length).toBe(blank.nodes.length);
+      const marks = dataRows.map((row) => row.split(",")[6]);
+      expect(marks).toContain("\u2014");
+      for (const row of dataRows) {
+        const cells = row.split(",");
+        expect(cells[6]).not.toBe("?");
+        expect(cells[7]).not.toBe("?");
+      }
+    });
+  });
 });

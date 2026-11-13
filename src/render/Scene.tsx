@@ -74,6 +74,20 @@ export interface SceneProps {
   viewport?: CullRect | null;
   /** Accessible summary of the drawing for screen readers (on-screen only). */
   ariaLabel?: string;
+  /**
+   * The dictionary every string drawn by this scene is taken from.
+   *
+   * An exported figure renders `Scene` through `renderToStaticMarkup`, and
+   * `useSyncExternalStore` (which zustand's `useT()` is built on) reads
+   * `getInitialState()` during a server render - the language
+   * `navigator.language` handed the store when it was created, NOT the one the
+   * user picked (that is applied later, in `main.tsx`). Left to `useT()` alone,
+   * an export would draw English tooltips under a Chinese legend. The exporters
+   * therefore inject `currentDict()`, exactly like `buildLegendGroup` does, so
+   * one artefact can never contain two locales (docs/STYLE-GUIDE-UI.md §5.1,
+   * §6). The on-screen canvas omits this and gets the live `useT()` dictionary.
+   */
+  dict?: Dict;
   /** Localized collapsed-clade tooltip words (default to English). */
   collapsedWord?: string;
   leavesWord?: string;
@@ -271,6 +285,7 @@ export function Scene(props: SceneProps) {
           onTransferClick={props.onTransferClick}
           interactive={props.interactive}
           detail={props.detail}
+          dict={props.dict}
           eventLabels={props.eventLabels}
           collapsedWord={props.collapsedWord}
           leavesWord={props.leavesWord}
@@ -323,8 +338,12 @@ const SceneContent = memo(function SceneContent({
   geneColors,
   annotations = {},
   viewport = null,
+  dict,
 }: SceneProps & { arrowId: string; tubeGradId: string }) {
-  const t = useT();
+  const liveT = useT();
+  // An injected dictionary wins: a static markup render cannot see the locale
+  // the user picked (see `SceneProps.dict`). Omitted = the live on-screen one.
+  const t = dict ?? liveT;
   const { reconciliation: recon, transfers, width, height, positions: pos } = result;
   const { species } = recon;
   const hidden = result.hiddenIds;
@@ -359,8 +378,8 @@ const SceneContent = memo(function SceneContent({
               onGeneLeave,
               onGeneClick,
               onGeneKeyDown,
-            }, viewport, { word: t.collapsedClade, leaves: t.leavesUnit, hint: t.expandHint, unnamed: t.cladeFallback }, hideOutside, diffSet)}
-            {options.showGeneLabels && showLabels && renderGeneLabels(tree.nodes, theme, options, proj, pos, highlight, hidden, collapsed, colorOf(tree.index), viewport, hideOutside, labelOverrides, labelOverridesById, onLabelClick)}
+            }, viewport, hideOutside, diffSet)}
+            {options.showGeneLabels && showLabels && renderGeneLabels(tree.nodes, theme, options, proj, pos, highlight, hidden, collapsed, colorOf(tree.index), viewport, hideOutside, labelOverrides, labelOverridesById, onLabelClick, t)}
           </Fragment>
         ))}
       </g>
@@ -782,7 +801,6 @@ function renderGeneGlyphs(
   color: string,
   h: GlyphHandlers,
   viewport: CullRect | null,
-  collapsedLabels: { word: string; leaves: string; hint: string; unnamed: string },
   hideOutside?: Set<string> | null,
   diffSet?: Set<string> | null,
 ) {
@@ -815,7 +833,13 @@ function renderGeneGlyphs(
         ? collapsedGlyph(c.x, c.y, proj, color, s)
         : geneGlyph(g.endEvent.type, c.x, c.y, theme, color, s);
       const title = isCollapsed
-        ? `${g.name || collapsedLabels.unnamed}\n${collapsedLabels.word} (${countLabel(leafCount(g), collapsedLabels.leaves)}) - ${collapsedLabels.hint}`
+        ? // The expand gesture is only promised where a click exists to make it:
+          // a PNG/SVG/PDF is a static picture, so selling "Alt/⌥- or ⌘-click to
+          // expand" inside it would be wording the artefact's own implementation
+          // cannot carry out (docs/STYLE-GUIDE-UI.md §3.3).
+          `${g.name ? `${g.name}\n` : ""}${dict.collapsedClade} · ${countLabel(leafCount(g), dict.leavesUnit)}${
+            h.interactive ? ` · ${dict.expandHint}` : ""
+          }`
         : tooltipText(g, dict);
       // Confidence shown next to the node: the terminal event's value first,
       // then a clade-level support - the same accessor the filter uses, so a
@@ -1000,7 +1024,7 @@ function tooltipText(g: GeneNode, t: Dict): string {
   const label = t.event[ev.type];
   const where = ev.speciesLocation ?? ev.destinationSpecies ?? g.speciesId;
   const name = g.name ? `${g.name}\n` : "";
-  const lines: string[] = [`${name}${label}${where ? ` @ ${where}` : ""}`.trimEnd()];
+  const lines: string[] = [`${name}${label}${where ? ` · ${where}` : ""}`.trimEnd()];
   // The scientific evidence a reviewer needs, without opening a panel: time
   // slice, event confidence, clade support, and every transfer arrival.
   if (ev.timeSlice != null) lines.push(`${t.inspTimeSlice}: ${ev.timeSlice}`);
@@ -1011,8 +1035,13 @@ function tooltipText(g: GeneNode, t: Dict): string {
     if (e.type === "transferBack") {
       lines.push(
         `${t.event.transferBack}: ${e.speciesLocation ?? t.inspNone} → ${e.destinationSpecies ?? t.inspNone}` +
-          (e.timeSlice != null ? ` (${t.inspTimeSlice} ${e.timeSlice})` : "") +
-          (e.confidence != null ? ` [${e.confidence}]` : ""),
+          // The arrival's own evidence rides on as ` · ` fields, never in
+          // brackets: STYLE §2.4 gives English `()` and Chinese `（）`, and this
+          // one line of code is read by both, so the half-width pair used to put
+          // English punctuation into a Chinese tooltip (STYLE §2.6 allows ` · `
+          // as the separator, §2.4 prefers it over brackets for spliced text).
+          (e.timeSlice != null ? ` · ${t.inspTimeSlice} ${e.timeSlice}` : "") +
+          (e.confidence != null ? ` · ${t.inspConfidence} ${e.confidence}` : ""),
       );
     }
   }
@@ -1061,8 +1090,16 @@ function renderGeneLabels(
     // Apply user override to the base label.
     let displayName: string;
     if (isCollapsed) {
-      const base = overrideKey ? (idOverride ?? labelOverrides?.[overrideKey] ?? overrideKey) : (t?.cladeFallback ?? "");
-      displayName = `${base} (${leafCount(g)})`;
+      // An unnamed collapsed clade is still a clade, so the drawn text names it
+      // with the dictionary's collapsed-clade word: the bare ` (2)` it used to
+      // produce - and the `undefined` the glyph tooltip spelled out for the same
+      // node - both restated a deleted dictionary key (`cladeFallback`, whose
+      // value broke GLOSSARY row 16) as a label. STYLE §5.1: the wording comes
+      // from the dictionary, which is also why `t` is passed in at the call site.
+      const base = overrideKey ? (idOverride ?? labelOverrides?.[overrideKey] ?? overrideKey) : (t?.collapsedClade ?? "");
+      // The leaf count is spliced on with ` · `, not in brackets: §2.4 gives
+      // English `()` and Chinese `（）` and this line feeds both.
+      displayName = `${base} · ${leafCount(g)}`;
     } else {
       displayName = overrideKey ? (idOverride ?? labelOverrides?.[overrideKey] ?? overrideKey) : "";
     }
@@ -1130,7 +1167,7 @@ function renderTransfers(
   highlight: Set<string> | null,
   hideOutside: Set<string> | null,
   colorOf: (ti: number) => string,
-  dict?: Dict,
+  dict: Dict,
   onTransferClick?: (edge: TransferEdge) => void,
 ) {
   // Multiple arrivals on one node (or the same donor->recipient pair) used to
@@ -1148,13 +1185,13 @@ function renderTransfers(
     const idx = pairSeen.get(pairKey) ?? 0;
     pairSeen.set(pairKey, idx + 1);
     const bow = Math.min(0.5, options.transferBow + idx * 0.09);
-    const donorSp = t.from.speciesId || t.from.endEvent.speciesLocation || dict?.inspNone || "—";
-    const recipSp = t.to.speciesId || t.to.endEvent.destinationSpecies || dict?.inspNone || "—";
+    const donorSp = t.from.speciesId || t.from.endEvent.speciesLocation || dict.inspNone;
+    const recipSp = t.to.speciesId || t.to.endEvent.destinationSpecies || dict.inspNone;
     const arrival = t.to.events.find((e) => e.type === "transferBack");
     const title =
-      `${dict?.event.transferBack ?? ""}: ${donorSp} → ${recipSp}` +
-      (arrival?.timeSlice != null ? `\n${dict?.inspTimeSlice ?? ""}: ${arrival.timeSlice}` : "") +
-      (arrival?.confidence != null ? `\n${dict?.inspConfidence ?? ""}: ${formatConfidence(arrival.confidence)}` : "");
+      `${dict.event.transferBack}: ${donorSp} → ${recipSp}` +
+      (arrival?.timeSlice != null ? `\n${dict.inspTimeSlice}: ${arrival.timeSlice}` : "") +
+      (arrival?.confidence != null ? `\n${dict.inspConfidence}: ${formatConfidence(arrival.confidence)}` : "");
     return (
       <path
         key={t.id}

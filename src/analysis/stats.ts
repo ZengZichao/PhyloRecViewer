@@ -182,8 +182,8 @@ export function computeStats(recon: Reconciliation): ReconStats {
         species: sp,
         family: tree.index,
         familyName: tree.name ?? `#${tree.index + 1}`,
-        donors: arrivals.map((e) => e.speciesLocation ?? "?").join(";"),
-        recipients: arrivals.map((e) => e.destinationSpecies ?? "?").join(";"),
+        donors: arrivals.map((e) => e.speciesLocation ?? "\u2014").join(";"),
+        recipients: arrivals.map((e) => e.destinationSpecies ?? "\u2014").join(";"),
         timeSlice: g.endEvent.timeSlice ?? arrivals.find((e) => e.timeSlice != null)?.timeSlice ?? null,
         confidence: g.endEvent.confidence ?? arrivals.find((e) => e.confidence != null)?.confidence ?? null,
         branchLength: g.branchLength ?? null,
@@ -224,8 +224,8 @@ export function computeStats(recon: Reconciliation): ReconStats {
   // Transfer donor -> recipient matrix (by species name).
   const pairMap = new Map<string, number>();
   for (const t of computeTransfers(recon)) {
-    const from = t.from.speciesId || "?";
-    const to = t.to.speciesId || t.to.endEvent.destinationSpecies || "?";
+    const from = t.from.speciesId || "\u2014";
+    const to = t.to.speciesId || t.to.endEvent.destinationSpecies || "\u2014";
     const key = `${from}\u0000${to}`;
     pairMap.set(key, (pairMap.get(key) ?? 0) + 1);
   }

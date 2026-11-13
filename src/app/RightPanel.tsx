@@ -151,6 +151,7 @@ function SearchFilterTab() {
   const confidenceMin = useStore((s) => s.confidenceMin);
   const confidenceMax = useStore((s) => s.confidenceMax);
   const setConfidenceRange = useStore((s) => s.setConfidenceRange);
+  const locale = useStore((s) => s.locale);
   const [idx, setIdx] = useState(0);
   // Debounce the typed query into the store so each keystroke does not run a
   // full O(N) focusMatches and trigger a whole-scene SVG rebuild.
@@ -165,6 +166,11 @@ function SearchFilterTab() {
   const { matches } = useFocusMatches();
   const list = matches ?? [];
   const hasConfidence = useMemo(() => (recon ? reconHasConfidence(recon) : false), [recon]);
+  // `regexError` keeps the engine's canonical English SyntaxError text (STYLE
+  // §4.4: the analysis layer stays locale-free); it is localised here, at the
+  // display boundary, so the Chinese panel does not print V8 English under a
+  // Chinese headline.
+  const regexProblem = regex ? regexError(query) : null;
   // Reset the active match index whenever the match set changes (query, regex,
   // event/family/confidence filters), so navigation always restarts from the
   // first match instead of an out-of-range position.
@@ -228,11 +234,11 @@ function SearchFilterTab() {
         <span>{t.searchOnlyMatch}</span>
       </label>
 
-      {regex && regexError(query) && (
+      {regex && regexProblem && (
         <p className="rp-issue ex regex-error" role="alert" style={{ color: "var(--danger, #c0392b)", fontSize: 11 }}>
           {t.regexInvalid}
           <br />
-          <code>{regexError(query)}</code>
+          <code>{localizeDiagnostic(regexProblem, locale)}</code>
         </p>
       )}
 
@@ -544,6 +550,7 @@ function StatsTab({ onToast }: { onToast: (msg: string, kind?: "success" | "erro
   const t = useT();
   const recon = useStore((s) => s.recon);
   const fileName = useStore((s) => s.fileName);
+  const locale = useStore((s) => s.locale);
   const theme = themes[useStore((s) => s.resolvedThemeId)];
   const stats = useStats();
   const locateGene = useStore((s) => s.locateGene);
@@ -579,7 +586,7 @@ function StatsTab({ onToast }: { onToast: (msg: string, kind?: "success" | "erro
         if (ok) onToast(`${t.exportedToast}: ${fname}`, "success");
       } catch (e) {
         onToast(
-          `${t.exportFailed}: ${e instanceof Error ? e.message : String(e)}`,
+          `${t.exportFailed}: ${localizeDiagnostic(e instanceof Error ? e.message : String(e), locale)}`,
           "error",
         );
       }
@@ -715,20 +722,20 @@ function StatsTab({ onToast }: { onToast: (msg: string, kind?: "success" | "erro
       </RpCollapsible>
 
       <RpCollapsible
-        title={t.statsBySpecies}
+        title={t.statsBySpecies.replace("{n}", String(topSpecies.length))}
         storageKey="rpv.rp.species"
         defaultOpen
         force={force}
         summary={
           topSpecies.length > 0
-            ? `${t.topOfSpecies.replace("{n}", String(topSpecies.length)).replace("{total}", String(stats.perSpecies.length))} · ${topSpecies[0].species}: ${countLabel(topSpecies[0].copies, t.copiesCol)}`
+            ? `${t.topOfSpecies.replace("{n}", String(topSpecies.length)).replace("{total}", String(stats.perSpecies.length))} · ${topSpecies[0].species}: ${countLabel(topSpecies[0].copies, t.copiesUnit)}`
             : t.noMatches
         }
       >
         <div className="rp-table-wrap"><table className="rp-table">
         <thead>
           <tr>
-            <th scope="col">{t.species}</th>
+            <th scope="col">{t.inspSpecies}</th>
             <th scope="col">{t.copiesCol}</th>
             <th scope="col">{t.event.speciation}</th>
             <th scope="col">{t.event.duplication}</th>
@@ -784,7 +791,7 @@ function StatsTab({ onToast }: { onToast: (msg: string, kind?: "success" | "erro
             <th>{t.colName}</th>
             <th>{t.colType}</th>
             <th>{t.colEvent}</th>
-            <th>{t.species}</th>
+            <th>{t.inspSpecies}</th>
             {multiFam && <th>{t.geneTree}</th>}
           </tr>
         </thead>
@@ -804,10 +811,10 @@ function StatsTab({ onToast }: { onToast: (msg: string, kind?: "success" | "erro
               style={{ cursor: "pointer" }}
             >
               <td>{n.num}</td>
-              <td className="rp-td-name">{n.name || "\u2014"}</td>
+              <td className="rp-td-name">{n.name || t.inspNone}</td>
               <td>{n.kind === "leaf" ? t.nodeLeaf : n.kind === "loss" ? t.nodeLoss : t.nodeInternal}</td>
               <td>{t.event[n.event]}</td>
-              <td className="rp-td-name">{n.species || "\u2014"}</td>
+              <td className="rp-td-name">{n.species || t.inspNone}</td>
               {multiFam && <td className="rp-td-name">{n.familyName}</td>}
             </tr>
           ))}
@@ -817,7 +824,7 @@ function StatsTab({ onToast }: { onToast: (msg: string, kind?: "success" | "erro
         <p className="rp-empty">
           {t.topOf.replace("{n}", String(nodeRows.length)).replace("{total}", String(stats.nodes.length))}
           {" · "}
-          {t.statsNodesLimited}
+          {t.statsNodesLimited.replace("{n}", String(NODE_ROW_CAP))}
         </p>
       )}
       </RpCollapsible>
@@ -1166,10 +1173,10 @@ function DiffTab() {
         <thead>
           <tr>
             <th scope="col">{t.colName}</th>
-            <th scope="col">{t.colEvent} ({t.paneTagA})</th>
-            <th scope="col">{t.colEvent} ({t.paneTagB})</th>
-            <th scope="col">{t.inspSpecies} ({t.paneTagA})</th>
-            <th scope="col">{t.inspSpecies} ({t.paneTagB})</th>
+            <th scope="col">{`${t.colEvent} · ${t.paneTagA}`}</th>
+            <th scope="col">{`${t.colEvent} · ${t.paneTagB}`}</th>
+            <th scope="col">{`${t.inspSpecies} · ${t.paneTagA}`}</th>
+            <th scope="col">{`${t.inspSpecies} · ${t.paneTagB}`}</th>
             <th scope="col">{t.diffColStatus}</th>
           </tr>
         </thead>
@@ -1186,8 +1193,8 @@ function DiffTab() {
               <td className="rp-td-name">{p.name}</td>
               <td style={{ fontWeight: p.agreeEvent ? 400 : 700 }}>{t.event[p.eventA as keyof typeof t.event] ?? p.eventA}</td>
               <td style={{ fontWeight: p.agreeEvent ? 400 : 700 }}>{t.event[p.eventB as keyof typeof t.event] ?? p.eventB}</td>
-              <td>{p.speciesA || "\u2014"}</td>
-              <td>{p.speciesB || "\u2014"}</td>
+              <td>{p.speciesA || t.inspNone}</td>
+              <td>{p.speciesB || t.inspNone}</td>
               <td>{statusOf(p)}</td>
             </tr>
           ))}
@@ -1252,12 +1259,12 @@ function ChecksTab() {
     { code: "parse_warnings", title: t.parseWarnings, items: docWarnings.map((w) => localizeDiagnostic(w, locale)) },
     {
       code: "nested_warnings",
-      title: `${t.nestedWarningsLabel}${nestedName ? ` (${nestedName})` : ""}`,
+      title: nestedName ? t.nestedWarningsNamed.replace("{name}", nestedName) : t.nestedWarningsLabel,
       items: nestedWarnings.map((w) => localizeDiagnostic(w, locale)),
     },
     {
       code: "compare_warnings",
-      title: `${t.compareWarningsLabel}${compareName ? ` (${compareName})` : ""}`,
+      title: compareName ? t.compareWarningsNamed.replace("{name}", compareName) : t.compareWarningsLabel,
       items: compareWarnings.map((w) => localizeDiagnostic(w, locale)),
     },
   ].filter((g) => g.items.length > 0);
@@ -1268,10 +1275,10 @@ function ChecksTab() {
   const trees: { code: string; name: string; issues: ConsistencyIssue[] }[] = [
     { code: "gene", name: t.paneGeneSymbiont, issues },
     ...(nestedIssues
-      ? [{ code: "symbiont", name: `${t.paneSymbiontHost}${nestedName ? ` (${nestedName})` : ""}`, issues: nestedIssues }]
+      ? [{ code: "symbiont", name: nestedName ? t.paneSymbiontHostNamed.replace("{name}", nestedName) : t.paneSymbiontHost, issues: nestedIssues }]
       : []),
     ...(compareIssues
-      ? [{ code: "compare", name: compareName ? `${t.comparePrefix} ${compareName}` : t.comparePrefix, issues: compareIssues }]
+      ? [{ code: "compare", name: compareName ? t.comparePrefix.replace("{name}", compareName) : t.paneComparison, issues: compareIssues }]
       : []),
   ];
 

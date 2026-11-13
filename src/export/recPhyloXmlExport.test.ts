@@ -109,11 +109,37 @@ describe("recPhyloXML export", () => {
   it("lists the losses an NHX export would incur", () => {
     const recon = parseRecPhyloXML(RICH);
     const losses = nhxExportLosses(recon).join("\n");
-    expect(losses).toMatch(/multiple transfer arrivals/);
-    expect(losses).toMatch(/timeSlice/);
-    expect(losses).toMatch(/confidence/);
-    expect(losses).toMatch(/species branch length/);
-    expect(losses).toMatch(/gene tree name/);
+    expect(losses).toBe(
+      [
+        // The sample carries one multi-arrival node and one named tree, so this
+        // is also the battery's only proof that a count of 1 declines to a
+        // singular and a count above 1 to a plural.
+        "1 node carries multiple transfer arrivals; only the first can be written to NHX",
+        "4 time slice values are not representable in NHX",
+        "2 event confidence values are not representable in NHX",
+        "2 species branch lengths are not carried by the NHX species tree",
+        "1 gene tree name is not written to NHX",
+      ].join("\n"),
+    );
+    // GLOSSARY row 26 and STYLE §3.6: the disclosure names the concept ("time
+    // slice"), never the `timeSlice` attribute, and declines by number instead
+    // of hedging with `(s)`.
+    expect(losses).not.toMatch(/timeSlice|\(s\)|\(es\)/);
+  });
+
+  it("declines an NHX loss for a single occurrence", () => {
+    const recon = parseRecPhyloXML(`<recPhylo>
+      <spTree><phylogeny rooted="true"><clade><name>R</name>
+        <clade><name>NeverSampled</name></clade>
+      </clade></phylogeny></spTree>
+      <recGeneTree><phylogeny rooted="true"><clade>
+        <eventsRec><leaf speciesLocation="R" geneName="g"/></eventsRec>
+      </clade></phylogeny></recGeneTree>
+    </recPhylo>`);
+    // Only NeverSampled is unsampled here, so the line must read as a singular.
+    expect(nhxExportLosses(recon).join("\n")).toMatch(
+      /^1 species tree taxon is not sampled by any gene tree/m,
+    );
   });
 
   it("reports unsampled species-tree taxa as an NHX loss", () => {

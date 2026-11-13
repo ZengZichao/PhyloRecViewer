@@ -107,7 +107,7 @@ export function reconToRecPhyloXml(recon: Reconciliation): string {
 
 /**
  * What an NHX export of this reconciliation would LOSE, for the export-time
- * disclosure dialog: multiple arrivals per node, timeSlice, event confidence,
+ * disclosure dialog: multiple arrivals per node, time slice, event confidence,
  * the species tree (and species never sampled by any gene tree), species branch
  * lengths and the gene-tree names.
  */
@@ -137,16 +137,16 @@ export function nhxExportLosses(recon: Reconciliation): string[] {
   const treeNames = recon.geneTrees.filter((t) => t.name).length;
 
   if (multiArrivalNodes > 0)
-    losses.push(`${multiArrivalNodes} node(s) carry multiple transfer arrivals; only the first can be written to NHX`);
+    losses.push(`${multiArrivalNodes} ${multiArrivalNodes === 1 ? "node carries" : "nodes carry"} multiple transfer arrivals; only the first can be written to NHX`);
   if (timeSlices > 0)
-    losses.push(`${timeSlices} timeSlice value(s) are not representable in NHX`);
+    losses.push(`${timeSlices} ${timeSlices === 1 ? "time slice value is" : "time slice values are"} not representable in NHX`);
   if (confidences > 0)
-    losses.push(`${confidences} event confidence value(s) are not representable in NHX`);
+    losses.push(`${confidences} ${confidences === 1 ? "event confidence value is" : "event confidence values are"} not representable in NHX`);
   if (unsampledSpecies.length > 0)
-    losses.push(`${unsampledSpecies.length} species tree taxa are not sampled by any gene tree and would disappear from the NHX species reconstruction`);
+    losses.push(`${unsampledSpecies.length} ${unsampledSpecies.length === 1 ? "species tree taxon is" : "species tree taxa are"} not sampled by any gene tree and would disappear from the NHX species reconstruction`);
   if (spBranchLengths > 0)
-    losses.push(`${spBranchLengths} species branch length(s) are not carried by the NHX species tree`);
+    losses.push(`${spBranchLengths} ${spBranchLengths === 1 ? "species branch length is" : "species branch lengths are"} not carried by the NHX species tree`);
   if (treeNames > 0)
-    losses.push(`${treeNames} gene tree name(s) are not written to NHX`);
+    losses.push(`${treeNames} ${treeNames === 1 ? "gene tree name is" : "gene tree names are"} not written to NHX`);
   return losses;
 }

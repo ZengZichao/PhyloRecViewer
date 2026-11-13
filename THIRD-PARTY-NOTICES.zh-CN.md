@@ -1,8 +1,8 @@
 # 第三方声明
 
-[English](./THIRD-PARTY-NOTICES.md) | **中文**
+**中文** | [English](./THIRD-PARTY-NOTICES.md)
 
-本文件涵盖的内容，以及 MIT [LICENSE](./LICENSE) **不**覆盖的部分：
+本文件涵盖的内容，以及 MIT [LICENSE](./LICENSE) *不*覆盖的部分：
 
 1. 随源码归档再分发的一个第三方**数据**文件，其上游仓库未声明任何许可证（§1）；
 2. 应用链接的第三方**代码**，以及为什么「以 MIT 许可证发布」并不足以描述一个安装器的
@@ -32,31 +32,31 @@
 |---|---|
 | 上游仓库 | <https://github.com/WandrilleD/recPhyloXML>（Duchemin 等，2018；recPhyloXML 项目） |
 | 上游路径 | `testFiles/9999.nhx.xml` |
-| 上游提交锚点（默认分支 `master` 的 HEAD） | `8c6b2849e219923b9e5da21df4483466724b09c2`——作者时间 2021-01-08T08:27:44Z，提交信息 *「python converter from NOTUNG to xml : proper handling of events following a transferBack」*；仓库 `pushed_at` 2021-01-08T08:28:09Z |
+| 上游提交锚点（默认分支 `master` 的 HEAD） | `8c6b2849e219923b9e5da21df4483466724b09c2`——提交作者日期 2021-01-08T08:27:44Z，提交信息 *「python converter from NOTUNG to xml : proper handling of events following a transferBack」*；仓库 `pushed_at` 2021-01-08T08:28:09Z |
 | 上游 git blob id | `93e85800837ccd02277421090efc668110e629fb` |
 | 上游文件 | **22,307 字节**，SHA-256 `972579ea48696152c8b0d2ca7b49ab0c707bbef73b9924b8271b1051fe2063a8` |
 | 本仓库归档副本 | **22,321 字节**，SHA-256 `fd7ebfc5190268d45cda867440c31d4ca6fdd8f40d672cb186f8d0d8d9ecde34` |
-| 复制/最后落盘时间 | 2026-09-25 |
-| 2026-10-08 经 GitHub API 复核 | blob id、字节数、提交锚点均未变化；上游自 2021-01-08 起无新提交 |
+| 本仓库复制 / 最后改动日期 | 2026-09-25 |
+| 经 GitHub API 复核 | 2026-10-08（blob id、字节数、提交锚点均未变化；上游自 2021-01-08 起无新提交） |
 
 自行核对（只读，除一次公开 API 请求外不需要任何凭据）：
 
 ```bash
-shasum -a 256 src/parser/__fixtures__/9999.nhx.xml            # fd7ebfc5…de34，22,321 B
-git hash-object src/parser/__fixtures__/9999.nhx.xml          # 与上游 blob 不同：见 1.3 的一处改动
+shasum -a 256 src/parser/__fixtures__/9999.nhx.xml            # fd7ebfc5…de34, 22,321 B
+git hash-object src/parser/__fixtures__/9999.nhx.xml          # ≠ 上游 blob：见 1.3 的一处改动
 gh api repos/WandrilleD/recPhyloXML/contents/testFiles/9999.nhx.xml \
-   --jq '{sha, size}'                                        # 93e85800…，22307
+   --jq '{sha, size}'                                        # 93e85800…, 22307
 gh api repos/WandrilleD/recPhyloXML/branches/master \
-   --jq '.commit.sha, .commit.commit.author.date'             # 8c6b2849…，2021-01-08T08:27:44Z
-gh api repos/WandrilleD/recPhyloXML --jq .license             # null → 见 1.4
+   --jq '.commit.sha, .commit.commit.author.date'             # 8c6b2849…, 2021-01-08T08:27:44Z
+gh api repos/WandrilleD/recPhyloXML --jq .license             # null  → 见 1.4
 ```
 
-用 `xml.etree.ElementTree` 对本仓库副本重新计数的结果：物种 clade 共 125 个，其中
-63 个为物种末端叶；`<recGeneTree>` 恰 1 个（单基因家族）；基因节点 23 个，其中末端叶
-12 个；记录的事件为 `speciation` 7、`duplication` 4、`loss` 6、`leaf` 6，且不含任何
+用 `xml.etree.ElementTree` 对本仓库副本重新计数的结果：物种演化支（clade）共 125 个，
+其中 63 个为物种叶；`<recGeneTree>` 恰 1 个（单基因家族）；基因节点 23 个，其中
+12 个为基因叶；记录的事件为 `speciation` 7、`duplication` 4、`loss` 6、`leaf` 6，且不含任何
 转移事件——这是一份只做重复/丢失的调和结果。
 
-### 1.3 唯一的一处改动：14 个字节，以及为什么必须改
+### 1.3 唯一的一处改动：14 个字节，以及为什么
 
 归档副本与上游只差一行，即物种树开头那个 `<phylogeny>` 元素：
 
@@ -78,7 +78,7 @@ gh api repos/WandrilleD/recPhyloXML --jq .license             # null → 见 1.4
 `<xsd:attribute name="rooted" type="xsd:boolean" use="required"/>`，并注释说明与调和树
 关联的物种树必定是有根的）。因此未经修改的上游文件不符合模式，应用自身的数据检查会
 拒绝这个用来演示这些检查的文件。新增的属性只是陈述了上游作者在自己的基因树元素上已经
-陈述的事实，不改变任何拓扑、名称、注释或事件。
+陈述的事实，不改变任何拓扑、名称、批注或事件。
 
 归档副本刻意**没有**就地加注说明：它的字节数与 SHA-256 已在上面的出处表里引用，若在
 XML 里加一段头注释，复核者所依赖的那两个数字就会失效。出处信息因此写在本文件里。
@@ -91,16 +91,16 @@ XML 里加一段头注释，复核者所依赖的那两个数字就会失效。�
   文件，但「分发」不等于「授权他人再分发」。
 * **正在向权利持有人申请授权**（Wandrille Duchemin 与 recPhyloXML 项目作者），请求允许
   在本仓库的 MIT 许可证下再分发该文件并注明出处。在该授权正式存档之前，本仓库
-  的 MIT 许可证不覆盖 §1 这个文件，任何「本仓库全部材料均已在许可下公开可得」的说法都会
-  夸大现状。本文件就是记录这个缺口的位置。
+  的 MIT 许可证不覆盖 §1 这个文件，任何声称本仓库*全部*材料均已在许可证下公开可得的说法
+  都会夸大现状。本文件就是记录这个缺口的位置。
 * **备选方案**（若授权未获批准）：以许可证清晰的等价文件替换该夹具——要么由作者生成一份
   合成 NHX/PhyloXML 调和结果（`scripts/measure.ts` 里已有用固定种子确定性生成合成调和树
   的做法），要么改用明确声明了数据许可证的来源。替换件必须保持 §1.2 记录的量
-  （63 个物种叶、125 个物种 clade、单基因家族、23 个基因节点、12 个基因叶、无转移事件），
+  （63 个物种叶、125 个物种演化支、单基因家族、23 个基因节点、12 个基因叶、无转移事件），
   并能复现统计卡片；届时 §1.2 中的字节数、SHA-256 与出处一并替换。
 * **备选方案无法撤销的一件事**：版本 DOI `10.5281/zenodo.23053318` 归档的是 v0.1.0 存档，
   那份不可变快照里已经含有这份 22,321 字节的副本。替换件只能出现在概念 DOI
-  `10.5281/zenodo.23053317` 之下的**后续版本**中，v0.1.0 归档无法修改。
+  `10.5281/zenodo.23053317` 之下的*后续版本*中，v0.1.0 归档无法修改。
 
 ---
 
@@ -120,7 +120,7 @@ XML 里加一段头注释，复核者所依赖的那两个数字就会失效。�
 | `fast-xml-parser`（含其 `strnum`） | 5.11.2 | MIT |
 | `jspdf` | 4.2.1 | MIT |
 | `svg2pdf.js` | 2.9.0 | MIT |
-| `d3-selection`、`d3-zoom`（含 `d3-*` 闭包） | 3.0.0 | ISC；其中 `d3-ease` 为 BSD-3-Clause |
+| `d3-selection`、`d3-zoom`（含 `d3-*` 闭包） | 3.0.0 | ISC；仅 1 个叶子依赖 `d3-ease` 为 BSD-3-Clause |
 | `@tauri-apps/api` | 2.11.1 | Apache-2.0 OR MIT |
 
 该依赖树中有两个包带**双重**许可证，本文件明确记录采用的是哪一选项，而不留给读者猜：
@@ -130,7 +130,7 @@ XML 里加一段头注释，复核者所依赖的那两个数字就会失效。�
 * `rgbcolor@1.0.1`（经 `canvg` ← `jspdf`）——`MIT OR SEE LICENSE IN FEEL-FREE.md`，
   按 **MIT** 选项采用。
 
-其余以 MIT 为主，其中 `pako@2.2.0` 为 `MIT AND Zlib`（两个条款都是宽松许可）。
+其余依赖闭包均为 MIT，其中 `pako@2.2.0` 为 `MIT AND Zlib`（两个条款都是宽松许可）。
 对所有已安装 `package.json`（329 个，`npm ls --all --parseable`）的许可证字段扫描
 显示**没有 GPL / AGPL / LGPL / SSPL / EPL / CPOL / 非商业条款**；两个需要点名的条目只在
 构建期出现、不进入发布物——`caniuse-lite@1.0.30001806`（CC-BY-4.0，经 `browserslist`）
@@ -157,11 +157,11 @@ crates.io 索引，无法只靠已提交内容离线生成。分发二进制前�
 
 以下文件没有任何第三方权利主张，它们与仓库其余部分一样受 MIT 许可证覆盖：
 
-* `src/samples/` 下的五份演示调和结果（`showcase`、三层演示的
-  `nested-*` 一对，以及 `compare-tool-a` / `compare-tool-b` 一对）；
-* `src/parser/__fixtures__/conformant-minimal.recphyloxml`（2,380 字节），其自带的头部
-  注释就说明这是一份手写的、符合模式的最小文档，用于钉住解析器读取
-  该一致方言的方式。
+* `src/samples/` 下的五份演示调和结果（`showcase`、三层演示的两个 `nested-*` 层级，
+  以及 `compare-tool-a` / `compare-tool-b` 一对）；
+* `src/parser/__fixtures__/conformant-minimal.recphyloxml`（2,380 字节），其自带的
+  头注释就说明这是一份手写的、符合模式的最小文档，用于钉住解析器读取
+  符合模式的那一方言的方式。
 
 ---
 

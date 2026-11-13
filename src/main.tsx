@@ -2,6 +2,7 @@ import React from "react";
 import { createRoot } from "react-dom/client";
 import { App } from "./app/App";
 import { ErrorBoundary } from "./app/ErrorBoundary";
+import { htmlLang } from "./i18n";
 import { friendlyParseError, useStore } from "./state/store";
 import { loadPrefs } from "./state/prefs";
 import { isTauri } from "./platform/desktop";
@@ -40,7 +41,7 @@ if (prefs.minimap !== undefined) useStore.setState({ minimap: prefs.minimap });
 // right background from the very first frame.
 const resolved = useStore.getState().resolvedThemeId;
 document.documentElement.dataset.theme = resolved;
-document.documentElement.lang = useStore.getState().locale === "zh" ? "zh-CN" : "en";
+document.documentElement.lang = htmlLang[useStore.getState().locale];
 document.body.style.background = themes[resolved].background;
 
 if (prefs.defaultView?.layoutOptions || prefs.defaultView?.renderOptions) {

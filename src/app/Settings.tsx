@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { useT } from "../i18n";
+import { intlTag, useT } from "../i18n";
 import { PNG_DPI_CHOICES } from "../export/exporters";
 import { useStore } from "../state/store";
 import { defaultLayoutOptions } from "../layout";
@@ -126,13 +126,13 @@ export function Settings({ open, onClose }: { open: boolean; onClose: () => void
             className={`btn ghost${locale === "zh" ? " active" : ""}`}
             onClick={() => setLocale("zh")}
           >
-            中文
+            {t.langNameZh}
           </button>
           <button
             className={`btn ghost${locale === "en" ? " active" : ""}`}
             onClick={() => setLocale("en")}
           >
-            English
+            {t.langNameEn}
           </button>
         </div>
 
@@ -161,7 +161,7 @@ export function Settings({ open, onClose }: { open: boolean; onClose: () => void
         <p className="settings-note">
           {hasDefault
             ? t.saveDefaultViewTitle
-            : `${t.saveDefaultViewTitle} — ${t.defaultView}`}
+            : `${t.saveDefaultViewTitle} · ${t.defaultView}`}
         </p>
         <div className="settings-row">
           <button className="btn" onClick={saveAsDefault}>
@@ -179,7 +179,7 @@ export function Settings({ open, onClose }: { open: boolean; onClose: () => void
           {autosaveFailed
             ? t.autosaveFailedLabel
             : autosaveAt
-              ? t.autosaveOn.replace("{time}", new Date(autosaveAt).toLocaleString(locale === "zh" ? "zh-CN" : "en-US"))
+              ? t.autosaveOn.replace("{time}", new Date(autosaveAt).toLocaleString(intlTag[locale]))
               : t.autosaveNone}
         </p>
         <div className="settings-row">

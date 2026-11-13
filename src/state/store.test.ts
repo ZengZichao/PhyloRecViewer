@@ -1,6 +1,9 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { useStore, friendlyParseError } from "./store";
+import { useStore, friendlyParseError, MAX_FILE_BYTES } from "./store";
+import { translations } from "../i18n";
 import { parseRecPhyloXML } from "../parser/recphyloxml";
+import { parseReconciliation } from "../parser/formats";
+import type { Reconciliation } from "../model/types";
 
 // jsdom lacks matchMedia; the store reads it at init and on theme changes.
 beforeEach(() => {
@@ -53,14 +56,44 @@ const DUP_NAME_XML = `<?xml version="1.0" encoding="UTF-8"?>
 </recPhylo>`;
 
 /** A File whose `text()` resolves after `delay` ms (a slow read / drop). */
-function fakeFile(name: string, text: string, delay = 0): File {
+function fakeFile(name: string, text: string, delay = 0, size = text.length): File {
   return {
     name,
+    size,
     text: () => new Promise((res) => setTimeout(() => res(text), delay)),
   } as unknown as File;
 }
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+describe("the oversized-file rejection toast", () => {
+  it("lists the rejected names in the UI language and joined the local way", async () => {
+    // Dropping a file past the size cap used to build its message with a
+    // `locale === "zh" ? translations.zh… : translations.en…` ternary and a
+    // Chinese comma written in the logic layer (STYLE-GUIDE-UI.md §5.2, §2).
+    // The join is part of the copy, so each locale must get its own separator.
+    const real = useStore.getState().showToast;
+    try {
+      for (const locale of ["en", "zh"] as const) {
+        const toast = vi.fn();
+        useStore.setState({ showToast: toast as never, locale });
+        const oversized = (name: string) => fakeFile(name, "x", 0, MAX_FILE_BYTES + 1);
+        await useStore.getState().openFiles([oversized("big-a.nhx"), oversized("big-b.nhx")]);
+        const dict = translations[locale];
+        expect(toast).toHaveBeenCalledWith(
+          dict.fileTooLarge.replace("{names}", ["big-a.nhx", "big-b.nhx"].join(dict.listSeparator)),
+          "error",
+        );
+        const other = translations[locale === "zh" ? "en" : "zh"];
+        expect(String(toast.mock.calls[0][0])).not.toContain(other.fileTooLarge.split("{names}")[0]);
+      }
+    } finally {
+      // The store is module-global: leaving the mock installed would blank the
+      // `toast` the identity tests below read.
+      useStore.setState({ showToast: real, toast: null });
+    }
+  });
+});
 
 describe("heavy tasks never wait on a frame that may never come", () => {
   it("runHeavy runs and clears the overlay when rAF never fires", async () => {
@@ -348,6 +381,38 @@ describe("lazily restored tabs", () => {
     expect(st.xml).toBe("###not a tree###");
     expect(toast.mock.calls.some((c) => String(c[0]).includes("corrupt.nhx"))).toBe(true);
   });
+
+  it("a nameless unparsable lazy tab is named by the dictionary, never by an English placeholder", () => {
+    const toast = vi.fn();
+    useStore.setState({ showToast: toast as never, locale: "zh" });
+    useStore.getState().loadXml(NHX, "a.nhx");
+    const tabA = useStore.getState().activeTabId;
+    useStore.getState().newTab();
+    useStore.setState((s) => ({
+      docs: {
+        ...s.docs,
+        [tabA]: {
+          ...s.docs[tabA]!,
+          xml: "###not a tree###",
+          // Every name slot a restored tab can carry is empty, exactly like a
+          // session entry whose title was null.
+          fileName: null,
+          recon: null,
+          lazyDoc: { title: null, xml: "###not a tree###" } as never,
+        },
+      },
+      tabs: s.tabs.map((tb) => (tb.id === tabA ? { ...tb, title: "" } : tb)),
+    }));
+    useStore.getState().switchTab(tabA);
+
+    const st = useStore.getState();
+    expect(st.recon).toBeNull();
+    // The nameless document stays nameless instead of being labelled "tab".
+    expect(st.fileName).toBeNull();
+    const msgs = toast.mock.calls.map((c) => String(c[0])).join("\n");
+    expect(msgs).toContain("未命名");
+    expect(msgs).not.toContain("untitled");
+  });
 });
 
 describe("undo/redo covers layout & render options", () => {
@@ -495,5 +560,131 @@ describe("applyViewState history", () => {
     useStore.getState().setLayout({ levelHeight: 120 });
     useStore.getState().applyViewState({ themeId: "dark" });
     expect(useStore.getState().past.length).toBe(0);
+  });
+});
+
+/* ------------------------------------------------------------------ *
+ * Parse-time namespace seeds                                         *
+ * ------------------------------------------------------------------ */
+
+/**
+ * The seed a nameless document hashes into its node ids is load-bearing: the
+ * collapse sets, swap sets, annotations and label overrides a user makes are
+ * all keyed by node id, so a seed that changes silently orphans all of them.
+ * Every expectation derives the expected ids from
+ * `parseReconciliation(xml, <the literal HEAD passed>)` rather than from a hash
+ * copied out of a run, so the test pins the contract, not an accident.
+ */
+describe("a nameless load reproduces HEAD's node ids", () => {
+  /** Gene plus species node ids of one parse ([] when nothing was parsed). */
+  const ids = (r: Reconciliation | null): string[] =>
+    r
+      ? [
+          ...r.species.nodes.map((n) => n.id),
+          ...r.geneTrees.flatMap((t) => t.nodes.map((n) => n.id)),
+        ]
+      : [];
+
+  it("keeps the oracle honest: another seed really does renumber the tree", () => {
+    expect(ids(parseReconciliation(NHX, "session"))).not.toEqual(ids(parseReconciliation(NHX, "")));
+  });
+
+  it("seeds a nameless front document with the seed HEAD called \"session\"", () => {
+    useStore.getState().loadXml(NHX, null);
+    const st = useStore.getState();
+    // Display: the pane header still falls back to the localized pane label.
+    expect(st.fileName).toBeNull();
+    // Parse: the ids are the ones HEAD hashed from its "session" seed.
+    expect(ids(st.recon)).toEqual(ids(parseReconciliation(NHX, "session")));
+  });
+
+  it("seeds a nameless nested layer with the seed HEAD called \"nested\"", () => {
+    useStore.getState().loadXml(NHX, "a.nhx");
+    useStore.getState().loadNestedXml(NHX, null);
+    const st = useStore.getState();
+    expect(st.nestedName).toBeNull();
+    expect(ids(st.nested)).toEqual(ids(parseReconciliation(NHX, "nested")));
+  });
+
+  it("seeds a nameless compare layer with the seed HEAD called \"compare\"", () => {
+    useStore.getState().loadXml(NHX, "a.nhx");
+    useStore.getState().loadCompareXml(NHX, null);
+    const st = useStore.getState();
+    expect(st.compareName).toBeNull();
+    expect(ids(st.compare)).toEqual(ids(parseReconciliation(NHX, "compare")));
+  });
+
+  it("treats an explicitly empty file name as no name, seeding the canonical one", () => {
+    // `""` is not a document name: persisting it would re-seed the document
+    // from null on the next restore and renumber every node id.
+    useStore.getState().loadXml(NHX, "");
+    const st = useStore.getState();
+    expect(st.fileName).toBeNull();
+    expect(st.tabs.find((tb) => tb.id === st.activeTabId)?.title).toBeNull();
+    expect(ids(st.recon)).toEqual(ids(parseReconciliation(NHX, "session")));
+  });
+
+  it("leaves a nameless load with no empty string in the tab bar either", () => {
+    const titleOf = () => {
+      const st = useStore.getState();
+      return st.tabs.find((tb) => tb.id === st.activeTabId)?.title;
+    };
+    useStore.getState().loadXml(NHX, null);
+    expect(useStore.getState().fileName).toBeNull();
+    // The tab title is what a background tab serializes as its id seed, so it must carry null.
+    expect(titleOf()).toBeNull();
+    useStore.getState().loadMany([{ name: "b.nhx", text: NHX }]);
+    expect(titleOf()).toBe("b.nhx");
+    useStore.getState().loadMany([{ name: "", text: NHX }]);
+    expect(useStore.getState().fileName).toBeNull();
+    expect(titleOf()).toBeNull();
+    // And it hashes the canonical nameless seed, as its own snapshot restores it.
+    expect(ids(useStore.getState().recon)).toEqual(ids(parseReconciliation(NHX, "session")));
+  });
+
+  it("seeds a lazily restored nameless tab with the front document's seed", () => {
+    useStore.getState().loadXml(NHX, null);
+    const front = ids(useStore.getState().recon);
+    const tabA = useStore.getState().activeTabId;
+    useStore.getState().newTab();
+    // Exactly what `restoreTabs` leaves behind for a background tab of a
+    // nameless session: no parsed document, no title.
+    useStore.setState((s) => ({
+      docs: {
+        ...s.docs,
+        [tabA]: {
+          ...s.docs[tabA]!,
+          recon: null,
+          lazyDoc: { title: null, xml: NHX } as never,
+        },
+      },
+      tabs: s.tabs.map((tb) => (tb.id === tabA ? { ...tb, title: null } : tb)),
+    }));
+    useStore.getState().switchTab(tabA);
+    const st = useStore.getState();
+    // The document's role must not change its ids.
+    expect(st.fileName).toBeNull();
+    expect(ids(st.recon)).toEqual(front);
+    expect(ids(st.recon)).toEqual(ids(parseReconciliation(NHX, "session")));
+  });
+
+  it("seeds a named load from its own name, never from a placeholder", () => {
+    useStore.getState().loadXml(NHX, "Mammals.nhx");
+    const st = useStore.getState();
+    expect(st.fileName).toBe("Mammals.nhx");
+    expect(ids(st.recon)).toEqual(ids(parseReconciliation(NHX, "Mammals.nhx")));
+    expect(ids(st.recon)).not.toEqual(ids(parseReconciliation(NHX, "session")));
+  });
+
+  it("keeps three nameless layers of one document on three distinct id sets", () => {
+    useStore.getState().loadXml(NHX, null);
+    const front = ids(useStore.getState().recon);
+    useStore.getState().loadNestedXml(NHX, null);
+    const nested = ids(useStore.getState().nested);
+    useStore.getState().loadCompareXml(NHX, null);
+    const compare = ids(useStore.getState().compare);
+    expect(nested).not.toEqual(front);
+    expect(compare).not.toEqual(front);
+    expect(compare).not.toEqual(nested);
   });
 });

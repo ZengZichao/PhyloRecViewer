@@ -6,6 +6,7 @@
  * (everything visible); otherwise the renderer dims every node outside the set.
  */
 import type { GeneNode, Reconciliation } from "../model/types";
+import { currentDict } from "../i18n";
 
 /** Which event categories are currently shown (all true = no filtering). */
 export interface EventFilter {
@@ -113,7 +114,7 @@ export function regexError(query: string): string | null {
     new RegExp(q, "i");
     return null;
   } catch (e) {
-    return (e as Error).message || "Invalid regular expression";
+    return (e as Error).message || currentDict().batchInvalidRegex;
   }
 }
 

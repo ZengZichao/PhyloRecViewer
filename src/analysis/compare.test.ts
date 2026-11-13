@@ -40,4 +40,30 @@ describe("computeDiff", () => {
     expect(agreementPct(d)).toBe(100);
     expect(d.disagreeA.size).toBe(0);
   });
+
+  /**
+   * GLOSSARY-UI row 36 (空值) / STYLE-GUIDE-UI §3.7: `MatchedPair.name` is
+   * rendered straight into the comparison table (app/RightPanel.tsx) and written
+   * into the exported diff CSV, so its label for an unnamed node is user-facing
+   * and must be `—` — not the banned `(unnamed)` / `?` aliases.
+   */
+  it("labels a matched node that carries no name with the glossary em dash", () => {
+    // A loss clade has no <name> and no geneName, which is exactly the case the
+    // `||` chain in pairOf() falls through.
+    const withLoss = (lossSpecies: string) =>
+      parseRecPhyloXML(`<recPhylo>${SP}
+        <recGeneTree><phylogeny><clade><name>g0</name>
+          <eventsRec><speciation speciesLocation="root"/></eventsRec>
+          <clade><name>gA</name><eventsRec><leaf speciesLocation="A" geneName="x"/></eventsRec></clade>
+          <clade><eventsRec><loss speciesLocation="${lossSpecies}"/></eventsRec></clade>
+        </clade></phylogeny></recGeneTree>
+      </recPhylo>`);
+    const d = computeDiff(withLoss("A"), withLoss("A"));
+    const names = d.pairs.map((p) => p.name);
+    expect(names).toContain("\u2014");
+    expect(names).not.toContain("(unnamed)");
+    expect(names).not.toContain("?");
+    // The named nodes are untouched by the fallback.
+    expect(names).toContain("x");
+  });
 });

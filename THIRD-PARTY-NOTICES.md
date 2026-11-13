@@ -1,6 +1,6 @@
 # Third-party notices
 
-**English** | [中文](./THIRD-PARTY-NOTICES.zh-CN.md)
+[中文](./THIRD-PARTY-NOTICES.zh-CN.md) | **English**
 
 What this file covers, and what the MIT [LICENSE](./LICENSE) does *not* cover:
 

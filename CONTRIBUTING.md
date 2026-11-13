@@ -1,6 +1,6 @@
 # Contributing to PhyloRecViewer
 
-**English** | [中文](./CONTRIBUTING.zh-CN.md)
+[中文](./CONTRIBUTING.zh-CN.md) | **English**
 
 Thank you for your interest in contributing to PhyloRecViewer! This document describes the development workflow, code standards, and project structure.
 
@@ -65,12 +65,12 @@ src/
 ├── app/           # React components (App, Canvas, Sidebar, RightPanel, …)
 ├── render/        # Pure-function SVG renderer (Scene, geometry, theme)
 ├── layout/        # Six-pass layout pipeline (species/gene/transfers/…)
-├── model/         | Immutable reconciliation model (Reconciliation, GeneNode, …)
+├── model/         # Immutable reconciliation model (Reconciliation, GeneNode, …)
 ├── parser/        # recPhyloXML / NHX / Newick parsers
-├── analysis/      | Focus matches, stats, data checks, diff
-├── export/        | SVG / PNG / PDF / HTML / NHX exporters
-├── state/         | Zustand store, autosave, session, prefs
-├── platform/      | Tauri desktop bridge (file open/save, fs)
+├── analysis/      # Focus matches, stats, data checks, diff
+├── export/        # SVG / PNG / PDF / HTML / NHX exporters
+├── state/         # Zustand store, autosave, session, prefs
+├── platform/      # Tauri desktop bridge (file open/save, fs)
 ├── samples/       # Bundled example reconciliations (three menu entries)
 ├── i18n.ts        # zh/en dictionary (compile-time type-checked)
 ├── session.ts     # Session file serialization (current schema version lives here)
@@ -80,7 +80,7 @@ src-tauri/
 data/              # frozen benchmark tables and MANIFEST.json (v0.1.0 measurement)
 scripts/
 ├── measure.ts                  # parse / layout / render benchmarks -> _build/*.csv
-├── aggregate-measurements.py   # fold benchmark runs into data/ or _build/aggregates
+├── aggregate-measurements.py   # merge benchmark runs into data/ or _build/aggregates
 └── check-tracked-files.mjs     # repo self-consistency guard (npm run check:tracked)
 docs/coverage-v0.1.2.json       # frozen v0.1.2 coverage summary cited by the manuscript
 .github/workflows/
@@ -236,7 +236,7 @@ from there.
 - **Session file trust boundary**: all options read from session files or prefs must pass through `sanitizeLayoutOptions` / `sanitizeRenderOptions` before reaching the layout/render engine.
 - **Session schema version**: `CURRENT_SESSION_VERSION` in `src/session.ts` is the
   single source of truth. Bump it only when the persisted shape changes, and keep
-  the "what a session contains" list and the version note in both user manuals in
+  the "Session file fields" list and the version note in both user manuals in
   sync with the code (the manuals quote the value; nothing else defines it).
 
 ### Commit Messages

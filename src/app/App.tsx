@@ -8,7 +8,7 @@ import {
   type PointerEvent as ReactPointerEvent,
 } from "react";
 import { layout } from "../layout";
-import { countLabel, useT } from "../i18n";
+import { countLabel, htmlLang, intlTag, useT } from "../i18n";
 import { agreementPct, speciesAgreementPct, computeDiff } from "../analysis/compare";
 import { desktopTakePendingFiles, onDesktopOpenFile, onDesktopOpenFailed } from "../platform/desktop";
 import { themes } from "../render/theme";
@@ -16,6 +16,7 @@ import { useStore, type ToastData } from "../state/store";
 import { isOnboarded, loadPrefs, savePrefs } from "../state/prefs";
 import { restoreAutosave, clearAutosaveSnapshot } from "../state/autosave";
 import { samples } from "../samples";
+import { APP_NAME } from "../version";
 import { Canvas, type ViewSync } from "./Canvas";
 import { AnnotationEditor } from "./AnnotationEditor";
 import { Legend } from "./Legend";
@@ -232,8 +233,8 @@ export function App() {
       const hide = diffHidden ? null : diff.disagreeA;
       const hideB = diffHidden ? null : diff.disagreeB;
       return [
-        { result, highlight: hide, hideOutside: ho, labelOverrides, labelOverridesById, title: fileName ?? "A" },
-        { result: compareResult, highlight: hideB, hideOutside: ho, labelOverrides, labelOverridesById, title: compareName ?? "B" },
+        { result, highlight: hide, hideOutside: ho, labelOverrides, labelOverridesById, title: fileName ?? t.paneTagA },
+        { result: compareResult, highlight: hideB, hideOutside: ho, labelOverrides, labelOverridesById, title: compareName ?? t.paneTagB },
       ];
     }
     return [{ result, highlight: focusPrimary, hideOutside: ho, labelOverrides, labelOverridesById }];
@@ -259,13 +260,13 @@ export function App() {
   // lang is essential for screen readers to pronounce the document correctly.
   useEffect(() => {
     document.documentElement.dataset.theme = resolvedThemeId;
-    document.documentElement.lang = locale === "zh" ? "zh-CN" : "en";
+    document.documentElement.lang = htmlLang[locale];
     document.body.style.background = theme.background;
   }, [theme, resolvedThemeId, locale]);
 
   // The window (and OS task switcher) should name the open document.
   useEffect(() => {
-    document.title = fileName ? `${fileName} — PhyloRecViewer` : "PhyloRecViewer";
+    document.title = fileName ? `${fileName} — ${APP_NAME}` : APP_NAME;
   }, [fileName]);
 
   // Listen for OS dark/light changes so "system" theme follows in real time.
@@ -444,9 +445,9 @@ export function App() {
     void runHeavy(() => {
       loadXml(s.xml, t[s.labelKey]);
       if (s.nestedXml)
-        loadNestedXml(s.nestedXml, s.nestedLabelKey ? t[s.nestedLabelKey] : "nested");
+        loadNestedXml(s.nestedXml, s.nestedLabelKey ? t[s.nestedLabelKey] : t.paneSymbiontHost);
       if (s.compareXml)
-        loadCompareXml(s.compareXml, s.compareLabelKey ? t[s.compareLabelKey] : "compare");
+        loadCompareXml(s.compareXml, s.compareLabelKey ? t[s.compareLabelKey] : t.paneComparison);
       setSampleId(s.id);
       useStore.getState().markDocClean();
     });
@@ -632,7 +633,7 @@ export function App() {
                     result={result}
                     theme={theme}
                     options={renderOptions}
-                    title={fileName ?? "A"}
+                    title={fileName ?? t.paneTagA}
                     paneId="primary"
                     onSpeciesClick={toggleSwap}
                     onToggleCollapse={toggleCollapse}
@@ -651,7 +652,7 @@ export function App() {
                     result={compareResult}
                     theme={theme}
                     options={renderOptions}
-                    title={compareName ?? "B"}
+                    title={compareName ?? t.paneTagB}
                     paneId="compare"
                     onSpeciesClick={toggleCompareSwap}
                     onToggleCollapse={toggleCompareCollapse}
@@ -789,8 +790,8 @@ export function App() {
                   {t.restoreBody.replace(
                     "{time}",
                     pendingRestore.savedAt
-                      ? new Date(pendingRestore.savedAt).toLocaleString()
-                      : "—",
+                      ? new Date(pendingRestore.savedAt).toLocaleString(intlTag[locale])
+                      : t.inspNone,
                   )}
                 </p>
                 <div className="multi-open-actions">

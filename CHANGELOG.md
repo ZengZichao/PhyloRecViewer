@@ -117,9 +117,48 @@ Full report with evidence: `docs/UI-REVIEW-2026-11-06.md`.
 - The `all-events` bundled sample was removed from the catalog; its XML is kept
   as an inline test fixture so the every-event-type routing and glyph coverage
   is unchanged.
+- **Bilingual copy aligned with the term table** (`src/i18n.ts`,
+  `src/i18nDiagnostics.ts`, `docs/USER_MANUAL.md`, `docs/USER_MANUAL.zh-CN.md`):
+  an audit of every interface string found the two locales drifting from
+  `docs/GLOSSARY-UI.md` — 「数据健康」 beside the `Data checks` panel title,
+  「丢失」 beside 「基因丢失」, "Species names" / "Gene names" beside "All
+  labels", "By family" for a gene family — plus counts hedged as `key(s)`
+  instead of declined, internal identifiers such as `timeSlice` echoed into
+  user-visible English, and the `——` and ` — ` dash styles mixed in one
+  catalogue. Counts that one locale spelled out and the other wrote as a digit
+  (`已将 {n} 个文件合并为 1 个文档` beside "… into one document", "3-level"
+  beside 「三层」) were unified, and the manuals now quote the copy the app
+  actually renders. Each fix is enforced at the string: the text guards also
+  cover the localiser's Chinese rule strings and the canonical English the
+  parsers build, a new guard re-reads every sentence the manuals introduce as
+  verbatim UI text against the copy the code holds, and every number a producer
+  interpolates is checked for the same treatment in both locales — so a doc that
+  drifts from a toast, or a rule that keeps a count in one language only, fails
+  the suite. The six translated documents are now compared with each other —
+  their headings, tables, code blocks, anchors and URLs must match, and so must
+  every figure they state, a number one edition may spell out and the other
+  write as a digit — which is the largest single class the audit found. A
+  document that names another one's section also has to name a heading that
+  exists. Working through those two rules corrected CONTRIBUTING's stale section
+  name, the `TB2=`…`TB9=` range the manual credited the exporter with (it is the
+  reader's ceiling, and the exporter has none), an agreement score the English
+  edition paraphrased where the Chinese one gave 100%, and a missing pair of
+  spaces around `=`. Two examples in `docs/STYLE-GUIDE-UI.md` were corrected to
+  quote real shipped copy, and the language menu's own entries — 「中文」 and
+  "English", names that must not move with the locale — went into the catalogue
+  as `langNameZh` / `langNameEn` so that no Chinese literal is written in a
+  component any more and the guard that used to excuse them has no exception
+  left to abuse. A fixed class cannot silently reopen.
 
 ### Fixed
 
+- **The full-labels switch had gone missing** (`src/app/Sidebar.tsx`): the
+  option, the canvas cap it lifts (`renderOptions.fullLabels`, `LABEL_MAX` in
+  `src/render/Scene.tsx`) and its session round-trip all existed, but the
+  Labels section had lost its row during a label-shortening edit, so a long
+  accession name could only be read in full from the tooltip. It is back as
+  「完整标签」 / "Full labels", and a render test now fails if the row
+  disappears again.
 - **Data-check rows printed a literal `\u2713`** (`src/app/RightPanel.tsx`):
   backslash escapes are a JavaScript string-literal feature and are not decoded
   in JSX text children, so the tick rendered as six characters. Same class of
@@ -254,7 +293,8 @@ the code.
   figure to be huge and pushed large drawings into the canvas-limit
   downgrade). The floor is now 72 (screen resolution).
 - **NHX export dialect extended** (`src/export/newickExport.ts`): writes every
-  transfer arrival (`TB=` for the first, `TB2=`…`TB9=` for further ones),
+  transfer arrival (`TB=` for the first, then `TB2=`, `TB3=` and so on, with no
+  upper limit, of which the reader interprets the first nine),
   `TS=` timeSlice, `CN=` event confidence, `B=` node support and the branch
   length both as the standard Newick `:length` and a redundant `BL=` tag;
   `S=` species tags are inferred for internal nodes from their ancestors.

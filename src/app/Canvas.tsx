@@ -106,8 +106,8 @@ export function Canvas({
   const setAnnotating = useStore((s) => s.setAnnotating);
   const setInspector = useStore((s) => s.setInspector);
   const onlyMatches = useStore((s) => s.onlyMatches);
-  // Canvas-level actions (undo/redo + analysis panel toggle) — only shown on
-  // the primary pane so split/compare views do not duplicate the controls.
+  // Canvas-level actions (undo/redo + the analysis panel toggle). They act on
+  // the document, not on one level, so every pane renders them.
   const undo = useStore((s) => s.undo);
   const redo = useStore((s) => s.redo);
   const canUndo = useStore((s) => s.past.length > 0);
@@ -429,7 +429,8 @@ export function Canvas({
         setAnnotating({ id: node.id, name: node.name || node.endEvent.geneName || node.id });
         return;
       }
-      // Alt/Option-click collapses or expands an internal clade.
+      // Alt/⌥- or ⌘(metaKey)-click collapses or expands an internal clade.
+      // Ctrl is deliberately NOT a trigger, and the copy says so (STYLE §3.3).
       if ((evt.altKey || evt.metaKey) && node.children.length > 0 && onToggleCollapse) {
         onToggleCollapse(node.id);
         return;
@@ -613,16 +614,21 @@ export function Canvas({
       )}
 
       {/* Unified canvas control cluster (top-left): zoom out, zoom level,
-          zoom in, fit-to-view, undo/redo, annotate, fullscreen, the analysis
-          panel toggle. Every pane gets the full set — undo/redo and the panel
-          act on the document, not on one level, so hiding them on the nested
-          and compare panes only made those views feel inert. */}
+          zoom in, fit-to-view, undo/redo, annotate, the analysis panel toggle.
+          There is no fullscreen button here: presentation mode is an app-level
+          shortcut (P, see App.tsx) that collapses the panels rather than asking
+          the browser for fullscreen, and HelpOverlay lists it as such. Every
+          pane gets the full set — undo/redo and the panel act on the document,
+          not on one level, so hiding them on the nested and compare panes only
+          made those views feel inert. The keyboard equivalents of these buttons
+          are the ones actually bound: ⌘/Ctrl +/- zoom and F fit in this canvas,
+          ⌘Z / ⌘⇧Z / ⌘Y undo-redo in App.tsx. */}
       <div className="float-toolbar">
-        <button data-tooltip={`${t.zoomOut} · ⌘-`} aria-label={t.zoomOut} onClick={() => zoomBy(1 / 1.2)}>
+        <button data-tooltip={`${t.zoomOut} · ⌘/Ctrl -`} aria-label={t.zoomOut} onClick={() => zoomBy(1 / 1.2)}>
           −
         </button>
         <span className="zoom-level" aria-label={`${t.zoomLevel} ${Math.round(view.k * 100)}%`}>{Math.round(view.k * 100)}%</span>
-        <button data-tooltip={`${t.zoomIn} · ⌘+`} aria-label={t.zoomIn} onClick={() => zoomBy(1.2)}>
+        <button data-tooltip={`${t.zoomIn} · ⌘/Ctrl +`} aria-label={t.zoomIn} onClick={() => zoomBy(1.2)}>
           +
         </button>
         <div className="ft-divider" />
@@ -630,7 +636,7 @@ export function Canvas({
           ⤢
         </button>
         <button
-          data-tooltip={`${t.undo} · ⌘Z`}
+          data-tooltip={`${t.undo} · ⌘/Ctrl Z`}
           aria-label={t.undo}
           disabled={!canUndo}
           onClick={undo}
@@ -638,7 +644,7 @@ export function Canvas({
           ↶
         </button>
         <button
-          data-tooltip={`${t.redo} · ⌘⇧Z`}
+          data-tooltip={`${t.redo} · ⌘/Ctrl ⇧Z`}
           aria-label={t.redo}
           disabled={!canRedo}
           onClick={redo}

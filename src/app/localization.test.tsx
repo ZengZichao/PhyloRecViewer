@@ -119,3 +119,74 @@ describe("localized sample names", () => {
     await unmountAndRemove(root, host);
   });
 });
+
+/**
+ * STYLE §5.3: the compare panes' on-screen titles must not keep an English
+ * "A"/"B" fallback. When a compare-mode pane carries no document name (a
+ * pasted/untitled buffer) its `.pane-label` falls back to the CURRENT
+ * dictionary's `paneTagA`/`paneTagB`, so the Chinese interface reads
+ * 「主文档 / 对比文档」 rather than the untranslated letters. Comparing against
+ * `translations[locale]` (not a literal) is what fails the test if the hard-coded
+ * "A"/"B" is ever re-introduced.
+ */
+describe("compare pane title fallback is localized", () => {
+  const cmp = samples.find((s) => s.id === "compare")!;
+
+  it.each(["en", "zh"] as const)(
+    "labels the unnamed compare panes with the %s dictionary tags",
+    async (locale) => {
+      const prev = useStore.getState().locale;
+      useStore.setState({ locale });
+      await act(async () => {
+        useStore.getState().loadXml(cmp.xml, "toolA");
+        useStore.getState().loadCompareXml(cmp.compareXml!, "toolB");
+      });
+      // Trigger the fallback: strip the pane document names.
+      await act(async () => {
+        useStore.setState({ fileName: null, compareName: null });
+      });
+      const host = document.createElement("div");
+      document.body.appendChild(host);
+      const root = await renderApp(host);
+      try {
+        const labels = Array.from(host.querySelectorAll(".pane-label")).map(
+          (n) => n.textContent,
+        );
+        const dict = translations[locale];
+        // Exactly the two split panes, primary then compare, in DOM order.
+        expect(labels).toEqual([dict.paneTagA, dict.paneTagB]);
+      } finally {
+        await unmountAndRemove(root, host);
+        useStore.setState({ locale: prev });
+      }
+    },
+  );
+
+  it("never shows the raw English letters on the Chinese interface", async () => {
+    const prev = useStore.getState().locale;
+    useStore.setState({ locale: "zh" });
+    await act(async () => {
+      useStore.getState().loadXml(cmp.xml, "toolA");
+      useStore.getState().loadCompareXml(cmp.compareXml!, "toolB");
+    });
+    await act(async () => {
+      useStore.setState({ fileName: null, compareName: null });
+    });
+    const host = document.createElement("div");
+    document.body.appendChild(host);
+    const root = await renderApp(host);
+    try {
+      const labels = Array.from(host.querySelectorAll(".pane-label")).map(
+        (n) => n.textContent ?? "",
+      );
+      expect(labels.length).toBeGreaterThan(0);
+      expect(labels).not.toContain("A");
+      expect(labels).not.toContain("B");
+      expect(labels).toContain(translations.zh.paneTagA);
+      expect(labels).toContain(translations.zh.paneTagB);
+    } finally {
+      await unmountAndRemove(root, host);
+      useStore.setState({ locale: prev });
+    }
+  });
+});

@@ -125,4 +125,32 @@ describe("App smoke render", () => {
     expect(next!.getAttribute("tabindex")).toBe("0");
     await unmountAndRemove(root, host);
   });
+
+  /**
+   * STYLE-GUIDE-UI §5.2 / §5.1: the BCP-47 tag written to `<html lang>` comes
+   * from the single-source `htmlLang` map in `src/i18n.ts`, not from a
+   * `locale === "zh" ? "zh-CN" : "en"` ternary in the component (the same map
+   * `main.tsx` uses for the pre-paint write). The tags are spelled out
+   * literally per locale, so a swapped or dropped lookup fails here instead of
+   * quietly following whatever the map holds.
+   */
+  it.each([
+    ["en", "en"],
+    ["zh", "zh-CN"],
+  ] as const)(
+    'announces the %s interface to assistive tech with <html lang="%s">',
+    async (locale, tag) => {
+      const prev = useStore.getState().locale;
+      useStore.setState({ locale });
+      const host = document.createElement("div");
+      document.body.appendChild(host);
+      try {
+        const root = await renderApp(host);
+        expect(document.documentElement.lang).toBe(tag);
+        await unmountAndRemove(root, host);
+      } finally {
+        useStore.setState({ locale: prev });
+      }
+    },
+  );
 });

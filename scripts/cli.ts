@@ -29,6 +29,10 @@ import { checkConsistency, type ConsistencyIssue } from "../src/analysis/validat
 import { reconToNhx } from "../src/export/newickExport";
 import { reconToRecPhyloXml } from "../src/export/recPhyloXmlExport";
 import type { ExportDoc } from "../src/export/exporters";
+// Type-only: the dictionary module reaches the app store, whose evaluation needs
+// the jsdom globals `installDom()` puts in place, so the values themselves are
+// imported lazily below (static imports hoist above that call).
+import type { Dict } from "../src/i18n";
 import { layout, type LayoutResult } from "../src/layout";
 import type { Reconciliation } from "../src/model/types";
 import { parseMerged, parseReconciliation } from "../src/parser/formats";
@@ -263,8 +267,11 @@ function installDom(): void {
 }
 
 /** Title for the interactive HTML page: the document's base name. */
-function docTitle(session: SessionData, sessionPath: string): string {
-  return (session.fileName ?? sessionPath).replace(/\.[^.]+$/, "") || "reconciliation";
+function docTitle(session: SessionData, sessionPath: string, dict: Dict): string {
+  // An unnamed document still needs a page title, and the app's own fallback for
+  // that is the dictionary's export stem ("reconciliation" / 「调和结果」) -
+  // re-spelling it here is how a headless artefact drifts from the UI (§5.1).
+  return (session.fileName ?? sessionPath).replace(/\.[^.]+$/, "") || dict.exportDefaultStem;
 }
 
 async function exportSvg(session: SessionData, recon: Reconciliation): Promise<string> {
@@ -283,11 +290,23 @@ async function exportHtml(
 ): Promise<string> {
   installDom();
   const exporters = await import("../src/export/exporters");
-  // The CLI writes English documents; the app passes localised labels instead.
+  // The labels come from the same dictionary the on-screen app and the exported
+  // SVG legend read (`currentDict()` is what `buildLegendGroup` calls), so a
+  // headless artefact can no longer carry wording the UI has moved on from -
+  // writing "Zoom in" out again here is what STYLE §5.1 forbids. Imported
+  // lazily for the same reason as the exporters: both reach the store.
+  const { currentDict, htmlLang } = await import("../src/i18n");
+  const { useStore } = await import("../src/state/store");
+  const dict = currentDict();
   return exporters.sceneToInteractiveHtml(
     buildExportDoc(session, recon),
-    docTitle(session, sessionPath),
-    { lang: "en", zoomIn: "Zoom in", zoomOut: "Zoom out", fit: "Fit to window" },
+    docTitle(session, sessionPath, dict),
+    {
+      lang: htmlLang[useStore.getState().locale],
+      zoomIn: dict.zoomIn,
+      zoomOut: dict.zoomOut,
+      fit: dict.fit,
+    },
   );
 }
 

@@ -1,6 +1,6 @@
 # PhyloRecViewer
 
-**English** | [中文](./README.zh-CN.md)
+[中文](./README.zh-CN.md) | **English**
 
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.23053317.svg)](https://doi.org/10.5281/zenodo.23053317)
 [![CI](https://github.com/ZengZichao/PhyloRecViewer/actions/workflows/ci.yml/badge.svg)](https://github.com/ZengZichao/PhyloRecViewer/actions/workflows/ci.yml)
@@ -13,9 +13,9 @@ Beautiful, offline, interactive **recPhyloXML / NHX** phylogenetic-reconciliatio
 
 - **Format support**: recPhyloXML and NHX/Newick parsing (probed by content; unknown input falls back to recPhyloXML), multi-file merge. NHX import reconstructs the species tree from `S=` annotations — reliable for self-contained files, but horizontal transfers that are unmarked in the input cannot be distinguished, so prefer recPhyloXML for results that contain HGT
 - **Visualization**: species + gene-tree reconciliation drawing, four orientations, tidy/rectangular layouts
-- **Nested view**: three-level nesting (gene → symbiont → host), plus a compare view whose panes stack vertically by default with a side-by-side toggle
+- **Nested view**: 3-level nesting (gene → symbiont → host), plus a compare view whose panes stack vertically by default with a side-by-side toggle
 - **Analysis**: search / filter / statistics / data checks, transfer network
-- **Export**: SVG / PNG / PDF / interactive HTML / NHX; session save & restore with workspace-wide autosave across all open tabs. The headless CLI additionally exports **recPhyloXML** — the fully lossless, self-describing round-trip. NHX is an extended dialect: it now carries every transfer arrival, timeSlice, confidence, support and branch lengths, but still loses the species tree itself, species branch lengths, gene-tree names and species never sampled by any gene tree
+- **Export**: SVG / PNG / PDF / interactive HTML / NHX; session save & restore with session-wide autosave across all open tabs. The headless CLI additionally exports **recPhyloXML** — the fully lossless, self-describing round-trip. NHX is an extended dialect: it now carries every transfer arrival, time slice, confidence, support and branch length, but still loses the species tree itself, species branch lengths, gene-tree names and species never sampled by any gene tree
 - **Platform**: bilingual (中文 / English), light & dark themes; runs fully offline
 - **Open source**: MIT license; installers for macOS, Windows, and Linux
 
@@ -78,7 +78,7 @@ npm run cli           # headless export from a saved session (.rpvsession.json):
 `npm run measure` exercises the real parser → layout → renderer path and writes
 benchmark CSVs into `_build/` (git-ignored). CI runs it on Linux so the script
 cannot rot silently. The frozen benchmark tables the manuscript cites are under
-`data/`; `scripts/aggregate-measurements.py` folds repeated runs into that
+`data/`; `scripts/aggregate-measurements.py` merges repeated runs into that
 directory (or into `_build/aggregates/` for a non-destructive replay).
 
 ## Usage
@@ -87,7 +87,7 @@ directory (or into `_build/aggregates/` for a non-destructive replay).
 2. Open a `.recphyloxml` / `.recphylo` / `.xml` / `.phyloxml` file (the app reads
    **recPhyloXML content**; plain PhyloXML trees without a `<recPhylo>` root are
    not reconciliations and are refused) or a `.nhx` / `.nwk` / `.newick` gene
-   tree via **File → Open**, drag & drop, or OS file association.
+   tree via **File → Open file**, drag & drop, or OS file association.
 3. Use the left panel to adjust layout, style, and labels.
 4. Use the right panel for search, statistics, transfer network, and data checks.
 5. Export to SVG / PNG / PDF / HTML via the **Export** menu.

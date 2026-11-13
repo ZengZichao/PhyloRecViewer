@@ -112,7 +112,7 @@ export function parseMerged(files: { name: string; text: string }[]): Reconcilia
   }
   if (missing.size > 0) {
     warnings.push(
-      `${missing.size} species referenced by merged families are absent from the first file's species tree.`,
+      `${missing.size} species referenced by merged families ${missing.size === 1 ? "is" : "are"} absent from the first file's species tree.`,
     );
   }
 
@@ -146,12 +146,12 @@ export function parseMerged(files: { name: string; text: string }[]): Reconcilia
     }
     if (extra > 0) {
       warnings.push(
-        `${name}: its species tree has ${extra} branch(es) that differ from the first file's species tree; the merged view is drawn on the first file's species tree only.`,
+        `${name}: its species tree has ${extra} ${extra === 1 ? "branch that differs" : "branches that differ"} from the first file's species tree; the merged view is drawn on the first file's species tree only.`,
       );
     }
     if (missingEdges > 0) {
       warnings.push(
-        `${name}: its species tree is missing ${missingEdges} branch(es) present in the first file's species tree (e.g. ${[...missingSpecies].slice(0, 3).join(", ")}); the merged view is drawn on the first file's species tree only.`,
+        `${name}: its species tree is missing ${missingEdges} ${missingEdges === 1 ? "branch" : "branches"} present in the first file's species tree (e.g. ${[...missingSpecies].slice(0, 3).join(", ")}); the merged view is drawn on the first file's species tree only.`,
       );
     }
   }

@@ -579,6 +579,9 @@ export function Sidebar({ width }: { width?: number }) {
             }
           />
         )}
+        <Row label={t.fullLabels}>
+          <Switch checked={renderOptions.fullLabels} onChange={(v) => setRender({ fullLabels: v })} />
+        </Row>
         <div className="side-divider" />
         <button className="btn ghost" onClick={() => setShowRenameDialog(true)}>
           {t.renameLabels}
@@ -642,8 +645,8 @@ function LabelReplaceDialog({ onClose }: { onClose: () => void }) {
       batchReplaceLabels(find, replace, useRegex, scope);
       showToast(t.labelEditedToast, "success");
       onClose();
-    } catch (e) {
-      showToast((e as Error).message, "error");
+    } catch {
+      showToast(t.batchInvalidRegex, "error");
     }
   };
 

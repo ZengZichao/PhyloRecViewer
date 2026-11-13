@@ -1,5 +1,6 @@
 import { Component, type ErrorInfo, type ReactNode } from "react";
 import { translations } from "../i18n";
+import { localizeDiagnostic } from "../i18nDiagnostics";
 import { useStore } from "../state/store";
 import { sessionDataOfStore } from "../state/autosave";
 import { serializeSession } from "../session";
@@ -58,7 +59,8 @@ export class ErrorBoundary extends Component<Props, State> {
   render(): ReactNode {
     const { error } = this.state;
     if (!error) return this.props.children;
-    const t = translations[useStore.getState().locale] ?? translations.en;
+    const locale = useStore.getState().locale;
+    const t = translations[locale] ?? translations.en;
     return (
       <div
         style={{
@@ -72,7 +74,7 @@ export class ErrorBoundary extends Component<Props, State> {
       >
         <div className="state-panel error" role="alert">
           <h2>{t.crashTitle}</h2>
-          <p>{error.message}</p>
+          <p>{localizeDiagnostic(error.message, locale)}</p>
           <p className="muted">
             {t.crashBody}
           </p>

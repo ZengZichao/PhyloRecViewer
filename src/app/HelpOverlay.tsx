@@ -47,9 +47,16 @@ export function HelpOverlay() {
     { keys: ["⌘/Ctrl", "+ / −"], label: t.helpZoomInOut },
     { keys: ["?"], label: t.helpTitle },
     { keys: ["Esc"], label: t.helpClosePanel },
-    { keys: ["⌘/Ctrl", "Enter"], label: t.annoTitle },
+    { keys: ["⌘/Ctrl", "Enter"], label: t.helpSaveAnnotation },
     { keys: ["Delete"], label: t.closeTabTitle },
-    { keys: ["←/→", "Home/End"], label: t.panelAnnotate },
+    // ←/→ plus Home/End belong to the tab strips: `TabBar.tsx` (open document
+    // tabs) and `RightPanel.tsx` (the analysis panel's tabs) both move to the
+    // previous/next tab and jump to the first/last one, activating what they
+    // land on. It was listed as "Annotations" (`panelAnnotate`), which no key
+    // does. ⌘/Ctrl+Enter is bound only to the note field of the annotation
+    // editor (`AnnotationEditor.tsx`), so it saves an annotation; opening one
+    // is a Shift-click on a node, listed in the interaction table below.
+    { keys: ["←/→", "Home/End"], label: t.helpSwitchTabs },
   ];
 
   // The interaction catalogue: the three modifier-click gestures plus the

@@ -56,17 +56,29 @@ export class NhxParseError extends Error {}
 const MAX_TREE_DEPTH = 1000;
 
 /**
+ * The app's NHX exporter writes `?` as a machine-readable placeholder for an
+ * unknown donor or recipient (see export/newickExport.ts). GLOSSARY-UI row 36
+ * bans `?` as an on-screen empty mark, and on import that placeholder must not
+ * re-enter the model as a species or event location literally named `?`, so the
+ * mark reads as *absent* here rather than as a value. Style §4.4: the parser
+ * stays locale-free; the display layer renders absent values as `—`.
+ */
+const markToAbsent = (v: string | undefined): string | undefined =>
+  v === "?" ? undefined : v;
+
+/**
  * Species tag for one node. `SP=` is accepted as an alias because some
  * third-party NHX writers emit it; it is part of this reader's dialect and is
  * covered by a test (see nhx.test.ts "accepts the SP= species alias").
  */
 const speciesOf = (node: NewickNode): string | undefined =>
-  node.nhx.S || node.nhx.SP || undefined;
+  markToAbsent(node.nhx.S || node.nhx.SP || undefined);
 
 /**
  * NHX keys this reader interprets. Anything else is kept but reported.
  * TB2..TB9 hold the SECOND and further transfer arrivals of a node (the
- * exporter writes them there so nothing is lost on round-trip); B= carries a
+ * exporter numbers every arrival it writes, so a node with more than nine
+ * arrivals round-trips its first nine); B= carries a
  * clade support value, TS= a time slice and CN= an event confidence.
  */
 const INTERPRETED_NHX_KEYS = new Set<string>([
@@ -91,8 +103,9 @@ const flag = (v: string | undefined): boolean =>
 /** Classified event view of one Newick node (structure + NHX tags). */
 interface Classified {
   endType: EndEventType;
-  /** Transfer-back arrivals, in file order: donor and recipient species. */
-  arrivals: { donor: string; recipient: string }[];
+  /** Transfer-back arrivals, in file order: donor and recipient species, each
+   * absent (not `"?"`) when the input supplies only the export placeholder. */
+  arrivals: { donor?: string; recipient?: string }[];
   /** Branch length, when the input provides one. */
   branchLength?: number;
   /** timeSlice (TS=) and confidence (CN=) of the terminal event, when given. */
@@ -109,7 +122,7 @@ const NUMERIC_LABEL = /^\d+(?:\.\d+)?$/;
 
 function classify(nd: NewickNode, warnings: string[]): Classified {
   const isLeaf = nd.children.length === 0;
-  const label = nd.name || speciesOf(nd) || "?";
+  const label = nd.name || speciesOf(nd) || "—";
   const dup = flag(nd.nhx.D);
   const loss = flag(nd.nhx.L);
   const branching = flag(nd.nhx.BO);
@@ -118,7 +131,13 @@ function classify(nd: NewickNode, warnings: string[]): Classified {
   const arrivals: Classified["arrivals"] = [];
   for (const { value } of arrivalTags(nd)) {
     const [donor, recipient] = value.replace(/^@/, "").split("|");
-    arrivals.push({ donor: donor ?? "?", recipient: recipient ?? speciesOf(nd) ?? "?" });
+    // An unknown donor/recipient is left ABSENT from the model rather than
+    // written as `"?"`, so the node inspector and re-exported files never show
+    // or smuggle the banned empty mark (see markToAbsent above).
+    arrivals.push({
+      donor: markToAbsent(donor),
+      recipient: markToAbsent(recipient) ?? speciesOf(nd),
+    });
   }
 
   // Resolve competing event tags with the recPhyloXML reader's shared
@@ -274,7 +293,7 @@ export function parseNhxReconciliation(
     // Named-but-uninterpreted keys are otherwise dropped without a trace, which
     // is the one silent-loss case this reader is supposed to avoid.
     warnings.push(
-      `This NHX file uses ${ignoredKeys.size} tag key(s) this reader does not interpret and has dropped: ${[...ignoredKeys].sort().join(", ")}. Species, duplication, loss, donor and arrival state comes only from S=/SP=, D=, L=, BO=, BC= and TB=.`,
+      `This NHX file uses ${ignoredKeys.size} ${ignoredKeys.size === 1 ? "tag key" : "tag keys"} this reader does not interpret and has dropped: ${[...ignoredKeys].sort().join(", ")}. Species, duplication, loss, donor and arrival state comes only from S=/SP=, D=, L=, BO=, BC= and TB=.`,
     );
   }
   if (!sawLossOrTransfer) {

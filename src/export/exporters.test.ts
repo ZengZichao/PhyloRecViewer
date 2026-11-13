@@ -17,6 +17,18 @@ import { parseReconciliation } from "../parser/formats";
 import { defaultRenderOptions } from "../render/options";
 import { themes, type Theme } from "../render/theme";
 import {
+  LEGEND_ROWS,
+  exportLegendRowDefs,
+  exportLegendRows,
+  screenLegendRows,
+} from "../render/legendRows";
+import { htmlLang, translations, type Dict } from "../i18n";
+import { APP_NAME } from "../version";
+// The headless CLI is the other writer of these artefacts, so its wording is
+// checked here too - as source, because a Node script is not a component.
+import cliSource from "../../scripts/cli.ts?raw";
+import { useStore } from "../state/store";
+import {
   DEFAULT_PNG_DPI,
   MIN_PNG_DPI,
   buildDocSvg,
@@ -98,7 +110,6 @@ function legendWith(families: string[]): ExportLegendConfig {
   return {
     eventsTitle: "Events",
     familiesTitle: "Families",
-    transferLabel: "Transfer",
     families: families.map((name, i) => ({ name, color: themes.light.genePalette[i] })),
   };
 }
@@ -130,6 +141,28 @@ function textOf(root: Element | Document): string {
   return Array.from(root.querySelectorAll("text"))
     .map((t) => t.textContent ?? "")
     .join("|");
+}
+
+/**
+ * The text of every exported legend `<g>`, in drawing order: the events title,
+ * the event rows, the families title, the family chips. `buildLegendGroup`
+ * stamps its group with `.rpv-export-legend` exactly so that the key can be
+ * compared with the on-screen legend row for row, in order (STYLE §6).
+ */
+function legendTextSequences(svg: string): string[][] {
+  const groups = Array.from(parseMarkup(svg).querySelectorAll(".rpv-export-legend"));
+  expect(groups.length, "an export with a legend carries a key").toBeGreaterThan(0);
+  return groups.map((g) => Array.from(g.querySelectorAll("text")).map((el) => el.textContent ?? ""));
+}
+
+/** The sequence one figure's key must show for `t` and these family chips. */
+function expectedLegendSequence(t: Dict, families: string[]): string[] {
+  return [
+    t.events,
+    ...exportLegendRows({ t, events: t.event }),
+    t.geneFamilies,
+    ...families,
+  ];
 }
 
 /* ------------------------------------------------------------------- escaping */
@@ -223,24 +256,125 @@ describe("SVG export escaping of untrusted text", () => {
     expect(reparsed.querySelectorAll("img")).toHaveLength(0);
   });
 
-  it("lists a key row for every glyph the exported drawing can contain", () => {
-    const result = lay(twoLeafXml(), "one.xml");
-    const { svg } = buildDocSvg(exportDoc([pane(result, { legend: legendWith(["famA"]) })]));
-    const text = textOf(parseMarkup(svg));
-    // These are the rows the on-screen Legend carries. An exported figure whose
-    // key omits the donor ring or the collapsed wedge cannot be decoded.
-    for (const label of [
-      "Speciation",
-      "Duplication",
-      "Loss",
-      "Transfer",
-      "Bifurcation donor",
-      "Transfer (donor)",
-      "Collapsed",
-      "Extant gene",
-    ]) {
-      expect(text).toContain(label);
-    }
+  /**
+   * The rows the exported figure has to key, read from the shared legend table
+   * (`src/render/legendRows.ts`) that `app/Legend.tsx` itself renders — NOT
+   * re-typed here. A hand-written copy of the row list is exactly how the
+   * transfer-arrival row stayed missing from every export while the on-screen
+   * legend showed it, so both sides now point at one source of truth.
+   */
+  function legendRows(t: Dict): string[] {
+    return exportLegendRows({ t, events: t.event });
+  }
+
+  /** A legend config fed straight from a dictionary. The caller supplies only
+   *  the group titles and the family chips: the event rows, their order and
+   *  their wording belong to the shared table, so no caller can shrink the key
+   *  any more. */
+  function dictLegend(t: Dict): ExportLegendConfig {
+    return {
+      eventsTitle: t.events,
+      familiesTitle: t.geneFamilies,
+      families: [{ name: "famA", color: themes.light.genePalette[0] }],
+    };
+  }
+
+  describe("the exported key against the on-screen key", () => {
+    it("keys exactly the on-screen legend's rows, in the same order, verbatim", () => {
+      const t = translations.en;
+      const result = lay(twoLeafXml(), "consistency.xml");
+      const prev = useStore.getState().locale;
+      useStore.setState({ locale: "en" });
+      try {
+        const { svg } = buildDocSvg(
+          exportDoc([pane(result, { legend: dictLegend(t) })], { eventLabels: t.event }),
+        );
+        // Ordered, whole-sequence equality — not `toContain`, which passes for a
+        // key that shows the rows in the wrong order or holds one extra.
+        expect(legendTextSequences(svg)).toEqual([expectedLegendSequence(t, ["famA"])]);
+        // STYLE §6 in one line: the figure's key IS the overlay's key.
+        expect(legendRows(t)).toEqual(
+          screenLegendRows({ t, events: t.event }).filter((r) => r !== t.legendLocate),
+        );
+      } finally {
+        useStore.setState({ locale: prev });
+      }
+    });
+
+    it("omits only the row keying a glyph no export draws, and it is documented", () => {
+      // The locate ring comes from `Scene`'s `locateSet` prop, which
+      // `renderPaneMarkup` never passes — so an exported figure cannot contain
+      // it and its key must not claim it. This test fails the moment ANY other
+      // row diverges, i.e. the exception cannot grow silently.
+      const exportedKinds: string[] = exportLegendRowDefs({
+        t: translations.en,
+        events: translations.en.event,
+      }).map((r) => r.kind);
+      const screenKinds: string[] = LEGEND_ROWS.map((r) => r.kind);
+      expect(screenKinds.filter((k) => !exportedKinds.includes(k))).toEqual(["locate"]);
+      expect(exportedKinds).toEqual(screenKinds.filter((k) => k !== "locate"));
+    });
+
+    it("draws a real swatch for every row it keys, never a generic fallback", () => {
+      // `iconEl` has no `default:` branch, so the compiler already refuses an
+      // unhandled kind; this pins the other half — that the case label really is
+      // the row's kind rather than a shape that happens to look right.
+      const cases = new Set(
+        [...exportersSource.matchAll(/^\s*case "(\w+)":/gm)].map((m) => m[1]),
+      );
+      for (const kind of exportLegendRowDefs({ t: translations.en, events: translations.en.event })) {
+        expect(cases.has(kind.kind), `iconEl case for "${kind.kind}"`).toBe(true);
+      }
+      expect(cases.has("locate")).toBe(false);
+    });
+  });
+
+  describe.each(["en", "zh"] as const)("in the %s language", (locale) => {
+    const t = translations[locale];
+
+    it("lists a key row for every glyph the exported drawing can contain", () => {
+      const result = lay(twoLeafXml(), "one.xml");
+      const prev = useStore.getState().locale;
+      useStore.setState({ locale });
+      try {
+        const { svg } = buildDocSvg(
+          exportDoc([pane(result, { legend: dictLegend(t) })], { eventLabels: t.event }),
+        );
+        expect(legendTextSequences(svg)).toEqual([expectedLegendSequence(t, ["famA"])]);
+        for (const label of legendRows(t)) {
+          expect(textOf(parseMarkup(svg))).toContain(label);
+        }
+      } finally {
+        useStore.setState({ locale: prev });
+      }
+    });
+
+    it("labels the legend from the current-language dictionary, never hard-coded English", () => {
+      const prev = useStore.getState().locale;
+      useStore.setState({ locale });
+      try {
+        const result = lay(twoLeafXml(), "fallback.xml");
+        // No `eventLabels` on the document: every row — the transfer arc, the
+        // arrival, the collapsed wedge included — has to come from the
+        // dictionary of the language the app is in, since the caller can no
+        // longer hand the exporter any row label at all (STYLE §5.3 forbids an
+        // English fallback).
+        const { svg } = buildDocSvg(exportDoc([pane(result, { legend: dictLegend(t) })]));
+        const sequence = legendTextSequences(svg)[0];
+        expect(sequence).toEqual(expectedLegendSequence(t, ["famA"]));
+        if (locale === "zh") {
+          // The English forms must be gone, not merely accompanied by Chinese.
+          for (const en of legendRows(translations.en)) {
+            expect(sequence).not.toContain(en);
+          }
+          for (const en of [translations.en.events, translations.en.geneFamilies]) {
+            expect(sequence).not.toContain(en);
+          }
+        }
+      } finally {
+        useStore.setState({ locale: prev });
+      }
+    });
   });
 
   it("keys speciation and transfer in the colour the drawing actually uses", () => {
@@ -762,5 +896,150 @@ describe("PDF export with a statically loaded writer", () => {
     expect(code.match(/\bawait\s+import\s*\(/g)).toHaveLength(1);
     expect(code).toMatch(/async function loadVectorConverter/);
     expect(code).toMatch(/const convert = await loadVectorConverter\(\)/);
+  });
+});
+
+/* --------------------------------------------- one figure, one language, one */
+
+describe("the locale of an exported figure", () => {
+  /** The on-screen legend's own titles, taken from the dictionary under test. */
+  function legendOf(t: Dict): ExportLegendConfig {
+    return {
+      eventsTitle: t.events,
+      familiesTitle: t.geneFamilies,
+      families: [{ name: "famA", color: themes.light.genePalette[0] }],
+    };
+  }
+
+  /** Every native tooltip the figure carries (`<title>`, SVG or HTML). */
+  function tooltips(svg: string): string[] {
+    return Array.from(parseMarkup(svg).querySelectorAll("title")).map((el) => el.textContent ?? "");
+  }
+
+  /** Layout with every non-root internal clade collapsed, so the collapsed-clade
+   *  wedge, its tooltip and its drawn label all exist. */
+  function collapsedLay(xml: string): LayoutResult {
+    const recon = parseReconciliation(xml, "collapsed.xml");
+    const ids = recon.geneTrees[0].nodes
+      .filter((g) => g.children.length > 0 && g !== recon.geneTrees[0].root)
+      .map((g) => g.id);
+    expect(ids.length).toBeGreaterThan(0);
+    return layout(recon, undefined, undefined, new Set(ids));
+  }
+
+  /** The figure's own text: drawn labels plus tooltip wording. */
+  function figureWords(svg: string): string {
+    return [...tooltips(svg), textOf(parseMarkup(svg))].join("\n");
+  }
+
+  function withLocale<T>(locale: "en" | "zh", fn: () => T): T {
+    const prev = useStore.getState().locale;
+    useStore.setState({ locale });
+    try {
+      return fn();
+    } finally {
+      useStore.setState({ locale: prev });
+    }
+  }
+
+  it("draws the tooltips in the language its key is written in", () => {
+    // `Scene` is rendered here through `renderToStaticMarkup`, where the zustand
+    // read behind `useT()` answers from `getInitialState()` - the language
+    // `navigator.language` gave the store when it was created, NOT the one the
+    // user picked. The legend already read `currentDict()`, so an export made
+    // while the app was Chinese keyed the figure in Chinese and labelled every
+    // tooltip in English: two locales in one artefact (STYLE §5.1, §6).
+    const result = lay(EVENT_XML, "locale.xml");
+    for (const locale of ["en", "zh"] as const) {
+      const t = translations[locale];
+      const words = withLocale(locale, () =>
+        figureWords(buildDocSvg(exportDoc([pane(result, { legend: legendOf(t) })])).svg),
+      );
+      expect(words, `${locale}: the figure speaks its own language`).toContain(t.event.speciation);
+      const other = translations[locale === "zh" ? "en" : "zh"];
+      for (const word of Object.values(other.event)) {
+        expect(words, `${locale}: no leftover "${word}"`).not.toContain(word);
+      }
+    }
+  });
+
+  it("promises no gesture the figure cannot perform", () => {
+    // A PNG/SVG/PDF is a static picture: `expandHint` told its reader to
+    // Alt/⌥- or ⌘-click a wedge no click can reach (STYLE §3.3), while the
+    // on-screen canvas - which really does expand - keeps the promise.
+    const svg = withLocale("en", () => buildDocSvg(exportDoc([pane(collapsedLay(EVENT_XML))])).svg);
+    const words = figureWords(svg);
+    expect(words).toContain(translations.en.collapsedClade);
+    expect(words).not.toContain(translations.en.expandHint);
+    expect(words).not.toContain("click");
+  });
+
+  it("names an unnamed collapsed clade instead of drawing a bare count", () => {
+    // `renderGeneLabels` was called without its dictionary, so a collapsed
+    // clade with no label drew ` (2)` - and the deleted `cladeFallback` key it
+    // used to read spelled the same tooltip line out as `undefined`.
+    const svg = withLocale("en", () => buildDocSvg(exportDoc([pane(collapsedLay(EVENT_XML))])).svg);
+    const labels = textOf(parseMarkup(svg)).split("|");
+    const counts = labels.filter((l) => /\b\d+\b/.test(l));
+    expect(counts.length).toBeGreaterThan(0);
+    for (const l of counts) {
+      expect(l.trim(), `label "${l}" names what it counts`).not.toBe("");
+      expect(l, `label "${l}" is not a bare count`).not.toMatch(/^\s*\(/);
+      expect(l.startsWith(translations.en.collapsedClade), l).toBe(true);
+    }
+  });
+
+  it("writes the page title from the single app-name source", () => {
+    // §5.1: artefact wording has one source. `APP_NAME` (`src/version.ts`, which
+    // the About dialog, the CSV provenance line and the SVG metadata already
+    // read) is that source for the product name, so the brand in a page title
+    // cannot fall out of step with the brand everywhere else.
+    const doc = exportDoc([pane(lay(SOLO_XML, "solo.xml"))]);
+    const html = sceneToInteractiveHtml(doc, "solo", EN_UI);
+    expect(html).toContain(`<title>solo — ${APP_NAME}</title>`);
+    const code = exportersSource
+      .replace(/\/\*[\s\S]*?\*\//g, "")
+      .replace(/^[ \t]*\/\/.*$/gm, "");
+    // The title is composed from the constant, not from a re-typed brand.
+    // (`id="PhyloRecViewer-provenance"` is left alone on purpose: an XML id in
+    // an exported file is a machine-readable field, which GLOSSARY-UI rule 1
+    // exempts from the term table - unlike human-readable text.)
+    const titleExpr = code.match(/"<title>"[\s\S]*?<\/title>/)?.[0] ?? "";
+    expect(titleExpr).toContain("APP_NAME");
+    expect(titleExpr).not.toContain("PhyloRecViewer");
+  });
+
+  it("splices the page's key hints with · , never with brackets", () => {
+    // This one line of code labels the page under both locales, and §2.4 gives
+    // English `()` and Chinese `（）`, so it carries no bracket at all (§2.6).
+    for (const locale of ["en", "zh"] as const) {
+      const t = translations[locale];
+      const html = sceneToInteractiveHtml(exportDoc([pane(lay(SOLO_XML, "solo.xml"))]), "solo", {
+        lang: htmlLang[locale],
+        zoomIn: t.zoomIn,
+        zoomOut: t.zoomOut,
+        fit: t.fit,
+      });
+      const labels = Array.from(html.matchAll(/aria-label="([^"]*)"/g)).map((m) => m[1]);
+      expect(labels).toHaveLength(3);
+      expect(labels[0]).toBe(`${t.zoomIn} · + / =`);
+      expect(labels[2]).toBe(`${t.fit} · 0 / Enter`);
+      for (const l of labels) expect(l, l).not.toMatch(/[()[\]]/);
+    }
+  });
+
+  it("has the headless CLI read the dictionary instead of restating it", () => {
+    // `npm run cli` writes the same artefact the app writes; its own copies of
+    // "Zoom in" / "Fit to window" / "reconciliation" are the wording that drifts
+    // when the UI moves (STYLE §5.1).
+    const code = cliSource
+      .replace(/\/\*[\s\S]*?\*\//g, "")
+      .replace(/^[ \t]*\/\/.*$/gm, "");
+    for (const literal of ['"Zoom in"', '"Zoom out"', '"Fit to window"', '"reconciliation"']) {
+      expect(code, `cli.ts must not write ${literal}`).not.toContain(literal);
+    }
+    expect(code).toContain("currentDict()");
+    expect(code).toContain("dict.exportDefaultStem");
+    expect(code).toMatch(/docTitle\(session, sessionPath, dict\)/);
   });
 });

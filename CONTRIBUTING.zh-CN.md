@@ -22,8 +22,8 @@ Windows 上运行：
 
 | Job | 做的事情 |
 |---|---|
-| `web`（3 系统矩阵） | 三套系统上都执行 `npm ci` → `check:tracked` → `lint`（`--max-warnings 0`）→ `typecheck` → `test` → `build`；`coverage` 与 `npm run measure` 仅在 Linux 执行；`npm run preview` 冒烟测试在 Linux 和 macOS 执行（`windows-latest` 不在此列） |
-| `tracked-only-build` | 从 commit 中**只导出 git 跟踪的文件**到一个干净目录，把 `node_modules` 链接进去，然后在那里运行 `npm run build`、`npm run typecheck`、`npm test`——因此「被跟踪的文件引入了一个未跟踪的文件」不可能通过 CI |
+| `web`（3 个操作系统矩阵） | 三套系统上都执行 `npm ci` → `check:tracked` → `lint`（`--max-warnings 0`）→ `typecheck` → `test` → `build`；`coverage` 与 `npm run measure` 仅在 Linux 执行；`npm run preview` 冒烟测试在 Linux 和 macOS 执行（`windows-latest` 不在此列） |
+| `tracked-only-build` | 从提交中**只导出 git 跟踪的文件**到一个干净目录，把 `node_modules` 链接进去，然后在那里运行 `npm run build`、`npm run typecheck`、`npm test`——因此「被跟踪的文件引入了一个未跟踪的文件」不可能通过 CI |
 | `rust`（Ubuntu + macOS） | 针对 Tauri 桌面壳执行 `cargo fmt --all -- --check`、`cargo check --all-targets`、`cargo test --all-targets`、`cargo clippy --all-targets -- -D warnings`，在 Ubuntu 和 macOS 上 |
 
 发布打包（三个平台的安装包）是另一个独立的工作流——见[版本发布](#版本发布)。
@@ -61,12 +61,12 @@ src/
 ├── app/           # React 组件（App、Canvas、Sidebar、RightPanel、……）
 ├── render/        # 纯函数 SVG 渲染器（Scene、几何、主题）
 ├── layout/        # 六步布局流水线（物种/基因/转移/……）
-├── model/         | 不可变调和模型（Reconciliation、GeneNode、……）
+├── model/         # 不可变调和模型（Reconciliation、GeneNode、……）
 ├── parser/        # recPhyloXML / NHX / Newick 解析器
-├── analysis/      | 聚焦匹配、统计、数据检查、差异
-├── export/        | SVG / PNG / PDF / HTML / NHX 导出器
-├── state/         | Zustand store、自动保存、会话、偏好设置
-├── platform/      | Tauri 桌面桥接（文件打开/保存、fs）
+├── analysis/      # 聚焦匹配、统计、数据检查、差异
+├── export/        # SVG / PNG / PDF / HTML / NHX 导出器
+├── state/         # Zustand store、自动保存、会话、偏好设置
+├── platform/      # Tauri 桌面桥接（文件打开/保存、fs）
 ├── samples/       # 随附示例调和结果（三个菜单项）
 ├── i18n.ts        # 中英词典（编译期类型检查）
 ├── session.ts     # 会话文件序列化（当前 schema 版本定义于此）
@@ -76,7 +76,7 @@ src-tauri/
 data/              # 冻结的基准表与 MANIFEST.json（v0.1.0 测量）
 scripts/
 ├── measure.ts                  # 解析 / 布局 / 渲染基准 -> _build/*.csv
-├── aggregate-measurements.py   # 将多次基准运行折叠到 data/ 或 _build/aggregates
+├── aggregate-measurements.py   # 将多次基准运行归并到 data/ 或 _build/aggregates
 └── check-tracked-files.mjs     # 仓库自洽性守卫（npm run check:tracked）
 docs/coverage-v0.1.2.json       # 手稿引用的 v0.1.2 覆盖率冻结摘要
 .github/workflows/
@@ -129,13 +129,13 @@ hooks/refresh 插件）是唯一的风格工具，因此 `npm run lint:fix` 就�
 ### 保持仓库自洽
 
 一个*没有*纳入 git、却被*已经*纳入 git 的文件所引用的文件，是一个特殊的陷阱：`tsc -b`、
-`vite build` 和 `vitest` 在本地全部通过——那个文件就待在工作树里——而每一次全新克隆
+`vite build` 和 `vitest` 在本地全部通过——那个文件位于工作树中——而每一次全新克隆
 （包括 CI）都会失败。更糟的是，未跟踪的测试文件不会让任何东西变红：它只是悄悄缩小了测试
 套件，于是 CI 报告绿色，实际测试的却比仓库看起来的更少。
 
 `npm run check:tracked`（`scripts/check-tracked-files.mjs`）捕获这一整类问题：它解析被
 跟踪源码里的每一个相对导入，检查 git 报告为未跟踪的测试/源文件，并校验被跟踪 Markdown
-中的相对链接。CI 在 `web` job 中运行它，并且会**构建仅含被跟踪文件的 commit 导出**，
+中的相对链接。CI 在 `web` job 中运行它，并且会**构建仅含被跟踪文件的提交导出**，
 所以回归无法蒙混过关。
 
 要在提交之前于本地得到同样的检查：
@@ -211,13 +211,22 @@ npm run coverage    # + 覆盖率报告（控制台摘要、html、lcov）
 
 ### 代码规范
 
-- **TypeScript 严格模式**：每个文件都做类型检查；`noUnusedLocals` 已开启。`noUncheckedIndexedAccess` 与 `exactOptionalPropertyTypes` **未**开启：目前打开其中任一个都会在 `src/` 各处报出数十条新诊断，所以它们是一件有意独立安排的工作，而不是改一次配置的事。不要在文档中把代码库描述为「完全严格」。
-- **不可变模型**：`Reconciliation`、`Positions` 和 `LayoutResult` 永不就地修改。新状态产生新对象。
-- **组件中不写硬编码 UI 字符串**：`src/app/`、`src/state/` 和 `src/export/` 中所有面向用户的文本都经由 `src/i18n.ts`，且 `Dict` 接口强制 `zh` 与 `en` 在编译期完整。已知例外是 `src/version.ts` 中 About 对话框的引用常量（作者名与 DOI 与语言无关），以及解析器诊断消息——后者经 `i18nDiagnostics.ts` 翻译。
-- **单一 store**：全部应用状态都存放在一个 Zustand store（`src/state/store.ts`）中。store 层不应从 `app/` 导入，也不应包含 i18n 字符串。
-- **会话文件信任边界**：从会话文件或偏好设置中读入的所有选项，在到达布局/渲染引擎之前必须经过 `sanitizeLayoutOptions` / `sanitizeRenderOptions`。
+- **TypeScript 严格模式**：每个文件都做类型检查；`noUnusedLocals` 已开启。
+  `noUncheckedIndexedAccess` 与 `exactOptionalPropertyTypes` **未**开启：目前打开
+  其中任一个都会在 `src/` 各处报出数十条新诊断，所以它们是一件有意独立安排的工作，
+  而不是改一次配置的事。不要在文档中把代码库描述为「完全严格」。
+- **不可变模型**：`Reconciliation`、`Positions` 和 `LayoutResult` 永不就地修改。
+  新状态产生新对象。
+- **组件中不写硬编码 UI 字符串**：`src/app/`、`src/state/` 和 `src/export/` 中所有
+  面向用户的文本都经由 `src/i18n.ts`，且 `Dict` 接口强制 `zh` 与 `en` 在编译期完整。
+  已知例外是 `src/version.ts` 中 About 对话框的引用常量（作者名与 DOI 与语言
+  无关），以及解析器诊断消息——后者经 `i18nDiagnostics.ts` 翻译。
+- **单一 store**：全部应用状态都存放在一个 Zustand store（`src/state/store.ts`）中。
+  store 层不应从 `app/` 导入，也不应包含 i18n 字符串。
+- **会话文件信任边界**：从会话文件或偏好设置中读入的所有选项，在到达布局/渲染引擎
+  之前必须经过 `sanitizeLayoutOptions` / `sanitizeRenderOptions`。
 - **会话 schema 版本**：`src/session.ts` 中的 `CURRENT_SESSION_VERSION` 是唯一事实
-  来源。仅当持久化的结构发生变化时才递增它，并让两份用户手册里的「会话包含什么」清单与
+  来源。仅当持久化的结构发生变化时才递增它，并让两份用户手册里的「会话文件字段」清单与
   版本说明和代码保持同步（手册引用该数值；别处不定义它）。
 
 ### 提交信息
@@ -255,12 +264,12 @@ refactor: extract slider component into shared controls
    git push origin vX.Y.Z
    ```
 3. `.github/workflows/release.yml` 构建 macOS / Windows / Linux 安装包，并创建一个附带安装包的
-   **草稿** GitHub Release。安装包未签名：macOS 用户需放行一次（右键 →
+   **草稿** GitHub Release。安装包未签名：macOS 用户必须放行一次（右键 →
    打开），Linux 的 `.AppImage` 需要 `chmod +x`。
 4. 检查草稿——在它面向的每个平台上打开每个安装包，载入一个示例和一个真实文件，导出
    PNG/SVG/PDF/HTML/NHX，保存并重新载入会话——然后发布它。
 
-要在**不打标签**的情况下验证打包工作，请在该分支上运行
+要在*不打标签*的情况下验证打包工作，请在该分支上运行
 **Actions → Release → Run workflow**：同样构建三个平台并作为工作流构件上传，且不会创建
 发布。
 

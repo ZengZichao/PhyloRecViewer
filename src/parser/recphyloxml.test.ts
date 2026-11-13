@@ -466,6 +466,48 @@ describe("schema-conformant minimal fixture", () => {
   });
 });
 
+describe("transferBack-arrival and empty-label marks follow the glossary", () => {
+  // GLOSSARY-UI row 36 / STYLE §3.7: an empty value is `—`, never `?`; and
+  // §2.4 says code-spliced strings prefer ` · ` over brackets.
+  const spTree = `<spTree><phylogeny rooted="true"><clade><name>root</name>
+      <clade><name>A</name></clade><clade><name>B</name></clade></clade></phylogeny></spTree>`;
+  const geneWith = (events: string) => `<recPhylo>${spTree}
+      <recGeneTree><phylogeny rooted="true">
+        <clade><name>g</name><eventsRec>${events}<leaf speciesLocation="B" geneName="x"/></eventsRec></clade>
+      </phylogeny></recGeneTree>
+    </recPhylo>`;
+
+  it("joins the first arrival value with the · separator, not brackets", () => {
+    const recon = parseRecPhyloXML(
+      geneWith(`<transferBack destinationSpecies="A"/><transferBack destinationSpecies="B"/>`),
+    );
+    const w = recon.warnings.find((x) => x.includes("<transferBack> arrivals"))!;
+    expect(w).toContain("use the first · A");
+    expect(w).not.toContain("use the first (");
+  });
+
+  it("marks a destination-less first arrival with the empty value mark", () => {
+    const recon = parseRecPhyloXML(
+      geneWith(`<transferBack/><transferBack destinationSpecies="A"/>`),
+    );
+    const w = recon.warnings.find((x) => x.includes("<transferBack> arrivals"))!;
+    expect(w).toContain("use the first · —");
+    expect(w).not.toContain("?");
+  });
+
+  it("marks a nameless gene node's label with the empty value mark", () => {
+    const xml = `<recPhylo>${spTree}
+      <recGeneTree><phylogeny rooted="true">
+        <clade><eventsRec></eventsRec></clade>
+      </phylogeny></recGeneTree>
+    </recPhylo>`;
+    const recon = parseRecPhyloXML(xml);
+    const w = recon.warnings.find((x) => x.includes("no terminal event"))!;
+    expect(w).toContain('Gene node "—"');
+    expect(w).not.toContain('Gene node "?"');
+  });
+});
+
 describe("crossing optimizer", () => {
   // Transfer A -> C where C is the far child of M; mirroring a subtree brings
   // donor and recipient closer, so the optimizer must pick a non-empty swap.

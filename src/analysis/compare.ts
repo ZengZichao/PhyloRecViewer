@@ -153,7 +153,7 @@ function pairOf(a: GeneNode, b: GeneNode, family: string): MatchedPair {
   return {
     aId: a.id,
     bId: b.id,
-    name: a.endEvent.geneName || a.name || b.endEvent.geneName || b.name || "(unnamed)",
+    name: a.endEvent.geneName || a.name || b.endEvent.geneName || b.name || "—",
     family,
     eventA,
     eventB,

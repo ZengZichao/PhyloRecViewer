@@ -34,14 +34,25 @@ import type { RenderOptions } from "../render/options";
 import type { EventType } from "../model/types";
 import { makeProjector } from "../render/geometry";
 import type { Theme } from "../render/theme";
+import {
+  FAMILY_COLOURED_KINDS,
+  exportLegendRowDefs,
+  type ExportLegendKind,
+  type LegendStrings,
+  type LegendSwatch,
+} from "../render/legendRows";
+import { currentDict } from "../i18n";
+import { APP_NAME } from "../version";
 
-/** One entry of an exported legend: a colored swatch and the label it keys. */
+/** One entry of an exported legend: a colored swatch and the label it keys.
+ *  The event rows themselves are NOT configurable: their set, order and wording
+ *  come from `LEGEND_ROWS` (src/render/legendRows.ts), the same table the
+ *  on-screen overlay draws, so an export can no longer key fewer rows than the
+ *  figure's reader sees in the app (docs/STYLE-GUIDE-UI.md §6). Only the two
+ *  group titles and the data-driven family chips are passed in. */
 export interface ExportLegendConfig {
   eventsTitle: string;
   familiesTitle: string;
-  transferLabel: string;
-  /** Label for the collapsed-clade wedge, so the key decodes what the canvas draws. */
-  collapsedLabel?: string;
   families: { name: string; color: string }[];
 }
 
@@ -131,44 +142,49 @@ interface LegendInput {
 /**
  * Build a self-contained legend `<g>` - positioned later through a transform -
  * that mirrors the on-screen Legend: the event glyphs plus one color chip per
- * gene family.
+ * gene family. The rows are read from `LEGEND_ROWS` (src/render/legendRows.ts),
+ * the very table `app/Legend.tsx` renders, so the two cannot drift apart.
  */
 function buildLegendGroup(
   doc: Document,
   input: LegendInput,
 ): { group: SVGGElement; width: number; height: number } {
   const { theme, legend } = input;
-  const ev = input.eventLabels ?? {
-    speciation: "Speciation",
-    duplication: "Duplication",
-    loss: "Loss",
-    branchingOut: "Transfer (donor)",
-    bifurcationOut: "Bifurcation donor",
-    transferBack: "Transfer (arrival)",
-    leaf: "Extant gene",
-  };
+  // The caller passes the live dictionary (MenuBar passes `t.event`). When a
+  // caller omits it - a headless export through `npm run cli`, say - the rows
+  // still come from the dictionary of the CURRENT language rather than from
+  // hard-coded English strings: that is what keeps the exported key verbatim
+  // identical to the on-screen legend, whose rows are `t.event.*` /
+  // `t.collapsedClade` (STYLE §5.3, §6 checklist).
+  const dict = currentDict();
+  const ev = input.eventLabels ?? dict.event;
+  const strings: LegendStrings = { t: dict, events: ev };
 
   const LP = 12;
   const ROW = 20;
   const ICON_W = 16;
   const TGAP = 8;
   // The exported legend has to decode the exported drawing, so it lists the
-  // SAME rows as the on-screen Legend: speciation, duplication, loss, transfer,
-  // bifurcation-out, the transfer-donor ring, the collapsed-clade wedge and the
-  // extant gene. A key that left the donor ring or the wedge out would give a
-  // reader of the exported figure no way to decode those glyphs.
+  // SAME rows as the on-screen Legend, in the same order: speciation,
+  // duplication, loss, the transfer arc, its arrival on a gene lineage, the
+  // bifurcation donor, the transfer-donor ring, the collapsed-clade wedge and
+  // the extant gene. A key that left a glyph out - the donor ring, the wedge, or
+  // the arrival arrowhead - would give a reader of the exported figure no way to
+  // decode it. The one row the on-screen overlay holds and the figure does not
+  // is the locate ring, a transient outline `Scene` draws only from its
+  // `locateSet` prop, which no export path passes (see ScreenOnlyLegendKind).
   const firstFamilyColor = legend.families[0]?.color;
-  const items: { label: string; kind: string; color?: string }[] = [
-    { label: ev.speciation, kind: "speciation", color: firstFamilyColor },
-    { label: ev.duplication, kind: "duplication" },
-    { label: ev.loss, kind: "loss" },
-    { label: legend.transferLabel, kind: "transfer", color: firstFamilyColor },
-    { label: ev.bifurcationOut, kind: "bifurcationOut" },
-    { label: ev.branchingOut, kind: "branchingOut" },
-    { label: legend.collapsedLabel ?? "Collapsed", kind: "collapsed" },
-    { label: ev.leaf, kind: "leaf", color: firstFamilyColor },
-  ];
-  const fams = legend.families.map((f) => ({ label: f.name, kind: "family", color: f.color }));
+  const items: { label: string; kind: ExportLegendKind; color?: string }[] =
+    exportLegendRowDefs(strings).map((row) => ({
+      label: row.label,
+      kind: row.kind,
+      color: FAMILY_COLOURED_KINDS.has(row.kind) ? firstFamilyColor : undefined,
+    }));
+  const fams = legend.families.map((f) => ({
+    label: f.name,
+    kind: "family" as const,
+    color: f.color,
+  }));
 
   const itemTextW = [...items, ...fams].reduce(
     (m, it) => Math.max(m, estimateTextWidth(it.label, 12)),
@@ -182,6 +198,10 @@ function buildLegendGroup(
   const width = Math.ceil(contentW + LP * 2);
 
   const g = doc.createElementNS(SVG_NS, "g") as SVGGElement;
+  // A class of its own, so the exported key is addressable: the figure can be
+  // checked - by the tests, and by a reader opening the SVG - to carry exactly
+  // the rows the on-screen legend shows, in the same order (STYLE §6).
+  g.setAttribute("class", "rpv-export-legend");
   const body = doc.createElementNS(SVG_NS, "g");
 
   let cy = LP;
@@ -198,7 +218,7 @@ function buildLegendGroup(
     body.appendChild(t);
     cy += 18;
   };
-  const addRow = (it: { label: string; kind: string; color?: string }): void => {
+  const addRow = (it: { label: string; kind: LegendSwatch; color?: string }): void => {
     const icx = LP + ICON_W / 2;
     const icy = cy + ROW / 2;
     body.appendChild(iconEl(doc, it.kind, icx, icy, theme, it.color));
@@ -236,10 +256,16 @@ function buildLegendGroup(
   return { group: g, width, height };
 }
 
-/** A single legend glyph, centered at (cx, cy). */
+/** A single legend glyph, centered at (cx, cy).
+ *
+ *  The parameter is `LegendSwatch` and there is deliberately NO `default:`
+ *  branch: TypeScript then refuses to compile until every row the shared legend
+ *  table can hand over has a real glyph here. A row that fell through to a
+ *  generic dot would key the exported figure with something that matches
+ *  nothing in it. */
 function iconEl(
   doc: Document,
-  kind: string,
+  kind: LegendSwatch,
   cx: number,
   cy: number,
   theme: Theme,
@@ -263,6 +289,17 @@ function iconEl(
       gg.appendChild(mk(doc, "path", { d: `M${cx + 2},${cy - 2.6} L${cx + 6},${cy} L${cx + 2},${cy + 2.6} Z`, fill: arc }));
       return gg;
     }
+    case "transferArrival": {
+      // The recipient end of a transfer: the arrowhead landing ON a gene
+      // lineage, drawn by Scene in the family colour. Matched shape for shape
+      // with the on-screen key, or the figure cannot be decoded.
+      const arc = color ?? theme.event.transferBack;
+      const gg = doc.createElementNS(SVG_NS, "g") as SVGGElement;
+      gg.appendChild(mk(doc, "line", { x1: cx - 7, y1: cy, x2: cx + 1, y2: cy, stroke: arc, "stroke-width": 1.8, "stroke-dasharray": "1 3" }));
+      gg.appendChild(mk(doc, "path", { d: `M${cx - 2},${cy - 3} L${cx + 4},${cy} L${cx - 2},${cy + 3} Z`, fill: arc }));
+      gg.appendChild(mk(doc, "circle", { cx: cx + 6, cy, r: 1.6, fill: arc }));
+      return gg;
+    }
     case "bifurcationOut":
       return mk(doc, "path", { d: `M${cx},${cy - 3.5} L${cx + 3.5},${cy} L${cx},${cy + 3.5} L${cx - 3.5},${cy} Z`, fill: theme.event.bifurcationOut });
     case "family":
@@ -279,8 +316,6 @@ function iconEl(
       // fixed event colour, so the exported key uses that colour here as well;
       // any other hue would be one the drawing never contains.
       return mk(doc, "circle", { cx, cy, r: 3, fill: color ?? theme.event.speciation, opacity: 0.85 });
-    default:
-      return mk(doc, "circle", { cx, cy, r: 3, fill: theme.text });
   }
 }
 
@@ -298,6 +333,14 @@ function renderPaneMarkup(doc: ExportDoc, pane: ExportPane): string {
       hideOutside: pane.hideOutside ?? null,
       labelOverrides: pane.labelOverrides,
       labelOverridesById: pane.labelOverridesById,
+      // The locale the FIGURE is drawn in. `Scene` reads `useT()` when this is
+      // omitted, and a `renderToStaticMarkup` render answers from zustand's
+      // INITIAL state - the language `navigator.language` gave the store when it
+      // was created, not the one the user picked (that is applied later, in
+      // `main.tsx`). The legend below already uses `currentDict()`, so without
+      // this an export would pair a Chinese key with English tooltips
+      // (docs/STYLE-GUIDE-UI.md §5.1, §6).
+      dict: currentDict(),
       interactive: false,
       detail: "full",
       showBackground: true,
@@ -755,7 +798,7 @@ export function sceneToInteractiveHtml(
   return (
     "<!doctype html><html lang=\"" + ui.lang + "\"><head><meta charset=\"utf-8\">" +
     "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">" +
-    "<title>" + safeTitle + " — PhyloRecViewer</title><style>" +
+    "<title>" + safeTitle + " — " + APP_NAME + "</title><style>" +
     "html,body{height:100%;margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Noto Sans',sans-serif;background:" + bg + "}" +
     "#wrap{position:absolute;inset:0;overflow:hidden;cursor:grab}#wrap:active{cursor:grabbing}" +
     "#stage{position:absolute;top:0;left:0;transform-origin:0 0;width:" + width + "px;height:" + height + "px}" +
@@ -767,9 +810,13 @@ export function sceneToInteractiveHtml(
     // Buttons carry real names now: a bare +/−/⤢ glyph is unreadable to a
     // screen reader, and the page documents its keyboard controls.
     "<div id=\"ctrl\">" +
-    "<button id=\"zin\" aria-label=\"" + ui.zoomIn + " (+ / =)\">+</button>" +
-    "<button id=\"zout\" aria-label=\"" + ui.zoomOut + " (−)\">−</button>" +
-    "<button id=\"fit\" aria-label=\"" + ui.fit + " (0 / Enter)\">\u2922</button>" +
+    // The keys each control answers to are spliced on with ` · `, never in
+    // brackets: this one line is read out under BOTH locales, and §2.4 gives
+    // English `()` and Chinese `（）` - half-width pairs would put English
+    // punctuation into a Chinese page (` · ` is the separator §2.6 allows).
+    "<button id=\"zin\" aria-label=\"" + ui.zoomIn + " · + / =\">+</button>" +
+    "<button id=\"zout\" aria-label=\"" + ui.zoomOut + " · −\">−</button>" +
+    "<button id=\"fit\" aria-label=\"" + ui.fit + " · 0 / Enter\">\u2922</button>" +
     "</div>" +
     (prov ? "<div id=\"provenance\" hidden>" + safeProv + "</div>" : "") +
     "<script>" + script + "</script></body></html>"
