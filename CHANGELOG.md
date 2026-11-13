@@ -152,8 +152,9 @@ Full report with evidence: `docs/UI-REVIEW-2026-11-06.md`.
   its notation rows — `donor → recipient`, the `—` empty mark,
   `Confidence (0–1)` — as symbols rather than copy, so a sweep cannot report a
   dash rule or a banned alias where the row prescribes a sign, and
-  `THIRD-PARTY-NOTICES.md` spells "license" the way the About panel and the
-  README do. A fixed class cannot silently reopen.
+  `THIRD-PARTY-NOTICES.md` spells "license" and the English manual "color" the
+  way the About panel, the README and the interface labels themselves do.
+  A fixed class cannot silently reopen.
 
 ### Fixed
 

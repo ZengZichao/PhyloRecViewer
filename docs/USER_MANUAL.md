@@ -193,7 +193,7 @@ A single file opens in the current tab if that tab is blank or only shows a bund
 
 When **several files** are selected / dropped at once, a dialog asks **"How do you want to open the N files?"**:
 
-- **Merge into one document**: all gene families are merged into one reconciliation against the first file's species tree; families are named after their source files and coloured distinctly. Species referenced by later files but missing from the first tree are reported as warnings.
+- **Merge into one document**: all gene families are merged into one reconciliation against the first file's species tree; families are named after their source files and colored distinctly. Species referenced by later files but missing from the first tree are reported as warnings.
 - **One tab per file**: each file opens independently in its own tab.
 
 After merging, a toast confirms "Merged N files into one document".
@@ -240,7 +240,7 @@ Once loaded the menu item becomes **"Nested: <filename> ✕"** (a name longer th
 - Gene nodes that **disagree** between the two are highlighted automatically. Comparison covers **three dimensions** — terminal event type, species mapping, and transfer donor/recipient — so a result that only moves a gene to another species no longer scores 100% agreement. The status bar gains a "Nodes differing between files" chip.
 - The **status bar** under the panes shows the breakdown: the agreement percentage (nodes agreeing on **all** dimensions, divided by the union of comparable nodes), the species-mapping agreement among matched nodes, and the counts of matched / only-in-A / only-in-B nodes — e.g. `71% in agreement · 80% species match · 7 matched · 1 only in A · 0 only in B`.
 - The **Link views** checkbox keeps the two panes' zoom/pan in sync; when unchecked each pane can be navigated independently.
-- The compare pane keeps its **own** mirror, collapse and family-colour state, independent of the primary document — and the session file stores it too (see [Section 10](#10-session-save--load)).
+- The compare pane keeps its **own** mirror, collapse and family-color state, independent of the primary document — and the session file stores it too (see [Section 10](#10-session-save--load)).
 - The ◎ / ◉ button in the status bar hides or restores the diff highlighting; the right panel gains a **Differences** tab (see 7.6).
 
 Once loaded the menu item becomes **"Compare: <filename> ✕"** (a name longer than 20 characters is elided to the first 18 plus `…`); click it to remove the comparison.
@@ -250,8 +250,8 @@ Once loaded the menu item becomes **"Compare: <filename> ✕"** (a name longer t
 ### 4.8 Document tabs
 
 - **＋** at the right end of the tab bar: new blank tab.
-- Click a tab to switch; each tab independently stores its own file, mirroring, collapses, family colours, annotations, renames, search criteria, and undo history.
-- Hovering a tab reveals its **✕** close button. If the document holds unsaved edits (annotations, mirroring, colours, renames, …), a confirmation appears before an unsaved document is closed; closing the last tab resets it to blank rather than quitting.
+- Click a tab to switch; each tab independently stores its own file, mirroring, collapses, family colors, annotations, renames, search criteria, and undo history.
+- Hovering a tab reveals its **✕** close button. If the document holds unsaved edits (annotations, mirroring, colors, renames, …), a confirmation appears before an unsaved document is closed; closing the last tab resets it to blank rather than quitting.
 - Closing the active tab activates an adjacent tab.
 - Keyboard support on the tab bar: `←` / `→` to move, `Home` / `End` for first/last, `Enter` / `Space` to activate.
 
@@ -332,7 +332,7 @@ Two ways to add / edit annotations:
 - **`Shift` + click** a gene node to open the annotation editor directly; or
 - click the floating-toolbar **✎ to enter annotation mode** (button highlights), then **click** any gene node to annotate. Click `✎` again to leave the mode.
 
-In the editor: type text, pick a colour, then **Save** (or `⌘Enter`); the node is drawn with a **coloured ring + text**. You can also **Remove** or **Cancel** (`Esc`). Saved annotations are managed centrally in the right panel's **Annotations** tab (see 7.5) and stored in the session file (see [Section 10](#10-session-save--load)).
+In the editor: type text, pick a color, then **Save** (or `⌘Enter`); the node is drawn with a **colored ring + text**. You can also **Remove** or **Cancel** (`Esc`). Saved annotations are managed centrally in the right panel's **Annotations** tab (see 7.5) and stored in the session file (see [Section 10](#10-session-save--load)).
 
 ### 5.9 Renaming labels on the canvas
 
@@ -380,7 +380,7 @@ The left panel is titled **Controls** and contains four collapsible sections (op
 | **Event glyphs** | on/off | Show event glyphs (duplication square, loss cross, …) |
 | **Support values** | on/off | Show event confidence **and** clade / node support values beside nodes (the terminal event's confidence first, otherwise the clade support; species clade names carry bootstrap / posterior values too). Values also appear in node tooltips and the Inspector |
 | **Tube gradient** | on/off | Fill species tubes with a gradient |
-| **Heatmap of overlapping copies** | on/off | Colour species tubes by the number of gene lanes laid out inside them (the layout engine's concurrent lanes). This is a layout quantity, not a gene copy number: the per-species gene count excluding losses is listed separately in the statistics panel as **Non-loss lineages** |
+| **Heatmap of overlapping copies** | on/off | Color species tubes by the number of gene lanes laid out inside them (the layout engine's concurrent lanes). This is a layout quantity, not a gene copy number: the per-species gene count excluding losses is listed separately in the statistics panel as **Non-loss lineages** |
 
 ### 6.4 Labels & batch rename
 
@@ -415,7 +415,7 @@ Click the floating-toolbar **◧** button to open/close the panel (after closing
 - **Search box**: type a gene or species name; tick **Regex** for regular-expression search.
 - `Enter` jumps to the next match, `Shift + Enter` to the previous; **Next / Previous** buttons do the same and **centre** the main canvas on each match. The count shows e.g. `12 matches`; "No matches" when none.
 - **By event type**: tick Speciation / Duplication / Loss / Transfer / Extant gene to show only those event types.
-- **By gene family**: with multiple gene trees, each family has a colour swatch; tick to toggle visibility.
+- **By gene family**: with multiple gene trees, each family has a color swatch; tick to toggle visibility.
 - **Confidence range**: two sliders bound Confidence (0–1) to filter low-confidence nodes.
 - **Show only matches**: when on, only matching nodes render (by default non-matching nodes dim to opacity 0.12).
 - **Clear**: resets the query, regex toggle, event filter, family filter, and confidence range in one click.
@@ -487,7 +487,7 @@ The legend overlays the bottom-left of the canvas (toggle **Layout parameters �
 
 | Glyph | Event |
 |-------|-------|
-| Filled dot (family colour) | Speciation |
+| Filled dot (family color) | Speciation |
 | Filled square | Duplication |
 | Cross ✕ | Loss |
 | Dashed arc arrow (donor → recipient) | Transfer |
@@ -495,11 +495,11 @@ The legend overlays the bottom-left of the canvas (toggle **Layout parameters �
 | Filled diamond ◆ | Bifurcation donor |
 | Open ring | Transfer donor |
 | Filled wedge | Collapsed clade |
-| Filled dot (family colour) | Extant gene |
+| Filled dot (family color) | Extant gene |
 
 The on-screen legend carries one extra row, `Located node` — the ring left behind by a search hit or a data-check locate; it is drawn only on the interactive canvas and not in exported images.
 
-**Gene families**: one colour swatch + name per gene tree. Each swatch is a colour picker — click to **change that family's colour** (undoable).
+**Gene families**: one color swatch + name per gene tree. Each swatch is a color picker — click to **change that family's color** (undoable).
 
 A toggle button in the legend's corner switches between **Vertical layout** and **Horizontal layout**.
 
@@ -541,7 +541,7 @@ The session is plain JSON (its schema marker is `CURRENT_SESSION_VERSION` — th
 - for a merged document, the **full list of source files** (`sourceFiles`), so a merge can be rebuilt exactly — menu load and startup recovery share one restore path, so every merged gene family comes back
 - all layout parameters, render parameters, theme — and, since schema v2, **each background tab keeps its own layout / style options**
 - species-mirror sets (main, nested **and compare** canvases stored separately), collapse sets — including the compare pane's `compareSwapped` / `compareCollapsed` / `compareGeneColors`
-- per-gene-tree colours, per-node annotations, and label renames — by label text **and by node id** (`labelOverridesById`), so one of several same-named labels can be renamed alone
+- per-gene-tree colors, per-node annotations, and label renames — by label text **and by node id** (`labelOverridesById`), so one of several same-named labels can be renamed alone
 - the current **search & filter criteria** (`searchQuery`, `searchRegex`, `eventFilter`, `familyFilter`, `confidenceMin` / `confidenceMax`, and the `onlyMatches` flag)
 - **snapshots of every other open tab** (`tabs`) and which of them is active (`activeTabIndex`), so saving and reloading restores the whole session, not just the active document
 
@@ -560,7 +560,7 @@ The session is plain JSON (its schema marker is `CURRENT_SESSION_VERSION` — th
 - **Undo**: `⌘Z` / `Ctrl+Z`, or the floating-toolbar `↶`
 - **Redo**: `⌘⇧Z` / `Ctrl+Shift+Z` or `Ctrl+Y`, or `↷`
 
-Undoable actions: species mirroring, collapse/expand, gene-family colour changes, annotation add/edit/remove, label renames (single and batch), reduce crossings, reset mirroring. History is capped at **100 steps**; consecutive drags of the same slider merge into one step.
+Undoable actions: species mirroring, collapse/expand, gene-family color changes, annotation add/edit/remove, label renames (single and batch), reduce crossings, reset mirroring. History is capped at **100 steps**; consecutive drags of the same slider merge into one step.
 
 > Shortcuts are ignored while a text input is focused, to avoid conflicting with text editing.
 
@@ -726,7 +726,7 @@ The format is auto-detected; no manual selection needed:
 
 ### Q8 How to recover a closed tab that had annotations
 
-Closing a tab with unsaved annotations / mirroring / colours asks for confirmation ("Close anyway?"). If you saved a session beforehand, restore it via **File → Open session…**. In addition, the session autosave snapshots **all open tabs** (not just the active one) about once per second and is flushed again when the window closes, so after an unexpected quit the next launch **offers to restore** every tab's document and view state (dialog **Restore last session?** with **Restore** / **Start blank**).
+Closing a tab with unsaved annotations / mirroring / colors asks for confirmation ("Close anyway?"). If you saved a session beforehand, restore it via **File → Open session…**. In addition, the session autosave snapshots **all open tabs** (not just the active one) about once per second and is flushed again when the window closes, so after an unexpected quit the next launch **offers to restore** every tab's document and view state (dialog **Restore last session?** with **Restore** / **Start blank**).
 
 ---
 
@@ -754,7 +754,7 @@ Closing a tab with unsaved annotations / mirroring / colours asks for confirmati
 
 ### B. Event types
 
-The Glyph column is the mark the interactive canvas draws for that event type, not the legend swatch of [Section 8](#8-legend): a transfer arrival's own node marker is a plain filled dot in its gene-family colour, and the arrowhead readers see belongs to the dashed arc that runs from the donor node into it.
+The Glyph column is the mark the interactive canvas draws for that event type, not the legend swatch of [Section 8](#8-legend): a transfer arrival's own node marker is a plain filled dot in its gene-family color, and the arrowhead readers see belongs to the dashed arc that runs from the donor node into it.
 
 | Internal type | Chinese | English | Glyph |
 |---------------|---------|---------|-------|
