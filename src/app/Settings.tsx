@@ -8,11 +8,14 @@ import { loadPrefs, savePrefs, setOnboarded } from "../state/prefs";
 import { hasUnrecoveredSnapshot, unrecoveredSnapshotText, clearAutosaveSnapshot } from "../state/autosave";
 import type { ThemePref } from "../render/theme";
 import { useFocusTrap } from "./hooks";
+import { Icon } from "./Icon";
 
 /**
- * Preferences dialog: theme, language, PNG scale, the "default view" applied to
- * every new document, and a reset — one discoverable surface holding them all,
- * persisted so theme/language/PNG carry over between sessions.
+ * Preferences: one setting per row, label on the left, control on the right,
+ * hairline between rows. Choices are segmented where the option set is small
+ * and closed (theme, language, PNG scale) and a single button where the action
+ * is one-shot (default view, autosave, tour) — so no row asks the user to
+ * invent a value.
  */
 export function Settings({ open, onClose }: { open: boolean; onClose: () => void }) {
   const t = useT();
@@ -92,115 +95,117 @@ export function Settings({ open, onClose }: { open: boolean; onClose: () => void
   };
 
   const themeOptions: { id: ThemePref; label: string }[] = [
-    { id: "light", label: `${t.lightTheme} ☀` },
-    { id: "dark", label: `${t.darkTheme} 🌙` },
-    { id: "system", label: `${t.systemTheme} 🖥` },
+    { id: "light", label: t.lightTheme },
+    { id: "dark", label: t.darkTheme },
+    { id: "system", label: t.systemTheme },
   ];
+
+  const autosaveLabel = autosaveFailed
+    ? t.autosaveFailedLabel
+    : autosaveAt
+      ? t.autosaveOn.replace(
+          "{time}",
+          new Date(autosaveAt).toLocaleString(intlTag[locale], {
+            month: "short",
+            day: "numeric",
+            hour: "numeric",
+            minute: "2-digit",
+          }),
+        )
+      : t.autosaveNone;
 
   return (
     <div className="help-overlay" onClick={onClose} role="dialog" aria-modal="true" aria-label={t.prefsTitle}>
       <div className="help-card settings-card" ref={dialogRef} onClick={(e) => e.stopPropagation()}>
         <div className="help-head">
-          <span className="sidebar-title">{t.prefsTitle}</span>
+          <span className="settings-title">{t.prefsTitle}</span>
           <button className="panel-collapse" onClick={onClose} data-tooltip={t.close} aria-label={t.close}>
-            ✕
+            <Icon name="close" />
           </button>
         </div>
 
-        <h4>{t.theme}</h4>
-        <div className="settings-row">
-          {themeOptions.map((o) => (
+        <div className="settings-field">
+          <span className="settings-label">{t.theme}</span>
+          <Segmented groupLabel={t.theme} value={themeId} onChange={setTheme} options={themeOptions} />
+        </div>
+
+        <div className="settings-field">
+          <span className="settings-label">{t.menuLanguage}</span>
+          <Segmented
+            groupLabel={t.menuLanguage}
+            value={locale}
+            onChange={setLocale}
+            options={[
+              { id: "zh", label: t.langNameZh },
+              { id: "en", label: t.langNameEn },
+            ]}
+          />
+        </div>
+
+        <div className="settings-field">
+          <span className="settings-label">{t.pngResolution}</span>
+          <Segmented
+            groupLabel={t.pngResolution}
+            className="segmented-grid"
+            value={String(pngDpi)}
+            onChange={(v) => setPngDpi(Number(v))}
+            options={PNG_DPI_CHOICES.map((sc) => ({
+              id: String(sc),
+              // The row label already carries the unit: six cells of "300 DPI"
+              // wrapped to two lines each and made the picker the tallest thing
+              // in the dialog.
+              label: String(sc),
+              title: sc === 192 ? t.pngScreen : `${sc} DPI`,
+            }))}
+          />
+        </div>
+
+        <div className="settings-field">
+          <span className="settings-label">{t.defaultView}</span>
+          <div className="settings-actions">
+            {hasDefault && (
+              <button className="btn ghost" onClick={clearDefault}>
+                {t.clearDefaultView}
+              </button>
+            )}
+            <button className="btn ghost" onClick={saveAsDefault}>
+              {t.saveDefaultView}
+            </button>
+          </div>
+        </div>
+
+        <div className="settings-field">
+          <span className="settings-label">{t.autosaveSection}</span>
+          <div className="settings-actions">
+            <span className="settings-value">{autosaveLabel}</span>
             <button
-              key={o.id}
-              className={`btn ghost${themeId === o.id ? " active" : ""}`}
-              onClick={() => setTheme(o.id)}
+              className="btn ghost"
+              onClick={() => {
+                clearAutosaveSnapshot();
+                showToast(t.clearAutosaveDone, "success");
+              }}
             >
-              {o.label}
+              {t.clearAutosave}
             </button>
-          ))}
+          </div>
         </div>
 
-        <h4>{t.menuLanguage}</h4>
-        <div className="settings-row">
-          <button
-            className={`btn ghost${locale === "zh" ? " active" : ""}`}
-            onClick={() => setLocale("zh")}
-          >
-            {t.langNameZh}
-          </button>
-          <button
-            className={`btn ghost${locale === "en" ? " active" : ""}`}
-            onClick={() => setLocale("en")}
-          >
-            {t.langNameEn}
-          </button>
-        </div>
-
-        <h4>{t.pngResolution}</h4>
-        <div className="settings-row">
-          {PNG_DPI_CHOICES.map((sc) => (
-            <button
-              key={sc}
-              className={`btn ghost${pngDpi === sc ? " active" : ""}`}
-              onClick={() => setPngDpi(sc)}
-            >
-              {sc === 192 ? t.pngScreen : `${sc} DPI`}
+        <div className="settings-field">
+          <span className="settings-label">{t.viewTour}</span>
+          <div className="settings-actions">
+            <button className="btn ghost" onClick={replayTour}>
+              {t.replayTour}
             </button>
-          ))}
-        </div>
-
-        <h4>{t.viewTour}</h4>
-        <p className="settings-note">{t.helpTitle}</p>
-        <div className="settings-row">
-          <button className="btn" onClick={replayTour}>
-            {t.viewTour}
-          </button>
-        </div>
-
-        <h4>{t.defaultView}</h4>
-        <p className="settings-note">
-          {hasDefault
-            ? t.saveDefaultViewTitle
-            : `${t.saveDefaultViewTitle} · ${t.defaultView}`}
-        </p>
-        <div className="settings-row">
-          <button className="btn" onClick={saveAsDefault}>
-            {t.saveDefaultView}
-          </button>
-          {hasDefault && (
-            <button className="btn ghost" onClick={clearDefault}>
-              {t.clearDefaultView}
-            </button>
-          )}
-        </div>
-
-        <h4>{t.autosaveSection}</h4>
-        <p className="settings-note">
-          {autosaveFailed
-            ? t.autosaveFailedLabel
-            : autosaveAt
-              ? t.autosaveOn.replace("{time}", new Date(autosaveAt).toLocaleString(intlTag[locale]))
-              : t.autosaveNone}
-        </p>
-        <div className="settings-row">
-          <button
-            className="btn ghost"
-            onClick={() => {
-              clearAutosaveSnapshot();
-              showToast(t.clearAutosaveDone, "success");
-            }}
-          >
-            {t.clearAutosave}
-          </button>
+          </div>
         </div>
 
         {quarantined && (
-          <>
-            <h4>{t.recoverySection}</h4>
-            <p className="settings-note">{t.recoveryFound}</p>
-            <div className="settings-row">
+          <div className="settings-field">
+            <span className="settings-label">{t.recoverySection}</span>
+            <div className="settings-actions">
+              <span className="settings-value">{t.recoveryFound}</span>
               <button
-                className="btn"
+                className="btn ghost"
                 onClick={() => {
                   const text = unrecoveredSnapshotText();
                   if (!text) return;
@@ -218,16 +223,51 @@ export function Settings({ open, onClose }: { open: boolean; onClose: () => void
                 {t.recoveryExport}
               </button>
             </div>
-          </>
+          </div>
         )}
 
-        <div className="settings-divider" />
-        <div className="settings-row">
-          <button className="btn ghost" onClick={resetPrefs}>
+        <div className="settings-foot">
+          <button className="btn ghost settings-reset" onClick={resetPrefs}>
             {t.restorePrefs}
           </button>
         </div>
       </div>
+    </div>
+  );
+}
+
+/**
+ * Segmented choice: one joined track, one selected segment. The selected
+ * segment is a tinted step of the same scale rather than a filled block, so a
+ * settings row never reads as a row of competing buttons.
+ */
+function Segmented<T extends string>({
+  value,
+  options,
+  onChange,
+  groupLabel,
+  className = "",
+}: {
+  value: T;
+  options: { id: T; label: string; title?: string }[];
+  onChange: (id: T) => void;
+  groupLabel: string;
+  className?: string;
+}) {
+  return (
+    <div className={`segmented ${className}`.trim()} role="group" aria-label={groupLabel}>
+      {options.map((o) => (
+        <button
+          key={o.id}
+          type="button"
+          className={value === o.id ? "active" : ""}
+          aria-pressed={value === o.id}
+          title={o.title}
+          onClick={() => onChange(o.id)}
+        >
+          {o.label}
+        </button>
+      ))}
     </div>
   );
 }

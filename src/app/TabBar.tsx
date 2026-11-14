@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent }
 import { useT } from "../i18n";
 import { samples } from "../samples";
 import { isDocDirty, useStore } from "../state/store";
+import { Icon } from "./Icon";
 
 /** Horizontal bar of open document tabs, with per-tab close and a "+" button.
  *  Tabs holding unsaved user work (annotations / swaps / colors / overlays)
@@ -169,7 +170,7 @@ export function TabBar() {
                 requestClose(tab.id);
               }}
             >
-              ✕
+              <Icon name="close" size={12} />
             </button>
           </div>
         );

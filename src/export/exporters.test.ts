@@ -1009,9 +1009,7 @@ describe("the locale of an exported figure", () => {
     expect(titleExpr).not.toContain("PhyloRecViewer");
   });
 
-  it("splices the page's key hints with · , never with brackets", () => {
-    // This one line of code labels the page under both locales, and §2.4 gives
-    // English `()` and Chinese `（）`, so it carries no bracket at all (§2.6).
+  it("puts the page's key hints in parentheses", () => {
     for (const locale of ["en", "zh"] as const) {
       const t = translations[locale];
       const html = sceneToInteractiveHtml(exportDoc([pane(lay(SOLO_XML, "solo.xml"))]), "solo", {
@@ -1022,9 +1020,9 @@ describe("the locale of an exported figure", () => {
       });
       const labels = Array.from(html.matchAll(/aria-label="([^"]*)"/g)).map((m) => m[1]);
       expect(labels).toHaveLength(3);
-      expect(labels[0]).toBe(`${t.zoomIn} · + / =`);
-      expect(labels[2]).toBe(`${t.fit} · 0 / Enter`);
-      for (const l of labels) expect(l, l).not.toMatch(/[()[\]]/);
+      expect(labels[0]).toBe(`${t.zoomIn} (+ / =)`);
+      expect(labels[1]).toBe(`${t.zoomOut} (−)`);
+      expect(labels[2]).toBe(`${t.fit} (0 / Enter)`);
     }
   });
 

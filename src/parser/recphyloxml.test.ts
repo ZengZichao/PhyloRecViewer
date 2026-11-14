@@ -467,8 +467,7 @@ describe("schema-conformant minimal fixture", () => {
 });
 
 describe("transferBack-arrival and empty-label marks follow the glossary", () => {
-  // GLOSSARY-UI row 36 / STYLE §3.7: an empty value is `—`, never `?`; and
-  // §2.4 says code-spliced strings prefer ` · ` over brackets.
+  // GLOSSARY-UI row 36 / STYLE §3.7: an empty value is `—`, never `?`.
   const spTree = `<spTree><phylogeny rooted="true"><clade><name>root</name>
       <clade><name>A</name></clade><clade><name>B</name></clade></clade></phylogeny></spTree>`;
   const geneWith = (events: string) => `<recPhylo>${spTree}
@@ -477,13 +476,12 @@ describe("transferBack-arrival and empty-label marks follow the glossary", () =>
       </phylogeny></recGeneTree>
     </recPhylo>`;
 
-  it("joins the first arrival value with the · separator, not brackets", () => {
+  it("names the first arrival value in parentheses", () => {
     const recon = parseRecPhyloXML(
       geneWith(`<transferBack destinationSpecies="A"/><transferBack destinationSpecies="B"/>`),
     );
     const w = recon.warnings.find((x) => x.includes("<transferBack> arrivals"))!;
-    expect(w).toContain("use the first · A");
-    expect(w).not.toContain("use the first (");
+    expect(w).toContain("use the first (A)");
   });
 
   it("marks a destination-less first arrival with the empty value mark", () => {
@@ -491,7 +489,7 @@ describe("transferBack-arrival and empty-label marks follow the glossary", () =>
       geneWith(`<transferBack/><transferBack destinationSpecies="A"/>`),
     );
     const w = recon.warnings.find((x) => x.includes("<transferBack> arrivals"))!;
-    expect(w).toContain("use the first · —");
+    expect(w).toContain("use the first (—)");
     expect(w).not.toContain("?");
   });
 

@@ -837,8 +837,8 @@ function renderGeneGlyphs(
           // a PNG/SVG/PDF is a static picture, so selling "Alt/⌥- or ⌘-click to
           // expand" inside it would be wording the artefact's own implementation
           // cannot carry out (docs/STYLE-GUIDE-UI.md §3.3).
-          `${g.name ? `${g.name}\n` : ""}${dict.collapsedClade} · ${countLabel(leafCount(g), dict.leavesUnit)}${
-            h.interactive ? ` · ${dict.expandHint}` : ""
+          `${g.name ? `${g.name}\n` : ""}${dict.collapsedClade}\n${countLabel(leafCount(g), dict.leavesUnit)}${
+            h.interactive ? `\n${dict.expandHint}` : ""
           }`
         : tooltipText(g, dict);
       // Confidence shown next to the node: the terminal event's value first,
@@ -1024,7 +1024,7 @@ function tooltipText(g: GeneNode, t: Dict): string {
   const label = t.event[ev.type];
   const where = ev.speciesLocation ?? ev.destinationSpecies ?? g.speciesId;
   const name = g.name ? `${g.name}\n` : "";
-  const lines: string[] = [`${name}${label}${where ? ` · ${where}` : ""}`.trimEnd()];
+  const lines: string[] = [`${name}${label}${where ? `\n${where}` : ""}`.trimEnd()];
   // The scientific evidence a reviewer needs, without opening a panel: time
   // slice, event confidence, clade support, and every transfer arrival.
   if (ev.timeSlice != null) lines.push(`${t.inspTimeSlice}: ${ev.timeSlice}`);
@@ -1035,13 +1035,10 @@ function tooltipText(g: GeneNode, t: Dict): string {
     if (e.type === "transferBack") {
       lines.push(
         `${t.event.transferBack}: ${e.speciesLocation ?? t.inspNone} → ${e.destinationSpecies ?? t.inspNone}` +
-          // The arrival's own evidence rides on as ` · ` fields, never in
-          // brackets: STYLE §2.4 gives English `()` and Chinese `（）`, and this
-          // one line of code is read by both, so the half-width pair used to put
-          // English punctuation into a Chinese tooltip (STYLE §2.6 allows ` · `
-          // as the separator, §2.4 prefers it over brackets for spliced text).
-          (e.timeSlice != null ? ` · ${t.inspTimeSlice} ${e.timeSlice}` : "") +
-          (e.confidence != null ? ` · ${t.inspConfidence} ${e.confidence}` : ""),
+          // One field per line keeps the tooltip readable in both locales and
+          // avoids locale-specific separators.
+          (e.timeSlice != null ? `\n${t.inspTimeSlice}: ${e.timeSlice}` : "") +
+          (e.confidence != null ? `\n${t.inspConfidence}: ${e.confidence}` : ""),
       );
     }
   }
@@ -1097,9 +1094,7 @@ function renderGeneLabels(
       // value broke GLOSSARY row 16) as a label. STYLE §5.1: the wording comes
       // from the dictionary, which is also why `t` is passed in at the call site.
       const base = overrideKey ? (idOverride ?? labelOverrides?.[overrideKey] ?? overrideKey) : (t?.collapsedClade ?? "");
-      // The leaf count is spliced on with ` · `, not in brackets: §2.4 gives
-      // English `()` and Chinese `（）` and this line feeds both.
-      displayName = `${base} · ${leafCount(g)}`;
+      displayName = `${base} ${leafCount(g)}`;
     } else {
       displayName = overrideKey ? (idOverride ?? labelOverrides?.[overrideKey] ?? overrideKey) : "";
     }

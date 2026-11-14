@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import { useT } from "../i18n";
 import { useStore } from "../state/store";
 import { useFocusTrap } from "./hooks";
+import { Icon } from "./Icon";
 
 /**
  * Modal listing keyboard shortcuts and mouse/touch interactions. Opened from
@@ -66,7 +67,7 @@ export function HelpOverlay() {
   // restated the mouse tip below ("scroll to zoom, drag to pan"), only padded
   // the card out.
   const gestures: { keys: string[]; label: string }[] = [
-    { keys: [t.hintClickHighlight], label: `${t.hintHighlightAction} · ${t.inspectorTitle}` },
+    { keys: [t.hintClickHighlight], label: `${t.hintHighlightAction} (${t.inspectorTitle})` },
     { keys: [t.hintShiftAnnotate], label: t.annoTitle },
     { keys: [t.hintAltCollapse], label: t.collapseExpandAction },
     { keys: [t.hintClickHighlight], label: t.hintMirror },
@@ -86,7 +87,7 @@ export function HelpOverlay() {
         <div className="help-head">
           <span className="sidebar-title">{t.helpTitle}</span>
           <button className="panel-collapse" onClick={() => setOpen(false)} data-tooltip={t.close} aria-label={t.close}>
-            ✕
+            <Icon name="close" />
           </button>
         </div>
         <h4>{t.helpKeyboard}</h4>

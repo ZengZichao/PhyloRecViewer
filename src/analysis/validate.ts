@@ -207,7 +207,7 @@ export function checkConsistency(recon: Reconciliation): ConsistencyIssue[] {
             const recipTS = arr.timeSlice;
             if (donorTS != null && recipTS != null) {
               if (recipTS < donorTS) {
-                push(issues, "transferBackwardsInTime", "warning", `${label} · time slice ${recipTS} < ${donorTS}`, g.id);
+                push(issues, "transferBackwardsInTime", "warning", `${label}: time slice ${recipTS} < ${donorTS}`, g.id);
               }
             } else {
               push(issues, "transferTimeUnknown", "info", label, g.id);

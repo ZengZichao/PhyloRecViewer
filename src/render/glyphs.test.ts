@@ -237,7 +237,7 @@ describe("the dictionary a figure is drawn in", () => {
     // the user picked was invisible to the drawing while the legend, built from
     // `currentDict()`, followed it. One artefact, two locales.
     const zh = drawLocaleScene({ dict: translations.zh });
-    expect(drawn(zh).join("\n")).toContain("物种形成 · R");
+    expect(drawn(zh).join("\n")).toContain("物种形成\nR");
     expect(drawn(zh).join("\n")).toContain("现存基因");
     expect(drawn(zh).join("\n")).not.toContain("Speciation");
     expect(drawn(zh).join("\n")).not.toContain("Extant gene");
@@ -296,7 +296,7 @@ describe("collapsed-clade wording", () => {
   });
 
   it("keeps the name of a collapsed clade in front of its count", () => {
-    expect(drawn(drawLocaleScene({ dict: translations.en }))).toContain("inner · 2");
+    expect(drawn(drawLocaleScene({ dict: translations.en }))).toContain("inner 2");
   });
 });
 
@@ -309,27 +309,25 @@ describe("what a figure may promise", () => {
     const figure = drawLocaleScene({ dict: translations.en, interactive: false });
     expect(figure).not.toContain(translations.en.expandHint);
     // The rest of the tooltip survives: the gesture went, not the information.
-    expect(figure).toContain(`${translations.en.collapsedClade} · 2 ${translations.en.leavesUnit}`);
+    expect(figure).toContain(`${translations.en.collapsedClade}\n2 ${translations.en.leavesUnit}`);
   });
 });
 
-describe("separator and bracket discipline in drawn text", () => {
-  it("joins an event to its species with the one allowed separator", () => {
+describe("line discipline in drawn text", () => {
+  it("puts an event and its species on separate tooltip lines", () => {
     const all = drawn(drawLocaleScene({ dict: translations.en })).join("\n");
-    expect(all).toContain("Speciation · R");
+    expect(all).toContain("Speciation\nR");
     expect(all).not.toContain(" @ ");
   });
 
-  it("splices an arrival's evidence with · rather than () and []", () => {
+  it("puts an arrival's evidence on its own lines", () => {
     // Nothing collapsed here: the arrival's own glyph has to be on the page for
     // its tooltip to be the thing under test.
     const zh = drawn(drawLocaleScene({ dict: translations.zh }, false));
     const arrival = zh.find((t) => t.includes(translations.zh.event.transferBack));
     expect(arrival, "the transfer arrival is drawn").toBeDefined();
-    expect(arrival).toContain(`${translations.zh.inspTimeSlice} 3`);
-    expect(arrival).toContain(`${translations.zh.inspConfidence} 0.87`);
-    // STYLE §2.4 gives English `()` and Chinese `（）` and this one line of code
-    // feeds both locales, so the spliced fields carry no bracket at all.
+    expect(arrival).toContain(`${translations.zh.inspTimeSlice}: 3`);
+    expect(arrival).toContain(`${translations.zh.inspConfidence}: 0.87`);
     for (const t of zh) expect(t, t).not.toMatch(/[()[\]]/);
     for (const t of drawn(drawLocaleScene({ dict: translations.en }, false))) {
       expect(t, t).not.toMatch(/\[[^\]]*\]/);

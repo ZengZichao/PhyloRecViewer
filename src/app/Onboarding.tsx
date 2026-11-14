@@ -131,9 +131,6 @@ export function Onboarding({ visible, onClose }: { visible: boolean; onClose: ()
         />
       )}
       <div className="onboard-card" ref={dialogRef}>
-        <div className="onboard-step">
-          {step + 1} / {stepsList.length}
-        </div>
         <h3>{stepsList[step].title}</h3>
         <p>{stepsList[step].body}</p>
         <div className="onboard-dots" aria-hidden="true">

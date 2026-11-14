@@ -1,39 +1,94 @@
+/* Radix Colors (slate and the semantic scales, light theme).
+   Steps follow Radix's usage contract: 1–2 backgrounds, 3–5 component
+   states, 6–8 borders, 9–10 solid fills, 11–12 text. */
 :root {
-  /* TRAE Minimalist — monochrome design system.
-     Neutral gray surfaces, near-black primary (#18181b), 12px base radius,
-     subtle layered shadows. Color is reserved for data semantics only. */
-  --bg: #ffffff;
-  --panel: #ffffff;
-  --panel-2: #fafafa;
-  --hover: #f4f4f5;
-  --border: #e4e4e7;
-  --border-weak: #f4f4f5;
-  /* Control border: a higher-contrast border for interactive controls
-     (toggles, switches, ghost buttons) to meet WCAG 1.4.11 (3:1). */
-  --control-border: #a1a1aa;
-  --text: #18181b;
-  --text-2: #3f3f46;
-  --muted: #71717a;
-  /* Primary near-black: used for the main CTA, active controls, tab
-     underlines, minimap frame, focus rings — the single monochrome accent
-     that ties the UI together. */
-  --accent: #18181b;
-  --accent-hover: #0a0a0a;
-  --accent-light: #f4f4f5;
-  --accent-weak: rgba(24,24,27,0.06);
-  --accent-weak-2: rgba(24,24,27,0.12);
-  --accent-text: #ffffff;
-  --ring: #18181b;
-  --danger: #dc2626;
-  --danger-weak: #fef2f2;
-  --success: #16a34a;
-  --warning: #b45309;
-  /* Shadow system: xs for cards, sm for popovers, lg for modals. */
-  --shadow-xs: 0 1px 0 0 rgba(0,0,0,0.04);
-  --shadow-sm: 0 1px 2px 0 rgba(0,0,0,0.05), 0 1px 1px 0 rgba(0,0,0,0.03);
-  --shadow: 0 2px 4px 0 rgba(0,0,0,0.06), 0 1px 2px 0 rgba(0,0,0,0.03);
-  --shadow-lg: 0 12px 20px -6px rgba(0,0,0,0.08), 0 4px 8px -2px rgba(0,0,0,0.04);
-  /* 8pt Grid spacing system: every gap/padding is a multiple of 8. */
+  --gray-1: #fcfcfd;
+  --gray-2: #f9f9fb;
+  --gray-3: #f0f0f3;
+  --gray-4: #e8e8ec;
+  --gray-5: #e0e1e6;
+  --gray-6: #d9d9e0;
+  --gray-7: #cdced6;
+  --gray-8: #b9bbc6;
+  --gray-9: #8b8d98;
+  --gray-10: #80838d;
+  --gray-11: #60646c;
+  --gray-12: #1c2024;
+  --red-3: #feebec;
+  --red-6: #fdbdbe;
+  --red-7: #f4a9aa;
+  --red-9: #e5484d;
+  --red-11: #ce2c31;
+  --green-3: #e6f6eb;
+  --green-6: #adddc0;
+  --green-7: #8eceaa;
+  --green-9: #30a46c;
+  --green-11: #218358;
+  --amber-3: #fff7c2;
+  --amber-6: #f3d673;
+  --amber-7: #e9c162;
+  --amber-9: #ffc53d;
+  --amber-11: #ab6400;
+  --violet-3: #f4f0fe;
+  --violet-6: #d4cafe;
+  --violet-7: #c2b5f5;
+  --violet-9: #6e56cf;
+  --violet-11: #6550b9;
+  --black-a6: rgba(0, 0, 0, 0.4);
+
+  --bg: var(--gray-2);
+  --panel: var(--gray-1);
+  --panel-2: var(--gray-2);
+  --hover: var(--gray-4);
+  --border: var(--gray-6);
+  --border-weak: var(--gray-5);
+  --control-border: var(--gray-8);
+  --text: var(--gray-12);
+  --text-2: var(--gray-12);
+  --muted: var(--gray-11);
+  /* One monochrome accent: Radix's high-contrast solid (step 12) with the
+     adjacent step for hover, exactly as Radix's high-contrast variant does. */
+  --accent: var(--gray-12);
+  --accent-hover: var(--gray-11);
+  --accent-light: var(--gray-3);
+  --accent-weak: var(--gray-3);
+  --accent-weak-2: var(--gray-4);
+  --accent-text: var(--gray-1);
+  --ring: var(--gray-11);
+  --danger: var(--red-11);
+  --danger-weak: var(--red-3);
+  --danger-border: var(--red-7);
+  --danger-solid: var(--red-9);
+  --success: var(--green-11);
+  --success-weak: var(--green-3);
+  --success-border: var(--green-7);
+  --success-solid: var(--green-9);
+  --warning: var(--amber-11);
+  --warning-weak: var(--amber-3);
+  --warning-border: var(--amber-7);
+  --warning-solid: var(--amber-9);
+  --locate: var(--violet-11);
+  --locate-weak: var(--violet-3);
+  --locate-border: var(--violet-7);
+  --scrim: var(--black-a6);
+
+  /* Radii are a system, not a decoration: 8 for surfaces, 6 for controls,
+     4 for chips and icon buttons. Nested radii subtract the gap, so a 6px
+     control inside an 8px surface inset by 2px keeps a concentric corner. */
+  --radius: 8px;
+  --radius-sm: 6px;
+  --radius-xs: 4px;
+  /* Only floating layers earn a shadow; panels and rows stay flat. */
+  --shadow-pop: 0 6px 16px -4px rgba(0, 0, 0, 0.10), 0 2px 4px -2px rgba(0, 0, 0, 0.06);
+  --shadow-modal: 0 16px 40px -8px rgba(0, 0, 0, 0.18), 0 4px 8px -4px rgba(0, 0, 0, 0.08);
+  --shadow-xs: none;
+  --shadow-sm: var(--shadow-pop);
+  --shadow: var(--shadow-pop);
+  --shadow-lg: var(--shadow-modal);
+  /* One transition spec for the whole app: a state change that needs
+     explaining gets 250ms of ease-out and nothing else. */
+  --motion: 250ms ease-out;
+  /* 8pt grid spacing. */
   --space-1: 4px;
   --space-2: 8px;
   --space-3: 12px;
@@ -41,60 +96,98 @@
   --space-6: 24px;
   --space-8: 32px;
   --space-10: 40px;
-  --radius: 12px;
-  --radius-sm: 8px;
-  --radius-xs: 4px;
-  /* Typography hierarchy: 5 levels from software title to annotation.
-     Kept compact per the TRAE Minimalist dashboard density. */
+  /* Three sizes carry the whole interface; hierarchy comes from weight and
+     the two Radix text steps. */
   --fs-title: 20px;
-  --fs-panel: 16px;
-  --fs-tab: 14px;
   --fs-body: 13px;
   --fs-note: 12px;
+  --fs-panel: var(--fs-body);
+  --fs-tab: var(--fs-body);
   --fw-bold: 700;
   --fw-semibold: 600;
   --fw-medium: 500;
   --fw-regular: 400;
   --toolbar-h: 36px;
   --sidebar-w: 360px;
-  /* Empty-state hub: one shared width for the action buttons and one for the
-     sample choices, so every rounded rectangle in a group is identical and the
-     group itself stays centered instead of left-aligned at its widest member. */
   --hub-btn-w: min(152px, calc((100vw - 64px) / 3));
   --settings-btn-w: min(132px, calc((100vw - 96px) / 4));
-  /* Outline color for a located node: a hue no event glyph or family palette
-     entry uses, so the ring cannot be mistaken for data. */
-  --locate: #a21caf;
   color-scheme: light;
 }
 
 :root[data-theme="dark"] {
-  /* TRAE Minimalist — dark (near-black graphite). */
-  --bg: #18181b;
-  --panel: #27272a;
-  --panel-2: #3f3f46;
-  --hover: #3f3f46;
---border: #3f3f46;
---border-weak: #27272a;
---control-border: #71717a;
-  --text: #fafafa;
-  --text-2: #d4d4d8;
-  --muted: #a1a1aa;
-  --accent: #fafafa;
-  --accent-hover: #ffffff;
-  --accent-light: rgba(250,250,250,0.15);
-  --accent-weak: rgba(250,250,250,0.10);
-  --accent-weak-2: rgba(250,250,250,0.20);
-  --accent-text: #18181b;
-  --ring: #d4d4d8;
-  --danger: #ef4444;
-  --danger-weak: rgba(239,68,68,0.14);
-  --success: #22c55e;
-  --warning: #f59e0b;
-  --shadow-xs: 0 1px 0 0 rgba(0,0,0,0.2);
-  --shadow-sm: 0 1px 2px 0 rgba(0,0,0,0.3), 0 1px 1px 0 rgba(0,0,0,0.2);
-  --shadow: 0 2px 4px 0 rgba(0,0,0,0.4), 0 1px 2px 0 rgba(0,0,0,0.2);
-  --shadow-lg: 0 12px 20px -6px rgba(0,0,0,0.5), 0 4px 8px -2px rgba(0,0,0,0.3);
+  --gray-1: #111113;
+  --gray-2: #18191b;
+  --gray-3: #212225;
+  --gray-4: #272a2d;
+  --gray-5: #2e3135;
+  --gray-6: #363a3f;
+  --gray-7: #43484e;
+  --gray-8: #5a6169;
+  --gray-9: #696e77;
+  --gray-10: #777b84;
+  --gray-11: #b0b4ba;
+  --gray-12: #edeef0;
+  --red-3: #3b1219;
+  --red-6: #72232d;
+  --red-7: #8c333a;
+  --red-9: #e5484d;
+  --red-11: #ff9592;
+  --green-3: #132d21;
+  --green-6: #20573e;
+  --green-7: #28684a;
+  --green-9: #30a46c;
+  --green-11: #3dd68c;
+  --amber-3: #302008;
+  --amber-6: #5c3d05;
+  --amber-7: #714f19;
+  --amber-9: #ffc53d;
+  --amber-11: #ffca16;
+  --violet-3: #291f43;
+  --violet-6: #473876;
+  --violet-7: #56468b;
+  --violet-9: #6e56cf;
+  --violet-11: #baa7ff;
+  --black-a6: rgba(0, 0, 0, 0.55);
+
+  --bg: var(--gray-1);
+  --panel: var(--gray-2);
+  --panel-2: var(--gray-3);
+  --hover: var(--gray-4);
+  --border: var(--gray-6);
+  --border-weak: var(--gray-5);
+  --control-border: var(--gray-8);
+  --text: var(--gray-12);
+  --text-2: var(--gray-12);
+  --muted: var(--gray-11);
+  --accent: var(--gray-12);
+  --accent-hover: var(--gray-11);
+  --accent-light: var(--gray-3);
+  --accent-weak: var(--gray-3);
+  --accent-weak-2: var(--gray-4);
+  --accent-text: var(--gray-1);
+  --ring: var(--gray-11);
+  --danger: var(--red-11);
+  --danger-weak: var(--red-3);
+  --danger-border: var(--red-7);
+  --danger-solid: var(--red-9);
+  --success: var(--green-11);
+  --success-weak: var(--green-3);
+  --success-border: var(--green-7);
+  --success-solid: var(--green-9);
+  --warning: var(--amber-11);
+  --warning-weak: var(--amber-3);
+  --warning-border: var(--amber-7);
+  --warning-solid: var(--amber-9);
+  --locate: var(--violet-11);
+  --locate-weak: var(--violet-3);
+  --locate-border: var(--violet-7);
+  --scrim: var(--black-a6);
+  --shadow-pop: 0 6px 16px -4px rgba(0, 0, 0, 0.45), 0 2px 4px -2px rgba(0, 0, 0, 0.35);
+  --shadow-modal: 0 16px 40px -8px rgba(0, 0, 0, 0.65), 0 4px 8px -4px rgba(0, 0, 0, 0.4);
+  --shadow-xs: none;
+  --shadow-sm: var(--shadow-pop);
+  --shadow: var(--shadow-pop);
+  --shadow-lg: var(--shadow-modal);
   color-scheme: dark;
 }
 
@@ -119,7 +212,7 @@
 }
 *::-webkit-scrollbar-thumb {
   background: var(--border);
-  border-radius: 3px;
+  border-radius: 999px;
 }
 *::-webkit-scrollbar-thumb:hover {
   background: var(--muted);
@@ -154,11 +247,11 @@ body {
 }
 
 /* ---------- typography hierarchy ---------- */
-.text-title { font-size: var(--fs-title); font-weight: var(--fw-bold); letter-spacing: -0.5px; }
-.text-panel { font-size: var(--fs-panel); font-weight: var(--fw-semibold); letter-spacing: -0.2px; }
-.text-tab   { font-size: var(--fs-tab); font-weight: var(--fw-medium); }
-.text-body  { font-size: var(--fs-body); font-weight: var(--fw-regular); }
-.text-note  { font-size: var(--fs-note); font-weight: var(--fw-regular); color: var(--muted); }
+/* Three sizes carry the interface, and nothing else is allowed to appear:
+   20px for page and dialog titles, 13px for body and labels, 12px for
+   metadata. Relationships inside a size come from weight (400/500/600) and
+   the two Radix text steps (--text / --text-2 / --muted), never from a fourth
+   size or from tracking. */
 
 /* ---------- top bar (merged tab bar + menu bar) ---------- */
 /* A single row that combines the document tabs (left) and the app menu
@@ -168,7 +261,7 @@ body {
   display: flex;
   align-items: stretch;
   background: var(--panel);
-  border-bottom: 1px solid var(--border);
+  border-bottom: 0.5px solid var(--border);
   box-shadow: var(--shadow-xs);
   z-index: 5;
   flex-shrink: 0;
@@ -211,21 +304,18 @@ body {
   padding: 5px 10px;
   border-radius: var(--radius-xs);
   cursor: pointer;
-  transition: all 0.12s;
   -webkit-app-region: no-drag;
   app-region: no-drag;
   white-space: nowrap;
   display: inline-flex;
   align-items: center;
-  gap: 3px;
+  gap: 4px;
 }
 /* Small ▾ dropdown indicator after each menu-bar item label. */
 .menu-bar-item::after {
   content: "▾";
-  font-size: 9px;
+  font-size: var(--fs-note);
   color: var(--muted);
-  opacity: 0.6;
-  transition: opacity 0.12s;
 }
 .menu-bar-item:hover::after,
 .menu-bar-item.active::after {
@@ -274,10 +364,10 @@ body {
 .warn-badge {
   background: var(--panel-2);
   color: var(--text-2);
-  border: 1px solid var(--border);
+  border: 0.5px solid var(--border);
   border-radius: var(--radius-xs);
   padding: 2px var(--space-2);
-  font-size: 11px;
+  font-size: var(--fs-note);
   font-weight: var(--fw-semibold);
   cursor: help;
   -webkit-app-region: no-drag;
@@ -293,7 +383,7 @@ body {
   display: flex;
   align-items: center;
   gap: 5px;
-  font-size: 12px;
+  font-size: var(--fs-note);
   color: var(--muted);
   cursor: pointer;
   white-space: nowrap;
@@ -303,7 +393,7 @@ body {
 .btn {
   appearance: none;
   white-space: nowrap;
-  border: 1px solid var(--border);
+  border: 0.5px solid var(--border);
   background: var(--panel);
   color: var(--text-2);
   border-radius: var(--radius-sm);
@@ -312,14 +402,10 @@ body {
   font-weight: var(--fw-medium);
   cursor: pointer;
   box-shadow: var(--shadow-xs);
-  transition: all 0.15s ease;
 }
 .btn:hover {
   background: var(--hover);
   border-color: var(--muted);
-}
-.btn:active {
-  transform: translateY(1px);
 }
 .btn:disabled {
   opacity: 0.45;
@@ -344,18 +430,16 @@ body {
   background: var(--accent);
   border-color: var(--accent);
   color: var(--accent-text);
-  box-shadow: 0 1px 3px rgba(24,24,27,0.25);
 }
 .btn.active:hover,
 .btn.primary:hover {
   background: var(--accent-hover);
   border-color: var(--accent-hover);
-  box-shadow: 0 2px 6px rgba(24,24,27,0.35);
 }
 
 .select {
   appearance: none;
-  border: 1px solid var(--border);
+  border: 0.5px solid var(--border);
   background: var(--panel);
   color: var(--text);
   border-radius: var(--radius-sm);
@@ -370,14 +454,13 @@ body {
   appearance: none;
   -webkit-appearance: none;
   position: relative;
-  width: 18px;
-  height: 18px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-xs);
+  width: 16px;
+  height: 16px;
+  border: 0.5px solid var(--control-border);
+  border-radius: 3px;
   background: var(--panel);
   cursor: pointer;
   flex-shrink: 0;
-  transition: background 0.15s, border-color 0.15s;
 }
 .toggle:hover {
   border-color: var(--accent);
@@ -389,12 +472,12 @@ body {
 .toggle:checked::after {
   content: "";
   position: absolute;
-  left: 5px;
-  top: 2px;
-  width: 5px;
-  height: 9px;
+  left: 4px;
+  top: 1px;
+  width: 4px;
+  height: 8px;
   border: solid var(--accent-text);
-  border-width: 0 2px 2px 0;
+  border-width: 0 1.5px 1.5px 0;
   transform: rotate(45deg);
 }
 
@@ -407,11 +490,11 @@ body {
   width: 40px;
   height: 24px;
   border: none;
-  border-radius: 12px;
+  border-radius: 999px;
   background: var(--control-border);
   cursor: pointer;
   flex-shrink: 0;
-  transition: background 0.2s ease;
+  transition: background-color var(--motion);
 }
 .switch:hover {
   background: var(--muted);
@@ -428,8 +511,7 @@ body {
   height: 20px;
   border-radius: 50%;
   background: var(--panel);
-  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
-  transition: transform 0.2s ease;
+  transition: transform var(--motion);
 }
 .switch:checked::after {
   transform: translateX(16px);
@@ -450,25 +532,31 @@ body {
   overflow-y: auto;
   overflow-x: hidden;
   background: var(--panel);
-  border-right: 1px solid var(--border);
+  border-right: 0.5px solid var(--border);
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
 }
 
 /* Card / panel: unified 12px radius, subtle shadow, neutral gray border. */
+/* Sidebar sections are rules, not cards: a hairline between sections and one
+   16px gutter for the whole panel. Four bordered boxes stacked in a 380px
+   column spent more ink on their frames than on the controls inside them. */
 .panel {
-  background: var(--panel);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: var(--space-4);
-  box-shadow: var(--shadow-xs);
+  background: transparent;
+  border-top: 0.5px solid var(--border-weak);
+  padding: 0 var(--space-4);
+  margin: 0 calc(-1 * var(--space-4));
+  box-shadow: none;
+}
+.panel:last-child {
+  border-bottom: 0.5px solid var(--border-weak);
 }
 .panel h3 {
   margin: 0;
-  font-size: var(--fs-note);
-  font-weight: var(--fw-semibold);
-  color: var(--muted);
+  font-size: var(--fs-body);
+  font-weight: var(--fw-medium);
+  color: var(--text);
 }
 
 .control-row {
@@ -496,12 +584,16 @@ body {
 }
 
 /* Root-direction picker: four icon buttons (top / bottom / left / right) — a
-   direct, glanceable control for the root orientation. */
+   direct, glanceable control for the root orientation. It is one joined track,
+   the same object as the theme/language pickers, not four separate buttons. */
 .orient-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 4px;
+  gap: 0;
   flex-shrink: 0;
+  border: 0.5px solid var(--control-border);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
 }
 .orient-btn {
   display: flex;
@@ -509,21 +601,21 @@ body {
   justify-content: center;
   width: 34px;
   height: 30px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-xs);
-  background: var(--panel);
+  border: 0;
+  border-radius: 0;
+  background: transparent;
   color: var(--muted);
   cursor: pointer;
   padding: 0;
-  transition: all 0.12s;
+}
+.orient-btn + .orient-btn {
+  border-left: 0.5px solid var(--control-border);
 }
 .orient-btn:hover {
-  border-color: var(--muted);
   color: var(--text);
   background: var(--hover);
 }
 .orient-btn.active {
-  border-color: var(--accent);
   background: var(--accent-weak);
   color: var(--accent);
 }
@@ -560,7 +652,7 @@ body {
 }
 .slider-wrap input[type="range"]::-webkit-slider-runnable-track {
   height: 6px;
-  border-radius: 3px;
+  border-radius: 999px;
   background: var(--border);
   /* Accent active track via gradient fill: the portion left of the thumb is
      the near-black accent, the rest stays gray — like Figma / Apple HIG
@@ -578,36 +670,28 @@ body {
   margin-top: -6px;
   border-radius: 50%;
   background: var(--panel);
-  border: 2px solid var(--accent);
-  box-shadow: 0 1px 4px rgba(24,24,27,0.20);
+  border: 0.5px solid var(--accent);
   cursor: grab;
-  transition: transform 0.1s, box-shadow 0.1s;
-}
-.slider-wrap input[type="range"]::-webkit-slider-thumb:hover {
-  transform: scale(1.15);
-  box-shadow: 0 2px 8px rgba(24,24,27,0.30);
 }
 .slider-wrap input[type="range"]::-webkit-slider-thumb:active {
   cursor: grabbing;
-  transform: scale(1.1);
 }
 .slider-wrap input[type="range"]::-moz-range-thumb {
   width: 18px;
   height: 18px;
   border-radius: 50%;
   background: var(--panel);
-  border: 2px solid var(--accent);
-  box-shadow: 0 1px 4px rgba(24,24,27,0.20);
+  border: 0.5px solid var(--accent);
   cursor: grab;
 }
 .slider-wrap input[type="range"]::-moz-range-track {
   height: 6px;
-  border-radius: 3px;
+  border-radius: 999px;
   background: var(--border);
 }
 .slider-wrap input[type="range"]::-moz-range-progress {
   height: 6px;
-  border-radius: 3px;
+  border-radius: 999px;
   background: var(--accent);
 }
 .slider-value {
@@ -632,7 +716,6 @@ body {
   padding: 0;
   cursor: text;
   border-radius: var(--radius-xs);
-  transition: color 0.12s, background 0.12s;
 }
 .slider-value:hover {
   color: var(--accent);
@@ -645,7 +728,7 @@ body {
   top: -1px;
   width: 42px;
   height: 20px;
-  border: 1px solid var(--accent);
+  border: 0.5px solid var(--accent);
   border-radius: var(--radius-xs);
   background: var(--panel);
   color: var(--text);
@@ -668,7 +751,7 @@ body {
   flex-shrink: 0;
   width: 134px;
   padding: 7px 28px 7px 10px;
-  border: 1px solid var(--border);
+  border: 0.5px solid var(--border);
   border-radius: var(--radius-sm);
   background: var(--panel)
     url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23868e96' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E")
@@ -679,7 +762,7 @@ body {
   box-shadow: var(--shadow-xs);
 }
 .hint {
-  font-size: 12px;
+  font-size: var(--fs-note);
   line-height: 1.5;
   color: var(--muted);
   margin: 0;
@@ -712,7 +795,7 @@ body {
   overflow: visible;
 }
 .panel-collapse {
-  border: 1px solid var(--border);
+  border: 0.5px solid var(--border);
   background: var(--panel);
   color: var(--muted);
   border-radius: var(--radius-sm);
@@ -722,7 +805,6 @@ body {
   font-weight: var(--fw-bold);
   line-height: 1;
   cursor: pointer;
-  transition: all 0.15s;
 }
 .panel-collapse:hover {
   border-color: var(--accent);
@@ -732,7 +814,7 @@ body {
 
 .tips {
   background: var(--panel-2);
-  border: 1px solid var(--border);
+  border: 0.5px solid var(--border);
   border-radius: var(--radius);
   padding: var(--space-3) var(--space-4);
   box-shadow: var(--shadow-xs);
@@ -794,7 +876,7 @@ body {
   color: var(--bg);
   padding: 5px 10px;
   border-radius: var(--radius-xs);
-  font-size: 11px;
+  font-size: var(--fs-note);
   font-weight: var(--fw-medium);
   line-height: 1.4;
   box-shadow: var(--shadow-lg);
@@ -811,21 +893,25 @@ body {
   align-items: center;
   justify-content: space-between;
   gap: var(--space-2);
+  min-height: 36px;
 }
 .panel-head {
   display: flex;
   align-items: center;
   gap: var(--space-2);
   width: 100%;
+  height: 36px;
   margin: 0;
   padding: 0;
   border: none;
   background: none;
   cursor: pointer;
   min-width: 0;
+  text-align: left;
 }
-/* Pin button: keeps a section permanently open. Monochrome ghost button,
-   always visible (not hover-revealed), turning near-black once pinned. */
+/* Pin button: keeps a section permanently open. It is a secondary affordance,
+   so it only materialises on hover / focus / pinned state instead of adding a
+   glyph to every one of the four section headers at rest. */
 .panel-pin {
   flex-shrink: 0;
   display: flex;
@@ -833,13 +919,23 @@ body {
   justify-content: center;
   width: 22px;
   height: 22px;
-  border: 1px solid transparent;
+  border: 0.5px solid transparent;
   border-radius: var(--radius-xs);
   background: transparent;
   color: var(--muted);
   cursor: pointer;
   opacity: 1;
-  transition: background 0.12s, color 0.12s, border-color 0.12s;
+}
+/* The pin is a power affordance, not part of the header: it stays out of the
+   way until the pointer is on the section (or the section is pinned, or a
+   keyboard user focuses it). */
+.panel-head-row .panel-pin {
+  opacity: 0;
+}
+.panel-head-row:hover .panel-pin,
+.panel-pin:focus-visible,
+.panel-pin.active {
+  opacity: 1;
 }
 .panel-pin:hover {
   border-color: var(--border);
@@ -862,13 +958,19 @@ body {
   line-height: 1.2;
 }
 .panel-head .chev {
-  font-size: 10px;
   color: var(--muted);
   width: 12px;
+  display: flex;
+  align-items: center;
   flex-shrink: 0;
 }
+/* The chevron points right when closed and down when open: one icon, no
+   glyph swap, so the stroke weight never changes between the two states. */
+.chev.open svg {
+  transform: rotate(90deg);
+}
 .panel-body {
-  margin-top: var(--space-3);
+  padding: var(--space-1) 0 var(--space-4);
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
@@ -890,7 +992,7 @@ body {
   overflow-y: auto;
   padding: var(--space-1);
   background: var(--panel);
-  border: 1px solid var(--border);
+  border: 0.5px solid var(--border);
   border-radius: var(--radius);
   box-shadow: var(--shadow-lg);
   z-index: 30;
@@ -917,10 +1019,9 @@ body {
   font-size: var(--fs-body);
   font-weight: var(--fw-medium);
   padding: var(--space-2) var(--space-3);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-xs);
   cursor: pointer;
   white-space: nowrap;
-  transition: background 0.1s;
   display: flex;
   align-items: center;
   gap: var(--space-2);
@@ -938,12 +1039,12 @@ body {
   color: var(--text-2);
 }
 .menu-divider {
-  height: 1px;
+  height: 0.5px;
   background: var(--border);
   margin: var(--space-1) var(--space-1);
 }
 .menu-label {
-  font-size: 10px;
+  font-size: var(--fs-note);
   font-weight: var(--fw-semibold);
   color: var(--muted);
   padding: var(--space-1) var(--space-3) 2px;
@@ -953,7 +1054,7 @@ body {
   display: inline-block;
   width: 16px;
   flex-shrink: 0;
-  font-size: 12px;
+  font-size: var(--fs-note);
   color: var(--accent);
   text-align: center;
 }
@@ -962,7 +1063,7 @@ body {
   margin-left: auto;
   padding-left: 24px;
   color: var(--muted);
-  font-size: 11px;
+  font-size: var(--fs-note);
 }
 
 /* Visible focus ring for keyboard users. */
@@ -993,27 +1094,6 @@ body {
 .tab-new:focus-visible {
   outline: none;
   box-shadow: inset 0 0 0 2px var(--ring);
-}
-
-/* Ghost button and switch use --control-border for WCAG 1.4.11 compliance. */
-.btn.ghost {
-  background: transparent;
-  border-color: var(--control-border);
-  box-shadow: none;
-  color: var(--text-2);
-}
-.switch {
-  appearance: none;
-  -webkit-appearance: none;
-  position: relative;
-  width: 40px;
-  height: 24px;
-  border: none;
-  border-radius: 12px;
-  background: var(--control-border);
-  cursor: pointer;
-  flex-shrink: 0;
-  transition: background 0.2s ease;
 }
 
 /* ---------- tab bar (title bar with drag region) ---------- */
@@ -1060,14 +1140,13 @@ body {
   flex: 0 1 160px;
   min-width: 40px;
   padding: var(--space-1) var(--space-3);
-  border: 1px solid transparent;
+  border: 0.5px solid transparent;
   border-radius: var(--radius-sm);
   background: transparent;
   color: var(--muted);
   font-size: var(--fs-note);
   cursor: pointer;
   user-select: none;
-  transition: all 0.15s;
   position: relative;
   overflow: hidden;
 }
@@ -1091,9 +1170,8 @@ body {
 .tab-close {
   border: none;
   background: none;
-  color: inherit;
-  opacity: 0.6;
-  font-size: 11px;
+  color: var(--muted);
+  font-size: var(--fs-note);
   line-height: 1;
   padding: 2px 3px;
   border-radius: var(--radius-xs);
@@ -1102,30 +1180,25 @@ body {
 }
 .tab-close:hover {
   opacity: 1;
-  background: color-mix(in srgb, var(--accent) 18%, transparent);
+  background: var(--accent-weak-2);
 }
 .tab-new {
   flex-shrink: 0;
   width: 28px;
   height: 28px;
-  border: 1px solid var(--border);
+  border: 0.5px solid var(--border);
   background: var(--panel-2);
   color: var(--text);
   border-radius: var(--radius-sm);
-  font-size: 16px;
+  font-size: var(--fs-title);
   font-weight: 700;
   line-height: 1;
   cursor: pointer;
-  transition: transform 0.15s ease, background 0.15s, border-color 0.15s, color 0.15s;
 }
 .tab-new:hover {
   border-color: var(--accent);
   color: var(--accent);
   background: var(--accent-weak);
-  transform: scale(1.12);
-}
-.tab-new:active {
-  transform: scale(0.96);
 }
 /* The remaining width of the tab bar (no tabs + the strip after "+") is an
    explicit window drag region: it stretches across every free pixel so the
@@ -1155,25 +1228,24 @@ body {
   cursor: pointer;
 }
 .rail.rail-left {
-  border-right: 1px solid var(--border);
+  border-right: 0.5px solid var(--border);
 }
 .rail.rail-right {
-  border-left: 1px solid var(--border);
+  border-left: 0.5px solid var(--border);
 }
 .rail:hover {
   color: var(--accent);
   background: var(--accent-weak);
 }
 .rail-chevron {
-  font-size: 17px;
+  font-size: var(--fs-title);
   font-weight: 700;
 }
 .rail-text {
   writing-mode: vertical-rl;
   text-orientation: mixed;
-  font-size: 12.5px;
+  font-size: var(--fs-note);
   font-weight: 600;
-  letter-spacing: 0.05em;
 }
 
 /* stats: event-distribution donut chart */
@@ -1199,11 +1271,10 @@ body {
   grid-template-columns: 12px 1fr auto;
   align-items: center;
   gap: 6px;
-  font-size: 11.5px;
+  font-size: var(--fs-note);
   padding: 2px 4px;
   border-radius: var(--radius-xs);
   cursor: pointer;
-  transition: background 0.1s;
 }
 .rp-donut-item:hover,
 .rp-donut-item.active {
@@ -1212,7 +1283,7 @@ body {
 .rp-donut-swatch {
   width: 10px;
   height: 10px;
-  border-radius: 2px;
+  border-radius: var(--radius-xs);
   flex-shrink: 0;
 }
 .rp-donut-label {
@@ -1239,7 +1310,7 @@ body {
   grid-template-columns: 76px 1fr auto;
   align-items: center;
   gap: 8px;
-  font-size: 12px;
+  font-size: var(--fs-note);
 }
 .rp-bar-label {
   color: var(--text);
@@ -1276,14 +1347,14 @@ body {
   grid-template-columns: 56px 1fr;
   align-items: center;
   gap: 8px;
-  font-size: 12px;
+  font-size: var(--fs-note);
   color: var(--muted);
 }
 .rp-conf-row input[type="range"] {
   -webkit-appearance: none;
   appearance: none;
   height: 6px;
-  border-radius: 3px;
+  border-radius: 999px;
   background: var(--border);
   background-image: linear-gradient(var(--accent), var(--accent));
   background-size: var(--slider-fill, 50%) 100%;
@@ -1298,8 +1369,7 @@ body {
   height: 16px;
   border-radius: 50%;
   background: var(--panel);
-  border: 2px solid var(--accent);
-  box-shadow: 0 1px 3px rgba(24,24,27,0.20);
+  border: 0.5px solid var(--accent);
   cursor: grab;
 }
 .rp-conf-row input[type="range"]::-moz-range-thumb {
@@ -1307,18 +1377,17 @@ body {
   height: 16px;
   border-radius: 50%;
   background: var(--panel);
-  border: 2px solid var(--accent);
-  box-shadow: 0 1px 3px rgba(24,24,27,0.20);
+  border: 0.5px solid var(--accent);
   cursor: grab;
 }
 .rp-conf-row input[type="range"]::-moz-range-track {
   height: 6px;
-  border-radius: 3px;
+  border-radius: 999px;
   background: var(--border);
 }
 .rp-conf-row input[type="range"]::-moz-range-progress {
   height: 6px;
-  border-radius: 3px;
+  border-radius: 999px;
   background: var(--accent);
 }
 
@@ -1341,18 +1410,18 @@ body {
   padding: 0 10px 6px;
 }
 .menu-estimate {
-  font-size: 11px;
+  font-size: var(--fs-note);
   color: var(--muted);
   white-space: nowrap;
 }
 .menu-scale-btn {
   flex: 0 1 auto;
-  border: 1px solid var(--border);
+  border: 0.5px solid var(--border);
   background: var(--panel-2);
   color: var(--text);
   border-radius: var(--radius-xs);
   padding: 4px 10px;
-  font-size: 12px;
+  font-size: var(--fs-note);
   font-weight: 600;
   cursor: pointer;
   min-width: 0;
@@ -1374,11 +1443,11 @@ body {
    "Screen 2× (192 DPI)" to "n 2×(". */
 .menu-scale .menu-item {
   justify-content: center;
-  border: 1px solid var(--border);
+  border: 0.5px solid var(--border);
   background: var(--panel-2);
   color: var(--text);
   padding: 4px 8px;
-  font-size: 12px;
+  font-size: var(--fs-note);
   font-weight: 600;
   gap: 2px;
   min-width: 0;
@@ -1396,11 +1465,10 @@ body {
 
 /* indented sub-controls for per-role label typography */
 .label-style {
-  margin: 4px 0 12px 10px;
-  padding: 8px 14px 10px 10px;
-  border-left: 2px solid var(--border);
+  margin: 4px 0 12px;
+  padding: 10px 12px;
   background: var(--panel-2);
-  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  border-radius: var(--radius-sm);
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -1417,7 +1485,7 @@ body {
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 12.5px;
+  font-size: var(--fs-note);
   cursor: pointer;
 }
 
@@ -1470,8 +1538,7 @@ body {
   width: 6px;
   cursor: col-resize;
   background: transparent;
-  border-right: 1px solid var(--border);
-  transition: background 0.12s;
+  border-right: 0.5px solid var(--border);
 }
 .sidebar-resizer:hover,
 .sidebar-resizer.active {
@@ -1479,14 +1546,14 @@ body {
 }
 .sidebar-resizer.right {
   border-right: none;
-  border-left: 1px solid var(--border);
+  border-left: 0.5px solid var(--border);
 }
 
 .tooltip {
   position: absolute;
   pointer-events: none;
   background: var(--panel);
-  border: 1px solid var(--border);
+  border: 0.5px solid var(--border);
   box-shadow: var(--shadow);
   border-radius: var(--radius);
   padding: var(--space-2) var(--space-3);
@@ -1498,7 +1565,7 @@ body {
   z-index: 10;
 }
 .tooltip strong {
-  font-size: 12.5px;
+  font-size: var(--fs-note);
 }
 .tooltip span {
   color: var(--muted);
@@ -1525,8 +1592,8 @@ body {
   top: 64px;
   right: var(--space-4);
   z-index: 4;
-  background: color-mix(in srgb, var(--panel) 92%, transparent);
-  border: 1px solid var(--border);
+  background: var(--panel);
+  border: 0.5px solid var(--border);
   border-radius: var(--radius);
   padding: 3px;
   box-shadow: var(--shadow-sm);
@@ -1559,18 +1626,19 @@ body {
   position: absolute;
   left: var(--space-4);
   bottom: var(--space-4);
-  background: color-mix(in srgb, var(--panel) 92%, transparent);
-  backdrop-filter: blur(8px);
-  border: 1px solid var(--border);
+  background: var(--panel);
+  border: 0.5px solid var(--border);
   border-radius: var(--radius);
   padding: var(--space-3) var(--space-4);
   box-shadow: var(--shadow-sm);
   font-size: var(--fs-note);
   z-index: 4;
-  max-width: 220px;
-  /* Tall event lists must not run into the stats pill / hint chip above the
-     bottom-right corner: cap the height and scroll the rest. */
-  max-height: calc(100% - 96px);
+  /* Two columns of event keys: wide enough for "Bifurcation donor", narrow
+     enough to leave the drawing the middle of the canvas. */
+  max-width: min(300px, calc(100% - 32px));
+  /* A long event list scrolls rather than running into the stats readout
+     above the bottom-right corner. */
+  max-height: calc(100% - 88px);
   overflow: auto;
 }
 /* Layout-direction toggle: a small monochrome corner button ("⋯" vertical
@@ -1584,15 +1652,14 @@ body {
   justify-content: center;
   width: 22px;
   height: 22px;
-  border: 1px solid transparent;
+  border: 0.5px solid transparent;
   border-radius: var(--radius-xs);
   background: transparent;
   color: var(--muted);
-  font-size: 12px;
+  font-size: var(--fs-note);
   line-height: 1;
   cursor: pointer;
   padding: 0;
-  transition: all 0.12s;
 }
 .legend:hover .legend-dir,
 .legend-dir:focus-visible {
@@ -1601,16 +1668,26 @@ body {
   color: var(--text);
 }
 .legend-title {
-  font-size: 10px;
+  font-size: var(--fs-note);
   font-weight: var(--fw-semibold);
   color: var(--muted);
   margin: 2px 0 var(--space-2);
 }
-/* Each legend group (evolutionary events / gene families) stacks its title
-   above its items in vertical mode… */
+/* Each legend group stacks its title above its items. The ten event keys
+   flow as two even columns, so the key costs half the canvas height it used
+   to and every row still reads left-to-right. */
 .legend-group {
   display: flex;
   flex-direction: column;
+}
+.legend-group.events {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  column-gap: var(--space-3);
+  align-items: center;
+}
+.legend-group.events .legend-title {
+  grid-column: 1 / -1;
 }
 .legend-group + .legend-group {
   margin-top: var(--space-3);
@@ -1619,7 +1696,13 @@ body {
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  padding: 2px 0;
+  padding: 1px 0;
+  min-width: 0;
+}
+.legend-item span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 /* …and in horizontal mode each group keeps its title on a full-width row of
    its own above the items, which then flow side by side underneath. */
@@ -1669,13 +1752,13 @@ body {
   display: inline-block;
   width: 14px;
   height: 3px;
-  border-radius: 1.5px;
+  border-radius: 999px;
 }
 .legend-color {
   width: 16px;
   height: 16px;
   padding: 0;
-  border: 1px solid var(--border);
+  border: 0.5px solid var(--border);
   border-radius: var(--radius-xs);
   background: none;
   cursor: pointer;
@@ -1683,30 +1766,40 @@ body {
 
 .stats {
   position: absolute;
+  display: flex;
+  gap: 0;
   right: var(--space-4);
-  /* Sit above the always-visible shortcut hints (.canvas-hint, bottom-right)
-     so the two bottom-right overlays never overlap. */
-  bottom: 68px;
+  bottom: var(--space-4);
   font-size: var(--fs-note);
   color: var(--muted);
-  background: color-mix(in srgb, var(--panel) 90%, transparent);
-  border: 1px solid var(--border);
+  background: var(--panel);
+  border: 0.5px solid var(--border);
   border-radius: var(--radius);
-  padding: var(--space-2) var(--space-3);
+  padding: var(--space-2) 0;
   z-index: 4;
+}
+/* Counts are separated by a hairline rather than a glyph: the categories are
+   already named, so a spelled-out divider would only add a character to read. */
+.stats span {
+  padding: 0 var(--space-3);
+  border-left: 0.5px solid var(--border-weak);
+  white-space: nowrap;
+}
+.stats span:first-child {
+  border-left: none;
 }
 
 /* ---------- right analysis panel ---------- */
 .right-panel {
-  width: 340px;
-  /* The minimum width keeps every analysis tab reachable: at 320px the tab
-     bar may wrap to a second row instead of clipping the last tab. */
-  min-width: 320px;
+  width: 400px;
+  /* The floor keeps all six analysis tabs (compare mode adds Diff) on one
+     row; a narrower panel would force the tab bar to wrap or scroll. */
+  min-width: 380px;
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
   background: var(--panel);
-  border-left: 1px solid var(--border);
+  border-left: 0.5px solid var(--border);
   min-height: 0;
 }
 .right-panel-header {
@@ -1715,32 +1808,41 @@ body {
   justify-content: space-between;
   gap: var(--space-2);
   padding: var(--space-3) var(--space-4);
-  border-bottom: 1px solid var(--border);
+  border-bottom: 0.5px solid var(--border);
 }
-/* Tab bar: browser-style with accent underline for the active tab. Wraps to a
-   second row when the panel is narrow so no tab ever gets clipped. */
+/* Tab bar: one row, never wrapped. The labels are single words so all five
+   fit at the panel's minimum width; a second row of tabs would push the
+   content down and break the panel's single reading column. */
 .right-panel-tabs {
   display: flex;
   align-items: center;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  /* No track gap: each tab carries 6px of its own side padding, so labels stay
+     12px apart while six labels still fit the 380px minimum panel width. */
   gap: 0;
-  padding: 0 var(--space-2);
-  border-bottom: 1px solid var(--border);
+  /* 10 = --space-2 + the 2px optical offset that puts the first tab label on
+     the same 16px gutter as the pane content below it (button padding is 6). */
+  padding: 0 10px;
+  border-bottom: 0.5px solid var(--border);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.right-panel-tabs::-webkit-scrollbar {
+  display: none;
 }
 .right-panel-tabs button {
   appearance: none;
   border: none;
   background: transparent;
   color: var(--muted);
-  padding: var(--space-2) 8px;
+  padding: var(--space-2) 6px;
   font-size: var(--fs-note);
   font-weight: var(--fw-medium);
   cursor: pointer;
   white-space: nowrap;
-  transition: color 0.15s;
   position: relative;
   border-bottom: 2px solid transparent;
-  margin-bottom: -1px;
+  margin-bottom: -0.5px;
 }
 .right-panel-tabs button:hover {
   color: var(--text);
@@ -1770,9 +1872,20 @@ body {
 }
 .rp-h4 {
   margin: var(--space-2) 0 2px;
-  font-size: 10px;
+  font-size: var(--fs-note);
   font-weight: var(--fw-semibold);
   color: var(--muted);
+}
+/* A section heading with its one action on the same line. */
+.rp-head-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+.rp-head-action {
+  flex-shrink: 0;
+  padding: 2px 6px;
 }
 /* Collapsible section header (button styled like rp-h4). */
 .rp-collapse-head {
@@ -1784,7 +1897,7 @@ body {
   background: none;
   padding: 0;
   cursor: pointer;
-  font-size: 10px;
+  font-size: var(--fs-note);
   font-weight: var(--fw-semibold);
   color: var(--muted);
 }
@@ -1792,7 +1905,7 @@ body {
   color: var(--text);
 }
 .rp-collapse-head .chev {
-  font-size: 10px;
+  font-size: var(--fs-note);
   width: 12px;
   flex-shrink: 0;
 }
@@ -1805,13 +1918,14 @@ body {
   left: var(--space-3);
   top: 50%;
   transform: translateY(-50%);
+  display: flex;
+  align-items: center;
   color: var(--muted);
   pointer-events: none;
-  font-size: var(--fs-body);
 }
 .rp-input {
   width: 100%;
-  border: 1px solid var(--border);
+  border: 0.5px solid var(--border);
   background: var(--panel);
   color: var(--text);
   border-radius: var(--radius-sm);
@@ -1828,15 +1942,53 @@ body {
 .rp-fam {
   display: flex;
   align-items: center;
-  gap: 6px;
-  font-size: 12.5px;
+  gap: var(--space-2);
+  font-size: var(--fs-note);
   cursor: pointer;
+}
+/* Result rows in the search tab: name first, then the event and the species in
+   secondary text, so a row scans as "what / what happened / where". */
+.rp-result-row {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  width: 100%;
+  padding: 4px 6px;
+  border: none;
+  border-radius: var(--radius-xs);
+  background: transparent;
+  color: var(--text);
+  font-size: var(--fs-note);
+  text-align: left;
+  cursor: pointer;
+}
+.rp-result-row:hover,
+.rp-result-row.active {
+  background: var(--accent-weak);
+}
+.rp-result-name {
+  flex: 1 1 auto;
+  font-weight: var(--fw-semibold);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.rp-result-event {
+  flex-shrink: 0;
+  color: var(--muted);
+}
+.rp-result-species {
+  max-width: 40%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--muted);
 }
 .rp-matchbar {
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 12px;
+  font-size: var(--fs-note);
   color: var(--muted);
 }
 .rp-matchbar .rp-spacer {
@@ -1844,7 +1996,7 @@ body {
 }
 .rp-matchbar .btn {
   padding: 4px 8px;
-  font-size: 12px;
+  font-size: var(--fs-note);
 }
 .rp-chips {
   display: flex;
@@ -1879,40 +2031,46 @@ body {
 }
 .rp-totals {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 8px;
+  grid-template-columns: 1fr 1fr;
+  border-top: 0.5px solid var(--border);
+  margin-top: var(--space-1);
 }
+/* A metric reads as one line of a table, not as a card: number first, label
+   on its baseline, hairline between rows. Eight metrics make a full 2x4 grid,
+   so no row is left half empty. */
 .rp-stat {
-  background: var(--panel-2);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: var(--space-2) var(--space-2);
-  text-align: left;
-  transition: border-color 0.15s;
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  padding: 7px 0;
+  border-bottom: 0.5px solid var(--border-weak);
+  min-width: 0;
 }
-/* Accent stat: prominent totals (larger number, accent-colored border). */
-.rp-stat.rp-stat-accent {
-  border-color: var(--accent);
-  border-width: 1.5px;
+.rp-stat:nth-child(odd) {
+  padding-right: var(--space-3);
+  border-right: 0.5px solid var(--border-weak);
 }
-.rp-stat.rp-stat-accent .rp-stat-value {
-  color: var(--accent);
+.rp-stat:nth-child(even) {
+  padding-left: var(--space-3);
 }
 .rp-stat-value {
-  font-size: 18px;
-  font-weight: var(--fw-bold);
+  font-size: var(--fs-title);
+  font-weight: var(--fw-semibold);
   font-variant-numeric: tabular-nums;
-  line-height: 1.2;
+  line-height: 1.1;
+  flex-shrink: 0;
 }
 .rp-stat-label {
-  font-size: 10px;
+  font-size: var(--fs-note);
   color: var(--muted);
-  margin-top: 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .rp-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 12px;
+  font-size: var(--fs-note);
 }
 .rp-table-wrap {
   overflow-x: auto;
@@ -1922,9 +2080,9 @@ body {
   text-align: left;
   color: var(--muted);
   font-weight: 600;
-  font-size: 11px;
+  font-size: var(--fs-note);
   padding: 6px;
-  border-bottom: 1px solid var(--border-weak);
+  border-bottom: 0.5px solid var(--border-weak);
   position: sticky;
   top: 0;
   background: var(--hover);
@@ -1936,7 +2094,7 @@ body {
 .rp-table td {
   text-align: left;
   padding: 5px 8px;
-  border-bottom: 1px solid var(--border-weak);
+  border-bottom: 0.5px solid var(--border-weak);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
@@ -1945,24 +2103,23 @@ body {
 .rp-node-table-wrap {
   max-height: 380px;
   overflow: auto;
-  border-radius: 6px;
-  border: 1px solid var(--border-weak);
+  border-radius: var(--radius-sm);
+  border: 0.5px solid var(--border-weak);
 }
 .rp-node-table-wrap .rp-table th {
   position: sticky;
   top: 0;
   z-index: 1;
   background: var(--panel);
-  box-shadow: inset 0 -1px 0 var(--border-weak);
+  box-shadow: inset 0 -0.5px 0 var(--border-weak);
 }
 /* Node table: increased row height for readability + hover highlight. */
 .rp-node-table td {
   padding: 7px 8px;
-  font-size: 12.5px;
+  font-size: var(--fs-note);
 }
 .rp-node-table tbody tr {
   cursor: pointer;
-  transition: background 0.1s;
 }
 .rp-node-table tbody tr:hover,
 .rp-node-table .rp-row-hover {
@@ -1988,62 +2145,143 @@ body {
 }
 .rp-note {
   margin: -4px 0 0;
-  font-size: 11.5px;
+  font-size: var(--fs-note);
   line-height: 1.45;
   color: var(--muted);
 }
 .rp-ok {
   color: var(--success);
-  font-size: 13px;
+  font-size: var(--fs-body);
   font-weight: 600;
 }
+/* A failing check is the only thing on this tab that asks for attention, so it
+   is the only thing that gets a surface. Passing checks are one quiet row
+   each: the tick carries the state, the text stays at secondary weight. */
+/* A flagged check is a block of text with a rule above it, not a tinted card:
+   the count and the severity word already say what is wrong, so a background
+   only competed with the sentence the reader has to act on. */
 .rp-issue {
-  border: 1px solid var(--border);
-  border-left: 3px solid var(--muted);
-  border-radius: var(--radius);
-  padding: 8px 10px;
+  border-top: 0.5px solid var(--border-weak);
+  padding: 10px 0 12px;
 }
-.rp-issue.error {
-  border-left-color: var(--danger);
+.rp-issue:first-child {
+  border-top: none;
 }
-.rp-issue.warning {
-  border-left-color: var(--warning);
-}
-.rp-issue-head {
+/* A failing check is a titled block: the check name leads, the count and the
+   severity sit on its baseline at the right, the problem text explains below. */
+.rp-issue-meta {
   display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 12.5px;
+  align-items: baseline;
+  gap: var(--space-2);
+  margin-bottom: 3px;
+}
+.rp-issue-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: var(--fs-body);
+  font-weight: var(--fw-medium);
+  color: var(--text);
+}
+.rp-issue-level {
+  font-size: var(--fs-note);
+  color: var(--muted);
+}
+.rp-issue.error .rp-issue-level {
+  color: var(--danger);
+}
+.rp-issue.warning .rp-issue-level {
+  color: var(--warning-text);
+}
+.rp-issue-problem {
+  margin: 0;
+  font-size: var(--fs-body);
+  line-height: 1.45;
+  color: var(--text);
 }
 .rp-issue-count {
-  min-width: 22px;
+  min-width: 20px;
   text-align: center;
-  font-weight: 700;
+  font-size: var(--fs-note);
+  font-weight: var(--fw-semibold);
   font-variant-numeric: tabular-nums;
-  background: var(--accent-weak);
-  color: var(--accent);
-  border-radius: var(--radius);
-  padding: 1px 6px;
+  border: 0.5px solid currentColor;
+  border-radius: var(--radius-xs);
+  padding: 0 4px;
+  flex-shrink: 0;
 }
 .rp-issue-ex {
-  margin-top: 4px;
-  font-size: 11.5px;
+  margin-top: 6px;
+  font-size: var(--fs-note);
   color: var(--muted);
   word-break: break-word;
 }
-.rp-issue.pass {
-  border-left-color: var(--success);
+.regex-error {
+  color: var(--danger);
+}
+/* Passing check: tick in the semantic colour, name in secondary text. */
+.rp-check-pass-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 5px 0;
+  border-bottom: 0.5px solid var(--border-weak);
+  font-size: var(--fs-note);
+  color: var(--muted);
+}
+.rp-check-pass-row:last-child {
+  border-bottom: none;
 }
 .rp-check-tick {
-  min-width: 22px;
-  text-align: center;
   color: var(--success);
-  font-weight: 700;
+  font-size: var(--fs-note);
+  flex-shrink: 0;
+  width: 12px;
 }
 .rp-checks-intro {
-  font-size: 12px;
+  font-size: var(--fs-body);
   color: var(--muted);
   margin: 0;
+  line-height: 1.45;
+}
+/* Summary and export share one row: the verdict is the heading, the export is
+   the one action that belongs beside it. */
+/* The verdict line draws no rule of its own: the first failing block already
+   opens with one, and two hairlines 12px apart read as a mistake. */
+.rp-checks-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding-bottom: var(--space-1);
+}
+.rp-checks-export {
+  flex-shrink: 0;
+}
+.rp-issue-locate {
+  font-size: var(--fs-note);
+  padding: 2px 6px;
+  margin-top: 2px;
+  text-align: left;
+  white-space: normal;
+}
+.rp-checks-passed {
+  margin-top: var(--space-2);
+}
+.rp-checks-passed-title {
+  font-size: var(--fs-note);
+  color: var(--muted);
+  padding: var(--space-2) 0 4px;
+}
+.rp-diff-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  font-size: var(--fs-note);
+  color: var(--muted);
+}
+.rp-diff-summary span:first-child {
+  color: var(--text);
+  font-weight: var(--fw-semibold);
 }
 .rp-checks-pass {
   color: var(--success);
@@ -2068,9 +2306,8 @@ body {
 }
 .state-panel h2 {
   margin: 0;
-  font-size: 18px;
-  font-weight: 700;
-  letter-spacing: -0.2px;
+  font-size: var(--fs-title);
+  font-weight: var(--fw-semibold);
 }
 .state-panel p {
   margin: 0;
@@ -2096,7 +2333,7 @@ body {
   position: relative;
   flex: 1;
   min-height: 160px;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 0.5px solid var(--border);
 }
 .split-pane:last-child {
   border-bottom: none;
@@ -2114,9 +2351,8 @@ body {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  background: color-mix(in srgb, var(--panel) 92%, transparent);
-  backdrop-filter: blur(8px);
-  border: 1px solid var(--border);
+  background: var(--panel);
+  border: 0.5px solid var(--border);
   border-radius: var(--radius);
   padding: var(--space-1) var(--space-3);
   font-size: var(--fs-note);
@@ -2132,7 +2368,7 @@ body {
   transform: translateX(-50%);
   z-index: 6;
   background: var(--panel);
-  border: 1px solid var(--border);
+  border: 0.5px solid var(--border);
   border-radius: var(--radius);
   padding: var(--space-2) var(--space-4);
   font-size: var(--fs-note);
@@ -2147,61 +2383,74 @@ body {
   z-index: 21;
   max-width: 60%;
   font-size: var(--fs-note);
-  color: var(--accent-text);
-  background: var(--danger);
-  border-radius: var(--radius);
+  color: var(--text);
+  background: var(--danger-weak);
+  border: 0.5px solid var(--danger-border);
+  border-radius: var(--radius-sm);
   padding: var(--space-2) var(--space-3);
-  box-shadow: var(--shadow);
 }
 
 .drop-overlay {
   position: absolute;
   inset: 12px;
-  border: 2px dashed var(--accent);
+  border: 0.5px dashed var(--accent);
   border-radius: var(--radius);
-  background: color-mix(in srgb, var(--accent) 8%, transparent);
+  background: var(--accent-weak);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 15px;
+  font-size: var(--fs-body);
   font-weight: 700;
   color: var(--accent);
   pointer-events: none;
   z-index: 20;
 }
 
-/* transient status notice (success / error / info) — the success ground is
-   green, never the danger red used by the error variant. */
+/* Transient status notice: a neutral surface with a small semantic dot, so the
+   message always meets text contrast regardless of toast kind. */
 .toast {
   position: fixed;
   right: 20px;
   bottom: 20px;
   z-index: 50;
   max-width: 420px;
-  font-size: 13px;
-  color: var(--accent-text);
-  background: var(--accent);
+  font-size: var(--fs-body);
+  color: var(--text);
+  background: var(--panel);
+  border: 0.5px solid var(--border);
   border-radius: var(--radius);
   padding: 10px 14px;
-  box-shadow: var(--shadow-lg);
-  animation: toast-in 0.16s ease-out;
+  box-shadow: var(--shadow-pop);
+  animation: toast-in var(--motion);
+}
+.toast::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+  flex-shrink: 0;
 }
 .toast.success {
-  /* White-on-#16a34a measures 3.30:1, below WCAG AA for body text.
-     A darker ground keeps the green identity at 5.02:1. */
-  background: #15803d;
+  border-color: var(--success-border);
+}
+.toast.success::before {
+  background: var(--success-solid);
 }
 .toast.error {
-  background: var(--danger);
+  border-color: var(--danger-border);
 }
-.toast.info {
+.toast.error::before {
+  background: var(--danger-solid);
+}
+.toast.info::before {
   background: var(--accent);
 }
 
 @keyframes toast-in {
   from {
     opacity: 0;
-    transform: translateY(6px);
+    transform: translateY(4px);
   }
   to {
     opacity: 1;
@@ -2223,7 +2472,7 @@ body {
   min-width: 80px;
   max-width: 260px;
   padding: 4px 8px;
-  border: 1px solid var(--accent);
+  border: 0.5px solid var(--accent);
   border-radius: var(--radius-xs);
   background: var(--panel);
   color: var(--text);
@@ -2245,13 +2494,13 @@ body {
   gap: 4px;
 }
 .label-rename-field label {
-  font-size: 11px;
+  font-size: var(--fs-note);
   font-weight: var(--fw-semibold);
   color: var(--muted);
 }
 .label-rename-field input[type="text"] {
   width: 100%;
-  border: 1px solid var(--border);
+  border: 0.5px solid var(--border);
   border-radius: var(--radius-sm);
   background: var(--panel-2);
   color: var(--text);
@@ -2270,7 +2519,7 @@ body {
 }
 .label-rename-scope button {
   flex: 1;
-  border: 1px solid var(--border);
+  border: 0.5px solid var(--border);
   background: var(--panel-2);
   color: var(--text-2);
   border-radius: var(--radius-xs);
@@ -2278,7 +2527,6 @@ body {
   font-size: var(--fs-note);
   font-weight: var(--fw-medium);
   cursor: pointer;
-  transition: all 0.12s;
 }
 .label-rename-scope button:hover {
   border-color: var(--muted);
@@ -2297,13 +2545,13 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(24, 24, 27, 0.35);
+  background: var(--scrim);
 }
 .anno-editor {
   width: 340px;
   max-width: calc(100vw - 32px);
   background: var(--panel);
-  border: 1px solid var(--border);
+  border: 0.5px solid var(--border);
   border-radius: var(--radius);
   box-shadow: var(--shadow);
   padding: 16px;
@@ -2312,7 +2560,7 @@ body {
   gap: 12px;
 }
 .anno-head {
-  font-size: 13px;
+  font-size: var(--fs-body);
   color: var(--muted);
 }
 .anno-head strong {
@@ -2322,12 +2570,12 @@ body {
   width: 100%;
   min-height: 72px;
   resize: vertical;
-  border: 1px solid var(--border);
+  border: 0.5px solid var(--border);
   border-radius: var(--radius-sm);
   background: var(--panel-2);
   color: var(--text);
   padding: 8px 10px;
-  font-size: 13px;
+  font-size: var(--fs-body);
   font-family: inherit;
 }
 .anno-row {
@@ -2339,7 +2587,7 @@ body {
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 12.5px;
+  font-size: var(--fs-note);
   color: var(--muted);
 }
 .anno-spacer {
@@ -2349,7 +2597,7 @@ body {
 /* ---------- sidebar separators and grouped controls ---------- */
 /* subtle separator between action buttons and view toggles in the sidebar */
 .side-divider {
-  height: 1px;
+  height: 0.5px;
   background: var(--border-weak);
   margin: 2px 0;
 }
@@ -2357,7 +2605,7 @@ body {
    (nested / compare) controls. */
 .toolbar-advanced {
   padding-left: 12px;
-  border-left: 1px solid var(--border-weak);
+  border-left: 0.5px solid var(--border-weak);
 }
 
 /* onboarding empty state */
@@ -2375,18 +2623,18 @@ body {
 }
 .empty-app-name {
   margin: 0 0 var(--space-2);
-  font-size: 24px;
+  font-size: var(--fs-title);
   font-weight: var(--fw-bold);
   letter-spacing: -0.5px;
 }
 .empty-actions {
-  /* Equal-width buttons on one centered row: a flex row of auto-width buttons
-     made each one as wide as its own label, so the three never lined up. */
-  display: grid;
-  grid-template-columns: repeat(3, var(--hub-btn-w));
+  /* Two equal-width buttons on one centered row. A fixed track per button is
+     what keeps the pair optically centered under the title, whatever the
+     labels measure. */
+  display: flex;
+  justify-content: center;
   gap: 8px;
   margin-top: 14px;
-  justify-content: center;
 }
 .empty-actions .btn {
   width: var(--hub-btn-w);
@@ -2403,7 +2651,7 @@ body {
 }
 .empty-samples-label {
   display: block;
-  font-size: 12px;
+  font-size: var(--fs-note);
   color: var(--muted);
   margin-bottom: 10px;
   text-align: center;
@@ -2417,32 +2665,15 @@ body {
   justify-content: center;
 }
 .empty-sample-btn {
-  width: var(--hub-btn-w);
+  min-width: var(--hub-btn-w);
   justify-content: center;
   text-align: center;
-}
-.empty-sample-name {
-  flex: 0 1 auto;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.empty-sample-arrow {
-  color: var(--muted);
-  margin-right: var(--space-2);
-  flex-shrink: 0;
-}
-.empty-body {
-  font-size: var(--fs-body);
-  color: var(--text-2);
-  margin: 0;
 }
 .empty-formats {
   margin: 0;
   font-size: var(--fs-note);
   color: var(--muted);
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  letter-spacing: 0.02em;
 }
 /* The three-step workflow strip, spaced evenly on one line under the buttons. */
 .empty-steps {
@@ -2466,10 +2697,9 @@ body {
   align-items: center;
   justify-content: center;
   gap: 10px;
-  font-size: 13px;
+  font-size: var(--fs-body);
   color: var(--muted);
-  background: color-mix(in srgb, var(--bg) 68%, transparent);
-  backdrop-filter: blur(1px);
+  background: color-mix(in srgb, var(--bg) 88%, transparent);
 }
 .spinner {
   width: 16px;
@@ -2501,7 +2731,7 @@ body {
   align-items: center;
   justify-content: center;
   padding: 24px;
-  background: color-mix(in srgb, #000 38%, transparent);
+  background: var(--scrim);
 }
 .help-card {
   width: min(520px, 100%);
@@ -2509,7 +2739,7 @@ body {
   overflow-y: auto;
   border-radius: var(--radius);
   background: var(--panel);
-  border: 1px solid var(--border);
+  border: 0.5px solid var(--border);
   box-shadow: var(--shadow-lg);
   padding: 18px 20px;
 }
@@ -2521,8 +2751,7 @@ body {
 }
 .help-card h4 {
   margin: 16px 0 8px;
-  font-size: 12px;
-  letter-spacing: 0.05em;
+  font-size: var(--fs-note);
   color: var(--muted);
 }
 .help-list {
@@ -2534,7 +2763,7 @@ body {
   display: flex;
   align-items: center;
   gap: 12px;
-  font-size: 13px;
+  font-size: var(--fs-body);
 }
 .help-keys {
   display: flex;
@@ -2552,12 +2781,12 @@ body {
 }
 kbd {
   font-family: inherit;
-  font-size: 11px;
+  font-size: var(--fs-note);
   font-weight: 600;
   color: var(--text-2);
   background: var(--panel-2);
-  border: 1px solid var(--border);
-  border-bottom-width: 2px;
+  border: 0.5px solid var(--border);
+  border-bottom-width: 0.5px;
   padding: 1px 6px;
   min-width: 18px;
   text-align: center;
@@ -2567,15 +2796,15 @@ kbd {
 .tooltip-hint {
   margin-top: 4px;
   padding-top: 4px;
-  border-top: 1px solid var(--border-weak);
-  font-size: 11px;
+  border-top: 0.5px solid var(--border-weak);
+  font-size: var(--fs-note);
   color: var(--muted);
   display: flex;
   flex-wrap: wrap;
   gap: 4px 8px;
 }
 .tooltip-hint kbd {
-  font-size: 10px;
+  font-size: var(--fs-note);
   padding: 0 4px;
   min-width: auto;
 }
@@ -2642,24 +2871,27 @@ kbd {
      last buttons used to clip under the pane divider. */
   max-width: calc(100% - var(--space-4) - 2px);
   background: var(--panel);
-  border: 1px solid var(--border);
+  border: 0.5px solid var(--border);
   border-radius: var(--radius);
   padding: var(--space-1);
   box-shadow: var(--shadow-sm);
 }
+/* 28px targets keep all eight controls on one row inside a compare pane.
+   The icon's optical centre is the button's centre: the SVG has no baseline,
+   so no manual nudge is needed. */
 .float-toolbar button {
-  width: 32px;
-  height: 32px;
+  width: 28px;
+  height: 28px;
   border: none;
   border-radius: var(--radius-xs);
   background: transparent;
   color: var(--text-2);
   font-size: var(--fs-body);
   cursor: pointer;
-  transition: all 0.12s;
   display: flex;
   align-items: center;
   justify-content: center;
+  padding: 0;
 }
 .float-toolbar button:hover {
   background: var(--accent-weak);
@@ -2678,65 +2910,15 @@ kbd {
   color: var(--text-2);
 }
 .float-toolbar .ft-divider {
-width: 1px;
-height: 20px;
-background: var(--border);
-margin: 0 2px;
+  width: 0.5px;
+  height: 18px;
+  background: var(--border);
+  margin: 0 2px;
 }
 
 /* ========================================================================
    Canvas overlays, dialogs and onboarding chrome
    ======================================================================== */
-
-/* --- always-visible canvas interaction legend (bottom-right) --- */
-.canvas-hint {
-  position: absolute;
-  right: 12px;
-  bottom: 12px;
-  z-index: 4;
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2);
-  background: var(--panel);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  box-shadow: var(--shadow-sm);
-  padding: 6px 10px;
-  font-size: 11px;
-  color: var(--muted);
-  pointer-events: none;
-  /* 60% (not 70%): with the legend open on a narrow canvas the two bottom
-     overlays must not meet — 60% + the legend's 220px cap still leaves a gap
-     on a 1024px window with both panels open. */
-  max-width: 60%;
-}
-.canvas-hint span {
-  display: inline-flex;
-  align-items: center;
-  gap: 3px;
-  white-space: nowrap;
-}
-/* When the bottom-left legend is on, it owns 220px + margins of the same
-   bottom strip the hint floats in: on a ~500px split pane the two collided.
-   Reserve the legend's footprint for the hint (nested/compare splits keep the
-   legend under .split, the single view under .main — :has catches both). */
-:has(.legend) .canvas-hint {
-  max-width: max(calc(100% - 256px), 160px);
-}
-.canvas-hint kbd {
-  font-family: inherit;
-  font-size: 10px;
-  background: var(--hover);
-  border: 1px solid var(--border);
-  border-radius: 3px;
-  padding: 0 4px;
-}
-.canvas-hint .canvas-hint-mirror {
-  color: var(--muted);
-  font-size: 10px;
-  padding-left: 6px;
-  border-left: 1px solid var(--border);
-}
 
 /* --- lightweight "rendering…" indicator --- */
 .rendering-badge {
@@ -2745,14 +2927,13 @@ margin: 0 2px;
   right: 16px;
   z-index: 30;
   background: var(--panel);
-  border: 1px solid var(--border);
+  border: 0.5px solid var(--border);
   border-radius: var(--radius-sm);
   box-shadow: var(--shadow-sm);
   color: var(--muted);
-  font-size: 11px;
+  font-size: var(--fs-note);
   padding: 4px 10px;
   pointer-events: none;
-  animation: pulse-fade 1.2s ease-in-out infinite;
 }
 /* --- on-canvas match counter --- */
 .match-badge {
@@ -2762,20 +2943,15 @@ margin: 0 2px;
   transform: translateX(-50%);
   z-index: 30;
   background: var(--panel);
-  border: 1px solid var(--border);
+  border: 0.5px solid var(--border);
   border-radius: var(--radius-sm);
   box-shadow: var(--shadow-sm);
   color: var(--text-2);
-  font-size: 12px;
+  font-size: var(--fs-note);
   font-weight: var(--fw-medium);
   padding: 4px 12px;
   pointer-events: none;
 }
-@keyframes pulse-fade {
-  0%, 100% { opacity: 0.55; }
-  50% { opacity: 1; }
-}
-
 /* --- error panel recovery actions --- */
 .error-actions {
   display: flex;
@@ -2793,11 +2969,11 @@ margin: 0 2px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(24, 24, 27, 0.35);
+  background: var(--scrim);
 }
 .multi-open-card {
   background: var(--panel);
-  border: 1px solid var(--border);
+  border: 0.5px solid var(--border);
   border-radius: var(--radius);
   box-shadow: var(--shadow-lg);
   padding: var(--space-6);
@@ -2815,6 +2991,16 @@ margin: 0 2px;
   gap: var(--space-2);
   justify-content: center;
 }
+/* The restore prompt offers two exits that carry the same weight: restore the
+   snapshot or start blank. Sized to their labels they read as two different
+   kinds of control, so the pair shares one width (the wider of the two), and
+   stays centered instead of stretching across the card. */
+.restore-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  width: max-content;
+  margin: 0 auto;
+}
 
 /* --- compare mode: diff legend + hide toggle --- */
 .diff-legend {
@@ -2827,11 +3013,11 @@ margin: 0 2px;
   align-items: center;
   gap: var(--space-2);
   background: var(--panel);
-  border: 1px solid var(--border);
+  border: 0.5px solid var(--border);
   border-radius: var(--radius-sm);
   box-shadow: var(--shadow-sm);
   padding: 4px 10px;
-  font-size: 12px;
+  font-size: var(--fs-note);
   color: var(--text-2);
 }
 .diff-swatch {
@@ -2839,14 +3025,14 @@ margin: 0 2px;
   height: 12px;
   border-radius: 50%;
   background: var(--danger);
-  box-shadow: 0 0 0 2px var(--danger-weak);
+  border: 0.5px solid var(--danger-border);
 }
 .diff-hide {
   border: none;
   background: transparent;
   cursor: pointer;
   color: var(--muted);
-  font-size: 14px;
+  font-size: var(--fs-body);
   padding: 2px;
 }
 .diff-hide:hover {
@@ -2854,7 +3040,7 @@ margin: 0 2px;
 }
 .diff-jump {
   padding: 2px 8px;
-  font-size: 12px;
+  font-size: var(--fs-note);
 }
 
 /* --- nested view explanatory subtitle --- */
@@ -2865,11 +3051,11 @@ margin: 0 2px;
   transform: translateX(-50%);
   z-index: 6;
   background: var(--panel);
-  border: 1px solid var(--border);
+  border: 0.5px solid var(--border);
   border-radius: var(--radius-sm);
   box-shadow: var(--shadow-sm);
   padding: 3px 10px;
-  font-size: 11px;
+  font-size: var(--fs-note);
   color: var(--muted);
   pointer-events: none;
 }
@@ -2879,7 +3065,7 @@ margin: 0 2px;
   display: flex;
   align-items: flex-start;
   gap: var(--space-2);
-  border: 1px solid var(--border);
+  border: 0.5px solid var(--border);
   border-radius: var(--radius-sm);
   padding: var(--space-2);
   margin-bottom: var(--space-2);
@@ -2905,14 +3091,14 @@ margin: 0 2px;
 }
 .anno-name {
   font-weight: var(--fw-semibold);
-  font-size: 12px;
+  font-size: var(--fs-note);
   color: var(--text);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 .anno-preview {
-  font-size: 12px;
+  font-size: var(--fs-note);
   color: var(--text-2);
   margin-top: 2px;
   display: -webkit-box;
@@ -2922,7 +3108,7 @@ margin: 0 2px;
 }
 .anno-btn {
   padding: 4px 8px;
-  font-size: 12px;
+  font-size: var(--fs-note);
   flex-shrink: 0;
 }
 
@@ -2939,7 +3125,7 @@ margin: 0 2px;
   justify-content: space-between;
   align-items: center;
   gap: var(--space-2);
-  border: 1px solid var(--border);
+  border: 0.5px solid var(--border);
   border-radius: var(--radius-xs);
   background: var(--panel);
   padding: 4px 8px;
@@ -2952,7 +3138,7 @@ margin: 0 2px;
   background: var(--accent-weak);
 }
 .rp-diff-name {
-  font-size: 12px;
+  font-size: var(--fs-note);
   font-weight: var(--fw-medium);
   color: var(--text);
   overflow: hidden;
@@ -2960,14 +3146,14 @@ margin: 0 2px;
   white-space: nowrap;
 }
 .rp-diff-event {
-  font-size: 11px;
+  font-size: var(--fs-note);
   color: var(--muted);
   flex-shrink: 0;
 }
 
 /* --- collapsible section preview line --- */
 .rp-collapse-preview {
-  font-size: 12px;
+  font-size: var(--fs-note);
   color: var(--muted);
   padding: 2px 0 8px 22px;
 }
@@ -2982,48 +3168,128 @@ margin: 0 2px;
 }
 
 /* --- settings dialog --- */
+/* One setting per row: label left, control right, hairline between rows. The
+   control column is right-aligned so the eye scans one edge instead of
+   bouncing between ragged button groups. */
 .settings-card {
-  width: 460px;
+  width: 520px;
   max-width: calc(100vw - 32px);
   max-height: 80vh;
   overflow-y: auto;
+  padding: 0;
 }
-.settings-row {
-  /* One grid of identically sized buttons per section: auto-width buttons made
-     each row ragged (浅色主题/深色主题/跟随系统 and the DPI chips all differed).
-     A fixed track width rather than 1fr, so a section with one button does not
-     stretch it across the whole dialog. */
+.settings-card .help-head {
+  padding: var(--space-3) var(--space-4) var(--space-3) 20px;
+  margin-bottom: 0;
+  border-bottom: 0.5px solid var(--border);
+}
+.settings-title {
+  font-size: var(--fs-body);
+  font-weight: var(--fw-semibold);
+}
+.settings-field {
   display: grid;
-  grid-template-columns: repeat(auto-fit, var(--settings-btn-w));
-  justify-content: center;
-  gap: var(--space-2);
-  margin: var(--space-2) 0 var(--space-4);
+  grid-template-columns: 112px minmax(0, 1fr);
+  align-items: center;
+  gap: var(--space-4);
+  padding: 9px 20px;
+  border-bottom: 0.5px solid var(--border-weak);
 }
-.settings-row .btn {
-  width: var(--settings-btn-w);
-  min-width: 0;
-  justify-content: center;
-  /* Wrap to a second line instead of ellipsis-clipping: "Screen 2× (192 DPI)"
-     and "Reset preferences" lost their meaning as "Screen 2× (19…" /
-     "Reset prefere…". The fixed track keeps the group aligned; two-line
-     buttons only appear where the label genuinely needs the room. */
-  white-space: normal;
-  line-height: 1.25;
-  padding-top: 4px;
-  padding-bottom: 4px;
-}
-.settings-row .btn.active {
-  border-color: var(--accent);
-}
-.settings-note {
-  font-size: 12px;
+.settings-label {
+  font-size: var(--fs-note);
   color: var(--muted);
-  margin: 0 0 var(--space-2);
 }
-.settings-divider {
-  height: 1px;
-  background: var(--border);
-  margin: var(--space-2) 0 var(--space-4);
+.settings-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+.settings-value {
+  font-size: var(--fs-note);
+  color: var(--muted);
+  text-align: right;
+  line-height: 1.4;
+}
+.settings-card .btn {
+  min-width: 0;
+  white-space: nowrap;
+  padding: 4px 10px;
+}
+.settings-foot {
+  display: flex;
+  justify-content: flex-end;
+  padding: var(--space-3) 20px var(--space-4);
+}
+.settings-reset {
+  color: var(--danger);
+}
+.settings-reset:hover {
+  background: var(--danger-weak);
+  border-color: var(--danger-border);
+  color: var(--danger);
+}
+
+/* Segmented choice: a joined track, not a row of competing buttons. */
+.segmented {
+  display: inline-flex;
+  justify-self: end;
+  border: 0.5px solid var(--control-border);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+.segmented button {
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: var(--text-2);
+  font-size: var(--fs-note);
+  font-weight: var(--fw-medium);
+  padding: 4px 10px;
+  line-height: 1.4;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.segmented button + button {
+  border-left: 0.5px solid var(--control-border);
+}
+.segmented button:hover {
+  background: var(--accent-weak);
+  color: var(--text);
+}
+.segmented button.active {
+  background: var(--gray-4);
+  color: var(--text);
+  font-weight: var(--fw-semibold);
+}
+/* Six PNG scales: three even columns keep the track within the control
+   column instead of pushing the dialog wider. */
+.segmented-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+/* Six stops in two rows: the joined-track rule "button + button gets a left
+   border" would draw a stray edge at the start of the second row and leave the
+   row seam open. Draw the grid from the inside instead; the container clips the
+   outer edges and keeps the rounded corners. */
+.segmented-grid button + button {
+  border-left: 0;
+}
+.segmented-grid button {
+  height: 30px;
+  padding: 0 4px;
+  text-align: center;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  border-right: 0.5px solid var(--control-border);
+  border-bottom: 0.5px solid var(--control-border);
+}
+.segmented-grid button:nth-child(3n) {
+  border-right: 0;
+}
+.segmented-grid button:nth-child(n + 4) {
+  border-bottom: 0;
 }
 
 /* --- first-run onboarding tour --- */
@@ -3031,16 +3297,15 @@ margin: 0 2px;
   position: fixed;
   inset: 0;
   z-index: 90;
-  background: rgba(24, 24, 27, 0.5);
+  background: var(--scrim);
 }
 .onboard-spotlight {
   position: fixed;
   z-index: 91;
-  border: 2px solid var(--accent);
+  border: 0.5px solid var(--accent);
   border-radius: var(--radius);
-  box-shadow: 0 0 0 4px var(--accent-weak), var(--shadow-lg);
+  box-shadow: var(--shadow-modal);
   pointer-events: none;
-  transition: all 0.22s ease;
 }
 .onboard-card {
   position: fixed;
@@ -3051,7 +3316,7 @@ margin: 0 2px;
   width: 420px;
   max-width: calc(100vw - 32px);
   background: var(--panel);
-  border: 1px solid var(--border);
+  border: 0.5px solid var(--border);
   border-radius: var(--radius);
   box-shadow: var(--shadow-lg);
   padding: var(--space-6);
@@ -3068,7 +3333,7 @@ margin: 0 2px;
   line-height: 1.55;
 }
 .onboard-step {
-  font-size: 11px;
+  font-size: var(--fs-note);
   color: var(--muted);
   margin-bottom: var(--space-2);
 }
@@ -3082,7 +3347,6 @@ margin: 0 2px;
   height: 8px;
   border-radius: 50%;
   background: var(--border);
-  transition: background 0.15s;
 }
 .onboard-dots span.on {
   background: var(--accent);
@@ -3105,7 +3369,6 @@ margin: 0 2px;
 /* Reduced motion: suppress non-essential transitions and animations. */
 @media (prefers-reduced-motion: reduce) {
   .onboard-spotlight,
-  .canvas-hint,
   .rendering-badge {
     animation: none;
     transition: none;
@@ -3171,14 +3434,14 @@ margin: 0 2px;
   align-items: center;
   gap: 10px;
   padding: 4px 12px;
-  background: color-mix(in srgb, var(--panel) 92%, transparent);
-  border-top: 1px solid var(--border);
-  font-size: 12px;
+  background: var(--panel);
+  border-top: 0.5px solid var(--border);
+  font-size: var(--fs-note);
   z-index: 6;
   flex-wrap: wrap;
 }
 .compare-status .compare-pct { font-weight: 700; }
-.compare-status .compare-sub { opacity: 0.75; }
+.compare-status .compare-sub { color: var(--muted); }
 .compare-status .compare-spacer { flex: 1; }
 .compare-status .diff-legend-inline { display: inline-flex; align-items: center; gap: 6px; }
 
@@ -3205,25 +3468,25 @@ margin: 0 2px;
   max-height: 46vh;
   overflow: auto;
   background: var(--panel);
-  border: 1px solid var(--border);
-  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.18);
+  border: 0.5px solid var(--border);
+  box-shadow: var(--shadow-pop);
   padding: 8px 10px;
-  font-size: 12px;
+  font-size: var(--fs-note);
   z-index: 8;
 }
 .node-inspector .ni-head { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; }
 .node-inspector .ni-head strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .node-inspector .ni-event { color: var(--accent); font-weight: 600; }
-.node-inspector .ni-pane { opacity: 0.6; font-size: 11px; }
+.node-inspector .ni-pane { color: var(--muted); font-size: var(--fs-note); }
 .node-inspector .ni-spacer { flex: 1; }
 .node-inspector button {
   border: none; background: transparent; cursor: pointer; padding: 2px 4px;
 }
 .node-inspector .ni-rows { margin: 0; }
 .node-inspector .ni-row { display: flex; gap: 8px; padding: 1px 0; }
-.node-inspector .ni-row dt { width: 84px; flex: none; opacity: 0.6; }
+.node-inspector .ni-row dt { width: 84px; flex: none; color: var(--muted); }
 .node-inspector .ni-row dd { margin: 0; word-break: break-all; }
-.node-inspector .ni-note { margin: 6px 0; opacity: 0.85; }
+.node-inspector .ni-note { margin: 6px 0; color: var(--text-2); }
 .node-inspector .ni-actions { display: flex; gap: 6px; margin-top: 6px; }
 
 /* Label editor with rename-scope choice. */
@@ -3233,22 +3496,22 @@ margin: 0 2px;
   flex-direction: column;
   gap: 4px;
   background: var(--panel);
-  border: 1px solid var(--border);
+  border: 0.5px solid var(--border);
   padding: 6px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.16);
+  box-shadow: var(--shadow-pop);
 }
-.label-edit-scope { font-size: 11px; display: flex; align-items: center; gap: 6px; }
+.label-edit-scope { font-size: var(--fs-note); display: flex; align-items: center; gap: 6px; }
 
 /* Overview-mode chip (labels hidden at low zoom). */
 .overview-chip {
   position: absolute;
   top: 44px;
   right: 12px;
-  font-size: 11px;
+  font-size: var(--fs-note);
   padding: 2px 8px;
   background: var(--panel);
-  border: 1px solid var(--border);
-  opacity: 0.85;
+  border: 0.5px solid var(--border);
+  color: var(--muted);
   z-index: 5;
   pointer-events: none;
 }
@@ -3264,7 +3527,7 @@ margin: 0 2px;
   transform: translateX(-50%);
   z-index: 40;
   padding: 4px 10px;
-  opacity: 0.7;
+  color: var(--muted);
 }
 
 /* Tab context menu. */
@@ -3272,7 +3535,7 @@ margin: 0 2px;
   position: fixed;
   z-index: 60;
   background: var(--panel);
-  border: 1px solid var(--border);
+  border: 0.5px solid var(--border);
   border-radius: var(--radius);
   box-shadow: var(--shadow-lg);
   display: flex;
@@ -3286,7 +3549,7 @@ margin: 0 2px;
   border: none;
   background: transparent;
   text-align: left;
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-xs);
   padding: var(--space-2) var(--space-3);
   cursor: pointer;
   font-size: var(--fs-body);
@@ -3300,13 +3563,13 @@ margin: 0 2px;
 }
 
 /* Export menu extras. */
-.menu-estimate { font-size: 11px; opacity: 0.7; margin-left: 8px; }
+.menu-estimate { font-size: var(--fs-note); color: var(--muted); margin-left: 8px; }
 
 /* Toast close button. */
 .toast { display: flex; align-items: center; gap: 10px; }
 .toast .toast-close {
   border: none; background: transparent; cursor: pointer; color: inherit;
-  font-size: 12px; padding: 0 2px;
+  font-size: var(--fs-note); padding: 0 2px;
 }
 
 /* Multi-file dialog file list. */
@@ -3316,21 +3579,21 @@ margin: 0 2px;
   padding: 0;
   max-height: 180px;
   overflow: auto;
-  font-size: 12px;
+  font-size: var(--fs-note);
 }
 .multi-open-files li { padding: 2px 0; display: flex; gap: 8px; align-items: center; }
 .multi-open-badge {
-  font-size: 10px;
-  border: 1px solid var(--border);
+  font-size: var(--fs-note);
+  border: 0.5px solid var(--border);
   padding: 0 6px;
-  opacity: 0.8;
+  color: var(--muted);
 }
 
 /* Right panel default is a bit wider so the stats toolbar fits at 1440x900. */
 
 /* Keyboard focus for panel separators. */
 .sidebar-resizer:focus-visible {
-  outline: 2px solid var(--accent, #4f8ef7);
+  outline: 2px solid var(--ring);
   outline-offset: -2px;
 }
 

@@ -42,22 +42,11 @@ export function EmptyState() {
         <AppLogo size={88} />
       </div>
       <h2 className="empty-app-name">Phylo<span className="brand-mark">Rec</span>Viewer</h2>
-      <p className="empty-body">{t.emptyBody}</p>
-      <p className="empty-formats">
-        recPhyloXML · NHX · Newick
-      </p>
+      <p className="empty-formats">{t.emptyFormats}</p>
 
       <div className="empty-actions">
         <button className="btn primary" onClick={() => fileInput.current?.click()}>
           {t.openFile}
-        </button>
-        <button
-          className="btn"
-          onClick={() => {
-            setTimeout(() => document.dispatchEvent(new CustomEvent("rpv:replay-tour")), 0);
-          }}
-        >
-          {t.viewTour}
         </button>
         <button className="btn" onClick={() => setHelpOpen(true)}>
           {t.viewShortcuts}
@@ -79,7 +68,7 @@ export function EmptyState() {
       </div>
 
       <div className="empty-samples">
-        <span className="empty-samples-label">{t.emptyOrSample}</span>
+        <span className="empty-samples-label">{t.samplesHeading}</span>
         <div className="empty-sample-list">
           {samples.map((s) => (
             <button
@@ -87,18 +76,12 @@ export function EmptyState() {
               className="btn ghost empty-sample-btn"
               onClick={() => openSample(s)}
             >
-              <span className="empty-sample-arrow" aria-hidden="true">▸</span>
-              <span className="empty-sample-name">{t[s.labelKey]}</span>
+              {t[s.labelKey]}
             </button>
           ))}
         </div>
       </div>
 
-      <div className="empty-steps">
-        <span>① {t.panelStats}</span>
-        <span>② {t.panelDiff}</span>
-        <span>③ {t.exportLabel}</span>
-      </div>
     </div>
   );
 }

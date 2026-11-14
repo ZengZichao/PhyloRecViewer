@@ -15,7 +15,7 @@ export function AnnotationEditor() {
   const setAnnotating = useStore((s) => s.setAnnotating);
   const resolvedThemeId = useStore((s) => s.resolvedThemeId);
   const [text, setText] = useState("");
-  const [color, setColor] = useState("#18181b");
+  const [color, setColor] = useState("#1c2024");
   const dialogRef = useRef<HTMLDivElement>(null);
   useFocusTrap(!!annotating, dialogRef);
   // Draft per node id: closing without saving (backdrop click, Esc) used to
@@ -27,7 +27,7 @@ export function AnnotationEditor() {
     if (!annotating) return;
     const cur = useStore.getState().annotations[annotating.id];
     setText(cur?.text ?? drafts.current.get(annotating.id) ?? "");
-    const themeDefault = resolvedThemeId === "dark" ? "#fafafa" : "#18181b";
+    const themeDefault = resolvedThemeId === "dark" ? "#edeef0" : "#1c2024";
     setColor(cur?.color ?? themeDefault);
   }, [annotating, resolvedThemeId]);
 

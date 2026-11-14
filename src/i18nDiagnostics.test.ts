@@ -76,14 +76,14 @@ describe("diagnostic localisation", () => {
     expect(localizeExample("Rabbit @depth 3", "zh")).toBe("Rabbit，深度 3");
     expect(localizeExample("\u2014 @depth 3", "zh")).toBe("\u2014，深度 3");
     expect(localizeExample("x: time slice 2", "zh")).toBe("x：时间片 2");
-    expect(localizeExample("x · time slice 2 < 3", "zh")).toBe("x · 时间片 2 < 3");
+    expect(localizeExample("x: time slice 2 < 3", "zh")).toBe("x：时间片 2 < 3");
     expect(localizeExample("g1 (into ancestor R)", "zh")).toBe("g1（进入祖先 R）");
     expect(localizeExample("x: time slice 2", "en")).toBe("x: time slice 2");
     for (const cell of [
       "\u2014 @depth 3",
       "Rabbit @depth 3",
       "x: time slice 2",
-      "x · time slice 2 < 3",
+      "x: time slice 2 < 3",
       "g1 (into ancestor R)",
     ]) {
       const zh = localizeExample(cell, "zh");
@@ -128,7 +128,7 @@ describe("diagnostic localisation", () => {
         "无法识别",
       ],
       [
-        'Gene node "g" carries 2 <transferBack> arrivals; the node\'s species and the NHX export use the first · B.',
+        'Gene node "g" carries 2 <transferBack> arrivals; the node\'s species and the NHX export use the first (B).',
         "转移到达",
       ],
       [

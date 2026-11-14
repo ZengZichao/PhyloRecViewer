@@ -54,6 +54,7 @@ import { Settings } from "./Settings";
 import { Onboarding } from "./Onboarding";
 import { TooltipProvider } from "./Tooltip";
 import { useGlobalShortcuts, useFocusTrap, isTextInput, useFocusMatches, useFocusMatchesFor } from "./hooks";
+import { Icon } from "./Icon";
 
 export function App() {
   const t = useT();
@@ -175,9 +176,9 @@ export function App() {
   };
   const onRightResizeMove = (e: ReactPointerEvent<HTMLDivElement>) => {
     if (!resizingRight.current) return;
-    // The minimum width must keep every analysis tab visible (the tab bar
-    // wraps to a second row below this, so 320px is the safe floor).
-    setRightPanelWidth(Math.max(320, Math.min(680, window.innerWidth - e.clientX)));
+    // The floor keeps all six analysis tabs on one row (compare mode adds
+    // Diff); below it the tab bar would have to wrap or scroll.
+    setRightPanelWidth(Math.max(380, Math.min(680, window.innerWidth - e.clientX)));
   };
   const onRightResizeUp = (e: ReactPointerEvent<HTMLDivElement>) => {
     resizingRight.current = false;
@@ -338,11 +339,29 @@ export function App() {
   // Thresholds keep ≥ ~700px of canvas: at 1024 with both panels open the
   // legend, stats pill and hint chip collided three-way.
   useEffect(() => {
-    setSidebarWidth((w) => Math.min(w, Math.max(360, window.innerWidth - 420)));
-    setRightPanelWidth((w) => Math.min(w, Math.max(320, window.innerWidth - 720)));
+    let last = window.innerWidth;
+    const clamp = () => {
+      setSidebarWidth((w) => Math.min(w, Math.max(360, window.innerWidth - 420)));
+      setRightPanelWidth((w) => Math.min(w, Math.max(380, window.innerWidth - 720)));
+    };
+    clamp();
     const w = window.innerWidth;
     if (w < 1180) useStore.getState().closePanel();
     if (w < 920) useStore.getState().setSidebarOpen(false);
+    // Dragging the window narrower than the thresholds has to collapse the
+    // same panels: the launch-only pass left a 244px canvas with both panels
+    // open and the legend, stats and toolbar stacked on top of each other.
+    // Only downward crossings act, so a panel the user re-opens at a narrow
+    // width stays open until the window shrinks past the next threshold.
+    const onResize = () => {
+      clamp();
+      const next = window.innerWidth;
+      if (last >= 1180 && next < 1180) useStore.getState().closePanel();
+      if (last >= 920 && next < 920) useStore.getState().setSidebarOpen(false);
+      last = next;
+    };
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
   }, []);
 
   // Presentation mode always collapses the panels on entry and restores them
@@ -419,15 +438,22 @@ export function App() {
   }, [openInNewTab, t.openFailedToast]);
 
   // First-run tour: shown ONCE automatically (skippable) so a new user ever
-  // sees it; afterwards it is opt-in from Help / Preferences.
+  // sees it; afterwards it is opt-in from Help / Preferences. It waits for the
+  // first document because a tour of the controls has nothing to point at on
+  // the empty hub — every stepped surface only exists once a file is open.
+  const tourPending = useRef(false);
   useEffect(() => {
-    if (!isOnboarded()) {
-      setOnboardVisible(true);
-    }
+    if (!isOnboarded()) tourPending.current = true;
     const onReplay = () => setOnboardVisible(true);
     document.addEventListener("rpv:replay-tour", onReplay);
     return () => document.removeEventListener("rpv:replay-tour", onReplay);
   }, []);
+  useEffect(() => {
+    if (tourPending.current && recon) {
+      tourPending.current = false;
+      setOnboardVisible(true);
+    }
+  }, [recon]);
 
   const onDrop = async (e: ReactDragEvent<HTMLDivElement>) => {
     e.preventDefault();
@@ -506,13 +532,16 @@ export function App() {
         <MenuBar panes={exportPanes} onOpenSettings={() => setSettingsOpen(true)} />
       </div>
       <div className="body">
-        {sidebarOpen ? (
+        {/* The empty hub owns the whole window: with no document loaded the
+            controls have nothing to govern, so both panels wait for the first
+            file instead of framing a blank canvas. */}
+        {recon && (sidebarOpen ? (
           <>
             <Sidebar width={sidebarWidth} />
             <div
               className="sidebar-resizer"
               role="separator"
-              aria-label={`${t.resizeHint} · ${t.controlsPanel}`}
+              aria-label={t.resizeHint}
               aria-orientation="vertical"
               tabIndex={0}
               onKeyDown={(e) => {
@@ -536,12 +565,12 @@ export function App() {
           <button
             className="rail rail-left"
             onClick={() => setSidebarOpen(true)}
-            title={`${t.expand} · ${t.controlsPanel}`}
+            title={`${t.expand} ${t.controlsPanel}`}
           >
             <span className="rail-chevron" aria-hidden="true">›</span>
             <span className="rail-text">{t.controlsPanel}</span>
           </button>
-        )}
+        ))}
         <main className="main">
           {error ? (
             <div className="state-panel error" role="alert">
@@ -742,7 +771,9 @@ export function App() {
                 {showLegend && <Legend theme={theme} recon={recon} />}
                 {stats && (
                   <div className="stats">
-                    {countLabel(stats.species, t.species)} &middot; {countLabel(stats.trees, t.geneTreeUnit)} &middot; {countLabel(stats.genes, t.geneNodes)}
+                    <span>{countLabel(stats.species, t.species)}</span>
+                    <span>{countLabel(stats.trees, t.geneTreeUnit)}</span>
+                    <span>{countLabel(stats.genes, t.geneNodes)}</span>
                   </div>
                 )}
               </>
@@ -794,7 +825,7 @@ export function App() {
                       : t.inspNone,
                   )}
                 </p>
-                <div className="multi-open-actions">
+                <div className="multi-open-actions restore-actions">
                   <button className="btn primary" onClick={onRestoreAccept}>
                     {t.restoreAccept}
                   </button>
@@ -810,7 +841,7 @@ export function App() {
               viewport — the card used to cover the sidebar's controls. */}
           <NodeInspector />
         </main>
-        {rightPanelOpen && (
+        {recon && rightPanelOpen && (
           <div
             className="sidebar-resizer right"
             role="separator"
@@ -834,12 +865,14 @@ export function App() {
             onPointerUp={onRightResizeUp}
           />
         )}
-        <RightPanel width={rightPanelWidth} />
-        {!rightPanelOpen && (
+        {/* With nothing loaded the panel has no readings to show: the empty
+            hub owns the screen and the panel appears with the first document. */}
+        {recon && <RightPanel width={rightPanelWidth} />}
+        {recon && !rightPanelOpen && (
           <button
             className="rail rail-right"
             onClick={() => openPanel(rightPanelTab)}
-            title={`${t.expand} · ${t.analyze}`}
+            title={`${t.expand} ${t.analyze}`}
           >
             <span className="rail-chevron" aria-hidden="true">‹</span>
             <span className="rail-text">{t.analyze}</span>
@@ -969,7 +1002,7 @@ function ToastView({ data, onClose }: { data: ToastData; onClose: () => void }) 
     <div className={`toast ${data.kind}`} role={isError ? "alert" : "status"}>
       <span className="toast-msg">{data.msg}</span>
       <button className="toast-close" aria-label={t.close} onClick={onClose}>
-        ✕
+        <Icon name="close" size={12} />
       </button>
     </div>
   );

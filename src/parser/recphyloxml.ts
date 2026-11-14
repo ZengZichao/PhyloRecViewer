@@ -501,7 +501,7 @@ function parseEvents(
     // transfer arcs draw one per arrival). Say so instead of staying silent.
     warnings.push(
       `Gene node "${label}" carries ${arrivals.length} <transferBack> arrivals; ` +
-        `the node's species and the NHX export use the first · ${str(arrivals[0]["@_destinationSpecies"]) ?? "—"}.`,
+        `the node's species and the NHX export use the first (${str(arrivals[0]["@_destinationSpecies"]) ?? "—"}).`,
     );
   }
 

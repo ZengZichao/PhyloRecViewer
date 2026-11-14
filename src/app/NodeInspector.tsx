@@ -3,6 +3,7 @@ import { formatConfidence, useT, type Dict } from "../i18n";
 import { useStore } from "../state/store";
 import { APP_NAME, APP_VERSION } from "../version";
 import type { GeneNode } from "../model/types";
+import { Icon } from "./Icon";
 
 /**
  * A dockable node inspector: click a gene glyph or a transfer arc and this
@@ -94,10 +95,10 @@ export function NodeInspector() {
     if (e.type === "transferBack") {
       rows.push([
         t.event.transferBack,
-        `${e.speciesLocation || t.inspNone} → ${e.destinationSpecies || t.inspNone}` +
-          (e.timeSlice != null ? ` · ${t.inspTimeSlice} ${e.timeSlice}` : "") +
-          (e.confidence != null ? ` · ${e.confidence}` : ""),
+        `${e.speciesLocation || t.inspNone} → ${e.destinationSpecies || t.inspNone}`,
       ]);
+      if (e.timeSlice != null) rows.push([t.inspTimeSlice, String(e.timeSlice)]);
+      if (e.confidence != null) rows.push([t.inspConfidence, formatConfidence(e.confidence)]);
     }
   }
   if (g.branchLength != null) rows.push([t.inspBranch, String(g.branchLength)]);
@@ -106,7 +107,7 @@ export function NodeInspector() {
 
   const copyDetails = () => {
     const text = [
-      `${APP_NAME} ${APP_VERSION} · ${t.inspectorTitle}`,
+      `${t.inspectorTitle} — ${APP_NAME} ${APP_VERSION}`,
       `id: ${g.id}`,
       ...rows.map(([k, v]) => `${k}: ${v}`),
       ...(note ? [`${t.inspAnnotation}: ${note.text}`] : []),
@@ -128,10 +129,10 @@ export function NodeInspector() {
           title={pinned ? t.unpinHighlight : t.pinHighlight}
           onClick={() => setPinned((v) => !v)}
         >
-          📌
+          <Icon name="pin" size={13} />
         </button>
         <button aria-label={t.close} onClick={() => setInspector(null)}>
-          ✕
+          <Icon name="close" size={12} />
         </button>
       </div>
       <dl className="ni-rows">

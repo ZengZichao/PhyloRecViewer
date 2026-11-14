@@ -12,6 +12,7 @@ import { APP_VERSION } from "../version";
 import { networkEdgeWidth, transferArc } from "../render/geometry";
 import { geneColor, themes, type Theme } from "../render/theme";
 import { useCollapsible, useFocusMatches, useStats } from "./hooks";
+import { Icon } from "./Icon";
 
 /**
  * Browser download fallback for CSV export. The desktop build saves via the
@@ -78,32 +79,34 @@ export function RightPanel({ width }: { width?: number }) {
         <button
           className="panel-collapse"
           onClick={close}
-          data-tooltip={`${t.collapse} · ${t.analyze}`}
+          data-tooltip={t.collapse}
           aria-label={t.collapse}
         >
           ›
         </button>
       </div>
-      <div className="right-panel-tabs" role="tablist">
-        {tabs.map((x, i) => (
-          <button
-            key={x.id}
-            role="tab"
-            id={`rp-tab-${x.id}`}
-            aria-selected={activeTab === x.id}
-            aria-controls={`rp-tabpanel-${x.id}`}
-            tabIndex={activeTab === x.id ? 0 : -1}
-            ref={(el) => {
-              tabRefs.current[i] = el;
-            }}
-            className={activeTab === x.id ? "active" : ""}
-            onClick={() => setTab(x.id)}
-            onKeyDown={(e) => onTabKey(e, i)}
-          >
-            {x.label}
-          </button>
-        ))}
-      </div>
+      {recon && (
+        <div className="right-panel-tabs" role="tablist">
+          {tabs.map((x, i) => (
+            <button
+              key={x.id}
+              role="tab"
+              id={`rp-tab-${x.id}`}
+              aria-selected={activeTab === x.id}
+              aria-controls={`rp-tabpanel-${x.id}`}
+              tabIndex={activeTab === x.id ? 0 : -1}
+              ref={(el) => {
+                tabRefs.current[i] = el;
+              }}
+              className={activeTab === x.id ? "active" : ""}
+              onClick={() => setTab(x.id)}
+              onKeyDown={(e) => onTabKey(e, i)}
+            >
+              {x.label}
+            </button>
+          ))}
+        </div>
+      )}
       <div
         className="right-panel-body"
         role="tabpanel"
@@ -194,7 +197,9 @@ function SearchFilterTab() {
   return (
     <div className="rp-section">
       <div className="rp-search-row">
-        <span className="rp-search-icon" aria-hidden="true">🔍</span>
+        <span className="rp-search-icon" aria-hidden="true">
+          <Icon name="search" size={14} />
+        </span>
         <input
           className="rp-input"
           type="text"
@@ -235,7 +240,7 @@ function SearchFilterTab() {
       </label>
 
       {regex && regexProblem && (
-        <p className="rp-issue ex regex-error" role="alert" style={{ color: "var(--danger, #c0392b)", fontSize: 11 }}>
+        <p className="rp-issue ex regex-error error" role="alert">
           {t.regexInvalid}
           <br />
           <code>{localizeDiagnostic(regexProblem, locale)}</code>
@@ -272,19 +277,10 @@ function SearchFilterTab() {
                   locateGene(g.id);
                   useStore.getState().setInspector({ kind: "gene", id: g.id });
                 }}
-                style={{
-                  display: "flex", gap: 6, width: "100%", textAlign: "left",
-                  padding: "3px 6px", fontSize: 11, cursor: "pointer",
-                  border: "none", background: i === idx ? "var(--hover, rgba(127,127,127,0.15))" : "transparent",
-                }}
               >
-                <span style={{ fontWeight: 600, flex: "1 1 auto", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                  {g.endEvent.geneName || g.name || g.id}
-                </span>
-                <span style={{ opacity: 0.7 }}>{t.event[g.endEvent.type]}</span>
-                <span style={{ opacity: 0.5, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: "40%" }}>
-                  {g.speciesId}
-                </span>
+                <span className="rp-result-name">{g.endEvent.geneName || g.name || g.id}</span>
+                <span className="rp-result-event">{t.event[g.endEvent.type]}</span>
+                <span className="rp-result-species">{g.speciesId}</span>
               </button>
             ))}
             {list.length > 200 && (
@@ -385,14 +381,12 @@ function SearchFilterTab() {
 /** A collapsible section for the right panel, using the same pattern as the
  *  Sidebar's Section: a clickable header with a chevron, remembered in
  *  localStorage. Supports a one-line preview when collapsed (so the section's
- *  value is visible without expanding) and an external `force` override for
- *  "Expand all / Collapse all". */
+ *  value is visible without expanding). */
 function RpCollapsible({
   title,
   storageKey,
   defaultOpen = false,
   summary,
-  force,
   children,
 }: {
   title: string;
@@ -400,19 +394,9 @@ function RpCollapsible({
   defaultOpen?: boolean;
   /** One-line preview shown while collapsed. */
   summary?: string;
-  /** External one-shot expand/collapse command (null = no command pending). */
-  force?: { mode: "all" | "none"; n: number } | null;
   children: ReactNode;
 }) {
   const [open, setOpen] = useCollapsible(storageKey, defaultOpen);
-  useEffect(() => {
-    // `force` is a command token, not a pinned state: the parent mints a fresh
-    // object per button press so this effect re-fires even when the user hits
-    // "expand all" a second time after collapsing a section by hand. Keying the
-    // effect on a plain "all"/"none" string would make the button one-shot.
-    if (!force) return;
-    setOpen(force.mode === "all");
-  }, [force, setOpen]);
   const isOpen = open;
   return (
     <>
@@ -423,7 +407,9 @@ function RpCollapsible({
           setOpen((o) => !o);
         }}
       >
-        <span className="chev" aria-hidden="true">{isOpen ? "\u25BE" : "\u25B8"}</span>
+        <span className={`chev${isOpen ? " open" : ""}`} aria-hidden="true">
+          <Icon name="chevron" size={12} />
+        </span>
         {title}
       </button>
       {!isOpen && summary ? <div className="rp-collapse-preview">{summary}</div> : null}
@@ -436,10 +422,10 @@ function RpCollapsible({
 // Statistics
 // --------------------------------------------------------------------------
 
-function Stat({ label, value, accent }: { label: string; value: number; accent?: boolean }) {
+function Stat({ label, value }: { label: string; value: number }) {
   const locale = useStore((s) => s.locale);
   return (
-    <div className={`rp-stat${accent ? " rp-stat-accent" : ""}`}>
+    <div className="rp-stat">
       <div className="rp-stat-value">{formatCount(value, locale)}</div>
       <div className="rp-stat-label">{label}</div>
     </div>
@@ -514,18 +500,15 @@ function DonutChart({ items }: { items: { label: string; value: number; color: s
             d={d}
             fill={it.color}
             opacity={hover === null || hover === i ? 1 : 0.3}
-            style={{ cursor: "pointer", transition: "opacity 0.15s", stroke: "var(--panel)", strokeWidth: 1 }}
+            style={{ cursor: "pointer", stroke: "var(--panel)", strokeWidth: 0.5 }}
             onMouseEnter={() => setHover(i)}
             onMouseLeave={() => setHover(null)}
           >
             <title>{it.label}: {it.value} ({p}%)</title>
           </path>
         ))}
-        <text x={cx} y={cy - 4} textAnchor="middle" fontSize={18} fontWeight={700} fill="currentColor">
+        <text x={cx} y={cy + 7} textAnchor="middle" fontSize={20} fontWeight={600} fill="currentColor">
           {hover !== null ? items[hover].value : total}
-        </text>
-        <text x={cx} y={cy + 12} textAnchor="middle" fontSize={9} fill="currentColor" opacity={0.5}>
-          {hover !== null ? items[hover].label : t.donutTotal}
         </text>
       </svg>
       <div className="rp-donut-legend">
@@ -538,7 +521,7 @@ function DonutChart({ items }: { items: { label: string; value: number; color: s
           >
             <span className="rp-donut-swatch" style={{ background: it.color }} />
             <span className="rp-donut-label">{it.label}</span>
-            <span className="rp-donut-val">{it.value} · {pct[i]}%</span>
+            <span className="rp-donut-val">{it.value} ({pct[i]}%)</span>
           </div>
         ))}
       </div>
@@ -554,7 +537,6 @@ function StatsTab({ onToast }: { onToast: (msg: string, kind?: "success" | "erro
   const theme = themes[useStore((s) => s.resolvedThemeId)];
   const stats = useStats();
   const locateGene = useStore((s) => s.locateGene);
-  const [force, setForce] = useState<{ mode: "all" | "none"; n: number } | null>(null);
   const [hoverId, setHoverId] = useState<string | null>(null);
   const hoverTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Clear any pending hover-locate timer when the panel unmounts (switching to
@@ -606,33 +588,20 @@ function StatsTab({ onToast }: { onToast: (msg: string, kind?: "success" | "erro
 
   return (
     <div className="rp-section">
-      <div className="rp-toolbar">
-        <button className="btn" onClick={() => void onExport()}>
+      <div className="rp-head-row">
+        <h4 className="rp-h4">{t.statsTotals}</h4>
+        <button className="btn ghost rp-head-action" onClick={() => void onExport()}>
           {t.exportCsv}
         </button>
-        <span className="rp-spacer" />
-        <button
-          className="btn ghost"
-          onClick={() => setForce((f) => ({ mode: "all", n: (f?.n ?? 0) + 1 }))}
-        >
-          {t.expandAll}
-        </button>
-        <button
-          className="btn ghost"
-          onClick={() => setForce((f) => ({ mode: "none", n: (f?.n ?? 0) + 1 }))}
-        >
-          {t.collapseAll}
-        </button>
       </div>
-
-      <h4 className="rp-h4">{t.statsTotals}</h4>
       <div className="rp-totals">
-        <Stat label={t.nodesCol} value={stats.nodes.length} accent />
-        <Stat label={t.nodeLeaf} value={stats.leafCount} accent />
+        <Stat label={t.nodesCol} value={stats.nodes.length} />
+        <Stat label={t.nodeLeaf} value={stats.leafCount} />
+        <Stat label={t.nodeInternal} value={stats.internalCount} />
+        <Stat label={t.geneTreesCol} value={stats.families.length} />
         <Stat label={t.event.speciation} value={stats.total.speciation} />
         <Stat label={t.event.duplication} value={stats.total.duplication} />
         <Stat label={t.event.loss} value={stats.total.loss} />
-        <Stat label={t.nodeInternal} value={stats.internalCount} />
         <Stat label={t.transferLegend} value={stats.total.transfer} />
       </div>
 
@@ -647,14 +616,12 @@ function StatsTab({ onToast }: { onToast: (msg: string, kind?: "success" | "erro
           { label: t.event.leaf, value: stats.total.leaf, color: theme.event.leaf },
         ]}
       />
-      <p className="rp-note">{t.transferOverlayNote}</p>
 
       {stats.families.length > 1 && (
         <RpCollapsible
           title={t.statsByFamily}
           storageKey="rpv.rp.fam"
           defaultOpen={false}
-          force={force}
           summary={countLabel(stats.families.length, t.geneTreeUnit)}
         >
           <div className="rp-table-wrap"><table className="rp-table">
@@ -690,11 +657,12 @@ function StatsTab({ onToast }: { onToast: (msg: string, kind?: "success" | "erro
         title={t.statsTransferMatrix}
         storageKey="rpv.rp.trans"
         defaultOpen={false}
-        force={force}
         summary={
           topTransfers.length === 0
             ? t.noTransfers
-            : `${t.topOf.replace("{n}", String(topTransfers.length)).replace("{total}", String(stats.transferMatrix.length))}`
+            : stats.transferMatrix.length > topTransfers.length
+              ? t.topOf.replace("{n}", String(topTransfers.length)).replace("{total}", String(stats.transferMatrix.length))
+              : undefined
         }
       >
         {topTransfers.length === 0 ? (
@@ -722,17 +690,23 @@ function StatsTab({ onToast }: { onToast: (msg: string, kind?: "success" | "erro
       </RpCollapsible>
 
       <RpCollapsible
-        title={t.statsBySpecies.replace("{n}", String(topSpecies.length))}
+        title={
+          stats.perSpecies.length > topSpecies.length
+            ? `${t.statsBySpecies} (${t.topOfShort.replace("{n}", String(topSpecies.length))})`
+            : t.statsBySpecies
+        }
         storageKey="rpv.rp.species"
         defaultOpen
-        force={force}
         summary={
           topSpecies.length > 0
-            ? `${t.topOfSpecies.replace("{n}", String(topSpecies.length)).replace("{total}", String(stats.perSpecies.length))} · ${topSpecies[0].species}: ${countLabel(topSpecies[0].copies, t.copiesUnit)}`
+            ? `${topSpecies[0].species}: ${countLabel(topSpecies[0].copies, t.copiesUnit)}`
             : t.noMatches
         }
       >
-        <div className="rp-table-wrap"><table className="rp-table">
+        <div className="rp-table-wrap"><table
+          className="rp-table"
+          aria-label={t.topOfSpecies.replace("{n}", String(topSpecies.length)).replace("{total}", String(stats.perSpecies.length))}
+        >
         <thead>
           <tr>
             <th scope="col">{t.inspSpecies}</th>
@@ -781,7 +755,6 @@ function StatsTab({ onToast }: { onToast: (msg: string, kind?: "success" | "erro
         title={t.statsNodes}
         storageKey="rpv.rp.nodes"
         defaultOpen={false}
-        force={force}
         summary={countLabel(stats.nodes.length, t.geneNodes)}
       >
         <div className="rp-table-wrap rp-node-table-wrap"><table className="rp-table rp-node-table">
@@ -822,8 +795,6 @@ function StatsTab({ onToast }: { onToast: (msg: string, kind?: "success" | "erro
       </table></div>
       {stats.nodes.length > nodeRows.length && (
         <p className="rp-empty">
-          {t.topOf.replace("{n}", String(nodeRows.length)).replace("{total}", String(stats.nodes.length))}
-          {" · "}
           {t.statsNodesLimited.replace("{n}", String(NODE_ROW_CAP))}
         </p>
       )}
@@ -839,6 +810,7 @@ function StatsTab({ onToast }: { onToast: (msg: string, kind?: "success" | "erro
 function NetworkTab() {
   const resolvedThemeId = useStore((s) => s.resolvedThemeId);
   const recon = useStore((s) => s.recon);
+  const compare = useStore((s) => s.compare);
   const stats = useStats();
   const t = useT();
   if (!stats) return null;
@@ -851,13 +823,6 @@ function NetworkTab() {
   }
   return (
     <div className="rp-section">
-      {/* Left-aligned note text like the scope note below: the hint used to be
-          a centred .rp-empty while the note was left-aligned, so the two
-          adjacent lines started at different x. */}
-      <p className="rp-note" style={{ margin: "0 0 2px", fontSize: 12.5 }}>
-        {t.networkHint}
-      </p>
-      <p className="rp-note">{t.scopeNote}</p>
       <NetworkView
         matrix={stats.transferMatrix}
         theme={themes[resolvedThemeId]}
@@ -870,6 +835,8 @@ function NetworkTab() {
             : undefined
         }
       />
+      {/* Scope is only ambiguous once a second document is loaded. */}
+      {compare && <p className="rp-note">{t.scopeNote}</p>}
     </div>
   );
 }
@@ -983,7 +950,7 @@ function NetworkView({
             onMouseLeave={() => setHover(null)}
           >
             <circle cx={p.x} cy={p.y} r={nodeR(sp)} fill={theme.event.speciation} stroke={theme.background} strokeWidth={1.2} />
-            <text x={lx} y={ly} fontSize={10} fill={theme.text} textAnchor={anchor} dominantBaseline="central">
+            <text x={lx} y={ly} fontSize={12} fill={theme.text} textAnchor={anchor} dominantBaseline="central">
               {short}
               <title>{sp}</title>
             </text>
@@ -1057,11 +1024,11 @@ function AnnotationsTab() {
           <button
             className="anno-body"
             onClick={() => locateGene(id, paneOf.get(id) ?? "primary")}
-            title={t.locateFirst}
+            title={t.locateNodeTitle}
           >
             <div className="anno-name">
               {nameOf.get(id) ?? id}
-              <span className="ni-pane"> · {paneLabel(id)}</span>
+              <span className="ni-pane"> ({paneLabel(id)})</span>
             </div>
             <div className="anno-preview">{ann.text}</div>
           </button>
@@ -1079,7 +1046,7 @@ function AnnotationsTab() {
             aria-label={t.annoRemove}
             onClick={() => removeAnnotation(id)}
           >
-            ✕
+            <Icon name="close" size={12} />
           </button>
         </div>
       ))}
@@ -1150,16 +1117,13 @@ function DiffTab() {
 
   return (
     <div className="rp-section">
-      <p className="rp-empty">
-        {pct === null ? t.notApplicable : `${pct}% ${t.agree}`}
-        {spct !== null && ` · ${t.speciesAgreeShort.replace("{p}", String(spct))}`}
-        {" · "}
-        {t.diffMatched.replace("{n}", String(diff.compared))}
-        {" · "}
-        {t.diffOnlyA.replace("{n}", String(diff.onlyA))}
-        {" · "}
-        {t.diffOnlyB.replace("{n}", String(diff.onlyB))}
-      </p>
+      <div className="rp-diff-summary">
+        <span>{pct === null ? t.notApplicable : `${pct}% ${t.agree}`}</span>
+        {spct !== null && <span>{t.speciesAgreeShort.replace("{p}", String(spct))}</span>}
+        <span>{t.diffMatched.replace("{n}", String(diff.compared))}</span>
+        <span>{t.diffOnlyA.replace("{n}", String(diff.onlyA))}</span>
+        <span>{t.diffOnlyB.replace("{n}", String(diff.onlyB))}</span>
+      </div>
       <div className="rp-toolbar">
         <button className="btn ghost" aria-pressed={onlyDiff} onClick={() => setOnlyDiff((v) => !v)}>
           {t.diffOnlyDiff}
@@ -1173,10 +1137,10 @@ function DiffTab() {
         <thead>
           <tr>
             <th scope="col">{t.colName}</th>
-            <th scope="col">{`${t.colEvent} · ${t.paneTagA}`}</th>
-            <th scope="col">{`${t.colEvent} · ${t.paneTagB}`}</th>
-            <th scope="col">{`${t.inspSpecies} · ${t.paneTagA}`}</th>
-            <th scope="col">{`${t.inspSpecies} · ${t.paneTagB}`}</th>
+            <th scope="col">{`${t.colEvent} (${t.paneTagA})`}</th>
+            <th scope="col">{`${t.colEvent} (${t.paneTagB})`}</th>
+            <th scope="col">{`${t.inspSpecies} (${t.paneTagA})`}</th>
+            <th scope="col">{`${t.inspSpecies} (${t.paneTagB})`}</th>
             <th scope="col">{t.diffColStatus}</th>
           </tr>
         </thead>
@@ -1319,21 +1283,22 @@ function ChecksTab() {
     }
   };
 
+  const passing = checks.filter((c) => !byCode.has(c.code));
+
   return (
     <div className="rp-section">
-      <p className="rp-checks-intro">
-        {t.checksIntro}{" "}
-        {issues.length === 0 && warningGroups.length === 0 ? (
-          <span className="rp-checks-pass">{"\u2713"} {t.checkAllGood}</span>
-        ) : (
-          <span className="rp-checks-fail">
-            {t.checksWithIssues.replace("{n}", formatCount(issues.length, locale)).replace("{m}", formatCount(checks.length, locale))}
-            {docWarnings.length + nestedWarnings.length + compareWarnings.length > 0 && t.warningSuffix}
-          </span>
-        )}
-      </p>
-      <div className="rp-toolbar">
-        <button className="btn" onClick={exportQc}>{t.exportReport}</button>
+      <div className="rp-checks-head">
+        <p className="rp-checks-intro">
+          {issues.length === 0 && warningGroups.length === 0 ? (
+            <span className="rp-checks-pass">{"\u2713"} {t.checkAllGood}</span>
+          ) : (
+            <span className="rp-checks-fail">
+              {t.checksWithIssues.replace("{n}", formatCount(issues.length, locale)).replace("{m}", formatCount(checks.length, locale))}
+              {docWarnings.length + nestedWarnings.length + compareWarnings.length > 0 && t.warningSuffix}
+            </span>
+          )}
+        </p>
+        <button className="btn ghost rp-checks-export" onClick={exportQc}>{t.exportReport}</button>
       </div>
 
       {warningGroups.map((g, gi) => (
@@ -1352,39 +1317,32 @@ function ChecksTab() {
         </RpCollapsible>
       ))}
 
+      {/* Failures first and only: a passing check is one line of text, so fifteen
+          of them stay quieter than the one that needs a decision. */}
       {checks.map((c) => {
         const iss = byCode.get(c.code);
-        if (!iss) {
-          return (
-            <div key={c.code} className="rp-issue pass">
-              <div className="rp-issue-head">
-                <span className="rp-check-tick">{"\u2713"}</span>
-                <span>{c.name}</span>
-              </div>
-            </div>
-          );
-        }
+        if (!iss) return null;
         return (
           <div key={c.code} className={`rp-issue ${iss.level}`}>
-            <div className="rp-issue-head">
+            <div className="rp-issue-meta">
+              <span className="rp-issue-name">{c.name}</span>
               <span className="rp-issue-count">{formatCount(iss.count, locale)}</span>
-              <span>{c.problem}</span>
-              <span className="ni-pane">{levelLabel(iss.level)}</span>
+              <span className="rp-issue-level">{levelLabel(iss.level)}</span>
             </div>
+            <p className="rp-issue-problem">{c.problem}</p>
             {iss.examples.length > 0 && (
               <div className="rp-issue-ex">
                 {iss.nodeIds.length > 0 ? (
                   // The first flagged node is one click away: the examples used
                   // to be dead text, so "known problems" never became "found".
                   <button
-                    className="btn ghost"
-                    style={{ fontSize: 11, padding: "1px 6px" }}
+                    className="btn ghost rp-issue-locate"
                     onClick={() => {
                       useStore.getState().setInspector({ kind: "gene", id: iss.nodeIds[0] });
                       useStore.getState().locateGene(iss.nodeIds[0]);
                     }}
                   >
-                    {t.locateFirst}: {localizeExample(iss.examples[0], locale)}
+                    {t.locateNode} {localizeExample(iss.examples[0], locale)}
                   </button>
                 ) : (
                   iss.examples.map((ex) => localizeExample(ex, locale)).join(", ")
@@ -1395,6 +1353,22 @@ function ChecksTab() {
           </div>
         );
       })}
+
+      {passing.length > 0 && (
+        <div className="rp-checks-passed">
+          <div className="rp-checks-passed-title">
+            {t.checksPassing} ({formatCount(passing.length, locale)})
+          </div>
+          {passing.map((c) => (
+            <div key={c.code} className="rp-check-pass-row">
+              <span className="rp-check-tick" aria-hidden="true">
+                {"\u2713"}
+              </span>
+              <span>{c.name}</span>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

@@ -9,7 +9,7 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import { select as d3select } from "d3-selection";
-import { zoom as d3zoom, zoomIdentity, type ZoomBehavior } from "d3-zoom";
+import { zoom as d3zoom, zoomIdentity, zoomTransform, type ZoomBehavior } from "d3-zoom";
 import { countLabel, useT } from "../i18n";
 import type { LayoutResult } from "../layout";
 import type { GeneNode } from "../model/types";
@@ -20,6 +20,8 @@ import { detailLevelForZoom, type RenderOptions } from "../render/options";
 import { type Theme } from "../render/theme";
 import { useStore, type PaneId } from "../state/store";
 import { useGlobalShortcuts, isTextInput } from "./hooks";
+import { Icon } from "./Icon";
+import { nextStamp, sameView, shouldPublish } from "./view-sync";
 
 /** Above this gene-node count the canvas virtualizes (culls off-screen gene
  *  elements) so panning/zooming a very large tree stays responsive. */
@@ -46,7 +48,8 @@ export interface ViewSync {
   y: number;
   /** Pane that produced the transform, so a pane never echoes back its own. */
   from: PaneId;
-  /** Monotonic token; only the newest sync is applied. */
+  /** Global ordering token; a pane ignores anything older than its own last
+   *  broadcast, so simultaneous refits converge instead of trading places. */
   nonce: number;
 }
 
@@ -117,8 +120,14 @@ export function Canvas({
   const openPanel = useStore((s) => s.openPanel);
   const closePanel = useStore((s) => s.closePanel);
   const [view, setView] = useState<View>({ k: 1, x: 0, y: 0 });
-  const viewNonce = useRef(0);
+  const lastPublished = useRef(0);
   const lastAppliedSync = useRef(0);
+  // The transform this pane last took from its linked peer. A transform that
+  // arrived from the peer must never be published back: each echo re-enters the
+  // other pane, and because the panes apply the peer mid-gesture the two
+  // viewports end up rolling each other back frame by frame (the "link views"
+  // jitter). Only transforms the user produced here may be broadcast.
+  const lastSynced = useRef<{ k: number; x: number; y: number } | null>(null);
   const [size, setSize] = useState({ w: 0, h: 0 });
   const [tip, setTip] = useState<Tip | null>(null);
   const [highlight, setHighlight] = useState<Set<string> | null>(null);
@@ -197,28 +206,43 @@ export function Canvas({
   }, []);
 
   // Report pan/zoom to the linked pane (compare "Link views"). Fires after
-  // every transform change; the peer applies it with from-guarding.
+  // every transform change the user made here; a transform that came in
+  // through syncView is echoed back by nobody (see lastSynced).
   useEffect(() => {
-    if (!onViewChange) return;
-    viewNonce.current += 1;
-    onViewChange({ k: view.k, x: view.x, y: view.y, from: paneId, nonce: viewNonce.current });
+    if (!onViewChange) {
+      // Unlinked: forget the peer value so a later link starts from scratch.
+      lastSynced.current = null;
+      return;
+    }
+    if (!shouldPublish(view, lastSynced.current)) return;
+    lastPublished.current = nextStamp();
+    onViewChange({ k: view.k, x: view.x, y: view.y, from: paneId, nonce: lastPublished.current });
+    // Anything this pane sends is its own from now on; the peer's value that
+    // used to sit in lastSynced must not suppress the next real move here.
+    lastSynced.current = null;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [view.k, view.x, view.y]);
 
-  // Apply the linked pane's transform (skipping echoes of our own).
-  const syncRef = useRef(onViewChange);
-  syncRef.current = onViewChange;
+  // Apply the linked pane's transform. Skipping echoes of our own is not
+  // enough: the peer may already sit on this transform, and re-applying a
+  // one-frame-old value in the middle of a wheel/drag rolls the gesture back
+  // and forth. So applying is also skipped when the value is already here,
+  // and whatever ends up on this pane is recorded as "not mine to publish".
   useEffect(() => {
     if (!syncView || syncView.from === paneId) return;
+    if (syncView.nonce <= lastPublished.current) return;
     if (syncView.nonce === lastAppliedSync.current) return;
     lastAppliedSync.current = syncView.nonce;
     const el = containerRef.current;
     const zb = zoomRef.current;
     if (!el || !zb) return;
+    if (sameView(zoomTransform(el), syncView)) return;
     d3select(el).call(
       zb.transform,
       zoomIdentity.translate(syncView.x, syncView.y).scale(syncView.k),
     );
+    const applied = zoomTransform(el);
+    lastSynced.current = { k: applied.k, x: applied.x, y: applied.y };
   }, [syncView, paneId]);
 
   // Track the container size so the culling viewport can be derived from it.
@@ -461,8 +485,7 @@ export function Canvas({
   );
 
   const gridStep = 24 * view.k;
-  const gridColor =
-    theme.id === "dark" ? "rgba(255,255,255,0.06)" : "rgba(24,24,27,0.06)";
+  const gridColor = theme.gridline;
   const showGrid = gridStep >= 6;
   // Level of detail follows the zoom: heavily zoomed-out views drop
   // labels/glyphs for legibility and rendering speed.
@@ -482,7 +505,7 @@ export function Canvas({
     () => result.reconciliation.geneTrees.reduce((n, tr) => n + tr.nodes.length, 0),
     [result],
   );
-  const ariaSummary = `${countLabel(result.reconciliation.species.nodes.length, t.species)} · ${countLabel(result.reconciliation.geneTrees.length, t.geneTreeUnit)} · ${countLabel(geneCount, t.geneNodes)}`;
+  const ariaSummary = `${countLabel(result.reconciliation.species.nodes.length, t.species)}, ${countLabel(result.reconciliation.geneTrees.length, t.geneTreeUnit)}, ${countLabel(geneCount, t.geneNodes)}`;
   const cullRef = useRef<CullRect | null>(null);
   const viewport = useMemo<CullRect | null>(() => {
     if (geneCount <= CULL_THRESHOLD || size.w === 0) return null;
@@ -593,15 +616,6 @@ export function Canvas({
         </div>
       )}
 
-      {/* Always-visible interaction legend (bottom-right corner): makes the
-          hidden-gesture capabilities discoverable without hovering. */}
-      <div className="canvas-hint">
-        <span><kbd>{t.hintClickHighlight}</kbd> {t.hintHighlightAction}</span>
-        <span><kbd>{t.hintAltCollapse}</kbd> {t.hintCollapseAction}</span>
-        <span><kbd>{t.hintShiftAnnotate}</kbd> {t.annoTitle}</span>
-        <span className="canvas-hint-mirror">{t.hintMirror}</span>
-      </div>
-
       {minimap && (
         <MiniMap
           result={result}
@@ -624,32 +638,32 @@ export function Canvas({
           are the ones actually bound: ⌘/Ctrl +/- zoom and F fit in this canvas,
           ⌘Z / ⌘⇧Z / ⌘Y undo-redo in App.tsx. */}
       <div className="float-toolbar">
-        <button data-tooltip={`${t.zoomOut} · ⌘/Ctrl -`} aria-label={t.zoomOut} onClick={() => zoomBy(1 / 1.2)}>
-          −
+        <button data-tooltip={`${t.zoomOut} (⌘/Ctrl -)`} aria-label={t.zoomOut} onClick={() => zoomBy(1 / 1.2)}>
+          <Icon name="minus" />
         </button>
         <span className="zoom-level" aria-label={`${t.zoomLevel} ${Math.round(view.k * 100)}%`}>{Math.round(view.k * 100)}%</span>
-        <button data-tooltip={`${t.zoomIn} · ⌘/Ctrl +`} aria-label={t.zoomIn} onClick={() => zoomBy(1.2)}>
-          +
+        <button data-tooltip={`${t.zoomIn} (⌘/Ctrl +)`} aria-label={t.zoomIn} onClick={() => zoomBy(1.2)}>
+          <Icon name="plus" />
         </button>
         <div className="ft-divider" />
-        <button data-tooltip={`${t.fit} · F`} aria-label={t.fit} onClick={fit}>
-          ⤢
+        <button data-tooltip={`${t.fit} (F)`} aria-label={t.fit} onClick={fit}>
+          <Icon name="fit" />
         </button>
         <button
-          data-tooltip={`${t.undo} · ⌘/Ctrl Z`}
+          data-tooltip={`${t.undo} (⌘/Ctrl Z)`}
           aria-label={t.undo}
           disabled={!canUndo}
           onClick={undo}
         >
-          ↶
+          <Icon name="undo" />
         </button>
         <button
-          data-tooltip={`${t.redo} · ⌘/Ctrl ⇧Z`}
+          data-tooltip={`${t.redo} (⌘/Ctrl ⇧Z)`}
           aria-label={t.redo}
           disabled={!canRedo}
           onClick={redo}
         >
-          ↷
+          <Icon name="redo" />
         </button>
         <div className="ft-divider" />
         <button
@@ -659,7 +673,7 @@ export function Canvas({
           aria-pressed={annotateMode}
           onClick={() => setAnnotateMode((v) => !v)}
         >
-          ✎
+          <Icon name="pencil" />
         </button>
         <button
           className={rightPanelOpen ? "active" : ""}
@@ -669,7 +683,7 @@ export function Canvas({
           disabled={!result}
           onClick={() => (rightPanelOpen ? closePanel() : openPanel(rightPanelTab))}
         >
-          ◧
+          <Icon name="panel" />
         </button>
       </div>
     </div>
@@ -844,9 +858,10 @@ function MiniMap({
           y={vy}
           width={vw}
           height={vh}
-          fill={theme.id === "dark" ? "rgba(255,255,255,0.10)" : "rgba(24,24,27,0.08)"}
-          stroke={theme.id === "dark" ? "#fafafa" : "#18181b"}
-          strokeWidth={1.5}
+          fill={theme.id === "dark" ? "#baa7ff" : "#6550b9"}
+          fillOpacity={0.12}
+          stroke={theme.id === "dark" ? "#baa7ff" : "#6550b9"}
+          strokeWidth={0.5}
         />
       </svg>
     </div>

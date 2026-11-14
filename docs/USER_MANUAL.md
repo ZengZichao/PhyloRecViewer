@@ -43,12 +43,12 @@
    - 6.3 Style
    - 6.4 Labels & batch rename
 7. [Right Analysis Panel](#7-right-analysis-panel)
-   - 7.1 Search & filter
+   - 7.1 Search
    - 7.2 Statistics
-   - 7.3 Transfer network
-   - 7.4 Data checks
+   - 7.3 Network
+   - 7.4 Checks
    - 7.5 Annotations
-   - 7.6 Differences (compare mode)
+   - 7.6 Diff (compare mode)
 8. [Legend](#8-legend)
 9. [Exporting](#9-exporting)
 10. [Session Save & Load](#10-session-save--load)
@@ -76,7 +76,7 @@ PhyloRecViewer is an **interactive gene–species reconciliation viewer** for ev
 - Comparison view for two reconciliations — panes are split stacked by default with a side-by-side toggle; disagreeing nodes are highlighted automatically (event type, species mapping and transfer donor/recipient are compared)
 - Rich, real-time layout & style parameters (4 orientations, compact layout, branch lengths, …)
 - Node search (regex supported), event-type filtering, gene-family filtering, confidence-range filtering
-- Statistics (with CSV export), transfer-network diagram, sixteen structural data checks (every check is listed in [Section 7.4](#74-data-checks))
+- Statistics (with CSV export), transfer-network diagram, sixteen structural data checks (every check is listed in [Section 7.4](#74-checks))
 - Batch label renaming and per-node annotations (with a dedicated annotations mode)
 - Undo / redo (100 steps), session save/load, multiple document tabs
 - One-click export to PNG (Screen 2× / 300 / 600 / 1200 / 2400 / 4800 DPI or custom) / SVG / PDF / interactive HTML / NHX; the headless CLI additionally exports a lossless recPhyloXML round-trip (see [Section 9.2](#92-data))
@@ -92,7 +92,7 @@ PhyloRecViewer is an **interactive gene–species reconciliation viewer** for ev
 5. **Analyse**: click the **◧** button (top-left of the canvas) to open the right analysis panel — search & filter, statistics, transfer network, data checks (see [Section 7](#7-right-analysis-panel)).
 6. **Export**: the **Export** menu offers publication-grade PNG / SVG / PDF / HTML, plus the **NHX (extended dialect)…** data export (NHX is Newick carrying `[&&NHX]` event annotations; there is no separate Newick item in the menu); the headless CLI (`npm run cli`) additionally writes a lossless recPhyloXML round-trip (see [Section 9.2](#92-data)).
 
-> The tips list at the bottom of the left panel and the shortcuts card under **Help** (press `?`) are always available.
+> The shortcuts card under **Help** (press `?`) is always available.
 
 ### 1.3 Glossary
 
@@ -157,22 +157,22 @@ Top to bottom, left to right:
 ├────────────────────────── Tab bar (TabBar): document tabs + new tab ──────────────────────────┤
 ├─ Left panel ───────┐ ┌─ Main canvas (Canvas) ───────────────────────────┐ ┌─ Right panel ─────┐
 │ Controls           │ │ Top-left: floating toolbar (zoom / fit / undo /  │ │ Analysis          │
-│  Layout actions    │ │          annotate / analysis toggle)             │ │  Search & filter  │
+│  Layout actions    │ │          annotate / analysis toggle)             │ │  Search           │
 │  Layout parameters │ │ Center: species tubes + gene skeleton + transfer │ │  Statistics       │
-│  Style             │ │         arcs + labels + annotations              │ │  Transfer network │
-│  Labels            │ │ Bottom-left: legend · top-right: minimap         │ │  Data checks      │
-│  (Tips)            │ │                                                  │ │  Annotations      │
-│                    │ │                                                  │ │  (Differences)    │
+│  Style             │ │         arcs + labels + annotations              │ │  Network          │
+│  Labels            │ │ Bottom-left: legend · top-right: minimap         │ │  Checks           │
+│                    │ │                                                  │ │  Annotations      │
+│                    │ │                                                  │ │  (Diff)           │
 └────────────────────┘ └──────────────────────────────────────────────────┘ └───────────────────┘
 ```
 
-- **Menu bar**: four dropdown menus — File, Export, View, Help — plus a **Preferences** button to the right of View (see [Section 12](#12-menu-bar-reference)). When parsing produces warnings, a warnings badge appears; click it to open the Data checks panel with the full list.
+- **Menu bar**: four dropdown menus — File, Export, View, Help — plus a **Preferences** button to the right of View (see [Section 12](#12-menu-bar-reference)). When parsing produces warnings, a warnings badge appears; click it to open the Checks panel with the full list.
 - **Tab bar**: multiple document tabs — new, switch, close (see 4.8).
-- **Left panel (Controls)**: four collapsible sections (Layout actions, Layout parameters, Style, Labels) plus a tips list at the bottom (see [Section 6](#6-left-controls-panel)).
+- **Left panel (Controls)**: four collapsible sections — Layout actions, Layout parameters, Style, Labels — separated by hairlines rather than boxed cards (see [Section 6](#6-left-controls-panel)).
 - **Main canvas**: the visualization area. Floating toolbar top-left (zoom, fit, undo/redo, annotation mode, analysis toggle); legend bottom-left; minimap top-right (see [Section 5](#5-canvas-navigation--interaction)).
-- **Right panel (Analysis)**: five fixed tabs (Search & filter, Statistics, Transfer network, Data checks, Annotations); a sixth **Differences** tab appears in compare mode (see [Section 7](#7-right-analysis-panel)).
+- **Right panel (Analysis)**: five fixed tabs (Search, Statistics, Network, Checks, Annotations); a sixth **Diff** tab appears in compare mode (see [Section 7](#7-right-analysis-panel)).
 
-> Both side panels are resizable by dragging their dividers; the `‹` / `›` buttons collapse and re-expand them. The narrow-window policy is evaluated **once at launch** (resizing later does not auto-collapse anything): on a window narrower than 1180 px the analysis panel starts collapsed, and below 920 px the left panel follows (both can be reopened manually).
+> Both side panels are resizable by dragging their dividers; the `‹` / `›` buttons collapse and re-expand them. Nothing is shown until a document is loaded: the empty screen is a single centred start panel with Open file, Shortcuts & help and the sample files, and both side panels appear with the first document. The narrow-window policy runs at launch and again whenever the window shrinks: below 1180 px the analysis panel collapses, below 920 px the left panel follows (both can be reopened manually, and they stay open until the window crosses the threshold again).
 
 ---
 
@@ -241,7 +241,7 @@ Once loaded the menu item becomes **"Nested: <filename> ✕"** (a name longer th
 - The **status bar** under the panes shows the breakdown: the agreement percentage (nodes agreeing on **all** dimensions, divided by the union of comparable nodes), the species-mapping agreement among matched nodes, and the counts of matched / only-in-A / only-in-B nodes — e.g. `71% in agreement · 80% species match · 7 matched · 1 only in A · 0 only in B`.
 - The **Link views** checkbox keeps the two panes' zoom/pan in sync; when unchecked each pane can be navigated independently.
 - The compare pane keeps its **own** mirror, collapse and family-color state, independent of the primary document — and the session file stores it too (see [Section 10](#10-session-save--load)).
-- The ◎ / ◉ button in the status bar hides or restores the diff highlighting; the right panel gains a **Differences** tab (see 7.6).
+- The ◎ / ◉ button in the status bar hides or restores the diff highlighting; the right panel gains a **Diff** tab (see 7.6).
 
 Once loaded the menu item becomes **"Compare: <filename> ✕"** (a name longer than 20 characters is elided to the first 18 plus `…`); click it to remove the comparison.
 
@@ -406,11 +406,11 @@ At the bottom of the section:
 
 Click the floating-toolbar **◧** button to open/close the panel (after closing it with `Esc`, `⌘F` jumps straight to the search tab). The panel has five fixed tabs plus a sixth in compare mode:
 
-**Search & filter / Statistics / Transfer network / Data checks / Annotations / (Differences)**
+**Search / Statistics / Network / Checks / Annotations / (Diff)**
 
 > Keyboard: move between tabs with `←` / `→`, `Home` / `End`.
 
-### 7.1 Search & filter
+### 7.1 Search
 
 - **Search box**: type a gene or species name; tick **Regex** for regular-expression search.
 - `Enter` jumps to the next match, `Shift + Enter` to the previous; **Next / Previous** buttons do the same and **centre** the main canvas on each match. The count shows e.g. `12 matches`; "No matches" when none.
@@ -422,7 +422,7 @@ Click the floating-toolbar **◧** button to open/close the panel (after closing
 
 ### 7.2 Statistics
 
-- **Summary**: total node count, extant-gene nodes, internal event nodes, and the transfer-arrival count. Transfer arrivals are overlay events — excluded from the composition chart but counted in Summary (speciation / duplication / loss are broken down in the distribution chart and the by-gene-family table).
+- **Summary**: eight counts in one two-column grid — Nodes, Tip node, Internal node, Gene trees, and one per event type (Speciation, Duplication, Loss, Transfer). Transfer arrivals are overlay events: they stay out of the composition chart but are still counted here. **Export CSV** sits on the heading line of this block (see the end of this section).
 - **Event distribution**: proportional view of speciation / duplication / loss / transfer donor / bifurcation donor / extant gene.
 - **By gene family** (multiple families): per-family event-count table.
 - **Transfer matrix**: donor → recipient transfer counts (top 25 rows; Donor / Recipient / Count columns).
@@ -430,7 +430,7 @@ Click the floating-toolbar **◧** button to open/close the panel (after closing
 - **Nodes**: full node detail table (#, Name, Type, Event, Species, plus Gene tree when several gene trees are loaded). Nodes are classified **Tip node / Loss / Internal node** — losses are no longer folded into "Internal node" — and are listed extant genes first, then losses, then internal events. The table is capped at 500 rows; when truncated it shows a "Top X of Y · Table truncated (first 500 rows)" note.
 - **Export CSV**: writes the statistics to `<filename>-stats.csv` with **stable English column names** and a **UTF-8 BOM** (so Windows Excel opens species names correctly), plus a provenance header (source file, app version, timestamp). Sections: `families`, `transfer_matrix`, `species` — including a `transfer_arrivals` column and an extra row whose species column is the literal `NA` whenever nodes without a species assignment exist (the on-screen table labels that same row `(no species)`) — and `nodes`, which adds `donors`, `recipients`, `time_slice`, `confidence` and `branch_length` columns. The CSV is never truncated.
 
-### 7.3 Transfer network
+### 7.3 Network
 
 A **circular graph** of donor → recipient transfers:
 
@@ -438,11 +438,10 @@ A **circular graph** of donor → recipient transfers:
 - **Hover** a node to focus its related transfers; the rest dim.
 - Self-transfers (donor = recipient) render as small rings.
 - Shows "No transfers" when there are none.
-- Caption: Nodes = species, arrows = transfers (thicker = more). Hover to focus.
 
-### 7.4 Data checks
+### 7.4 Checks
 
-Sixteen structural checks run on the loaded data — the table below is the complete list, and the panel itself shows one row per check; each row carries its **name**, the problem description, and a count:
+Sixteen structural checks run on the loaded data. The panel opens with the verdict and **Export quality report**, then lists only the checks that failed — each with its count, the problem and a one-click jump to the first flagged node — and closes with a compact **Passing** list, so a single anomaly never drowns in fifteen passes. The table below is the complete catalogue:
 
 | Check (name) | Problem found |
 |--------------|---------------|
@@ -463,13 +462,13 @@ Sixteen structural checks run on the loaded data — the table below is the comp
 | Negative / invalid branch length | A branch length is negative or not finite; it is clamped to 0 for drawing |
 | Vertical edge between unrelated clades | A non-transfer gene edge jumps between unrelated species — impossible without a transfer; check the species recorded on each event |
 
-When everything passes the panel reports **"All data checks passed"**; otherwise "N of M checks flagged".
+When everything passes the panel reports **"All data checks passed"** at the top; otherwise it reads "N of M checks flagged" and lists the failures first.
 
 ### 7.5 Annotations
 
 Central management for the current document's annotations: each entry lists its node and text, with jump / edit / remove actions. When empty: "No annotations yet. Shift-click a gene node (or use annotation mode) to add one."
 
-### 7.6 Differences (compare mode)
+### 7.6 Diff (compare mode)
 
 Only visible in compare view (4.7):
 
@@ -593,7 +592,7 @@ Undoable actions: species mirroring, collapse/expand, gene-family color changes,
 | | Tutorial | Replay the five-step onboarding tour |
 | | About PhyloRecViewer | Shows the version, license and citation, and copies the diagnostics text to the clipboard |
 
-The menu bar also shows a **warnings badge** (e.g. `3 warnings`) — it is a button, and clicking it opens the Data checks panel with the full list. The empty area of the menu bar drags the window (desktop build).
+The menu bar also shows a **warnings badge** (e.g. `3 warnings`) — it is a button, and clicking it opens the Checks panel with the full list. The empty area of the menu bar drags the window (desktop build).
 
 ---
 

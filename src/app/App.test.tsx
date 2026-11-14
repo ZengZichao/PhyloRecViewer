@@ -59,8 +59,11 @@ describe("App smoke render", () => {
     document.body.appendChild(host);
     const root = await renderApp(host);
     expect(host.querySelector(".menu-bar")).not.toBeNull();
-    expect(host.querySelector(".sidebar")).not.toBeNull();
     expect(host.querySelector(".state-panel.empty-hub")).not.toBeNull();
+    // Nothing to control and nothing to analyse: both panels stay out of the
+    // way until a document exists, so the hub owns the window.
+    expect(host.querySelector(".sidebar")).toBeNull();
+    expect(host.querySelector(".right-panel")).toBeNull();
     await unmountAndRemove(root, host);
   });
 
@@ -87,8 +90,8 @@ describe("App smoke render", () => {
     document.body.appendChild(host);
     const root = await renderApp(host);
     expect(host.querySelector(".canvas")).not.toBeNull();
-    // The always-visible interaction hint bar.
-    expect(host.querySelector(".canvas-hint")).not.toBeNull();
+    // The canvas control cluster (zoom, fit, undo/redo, annotate, panel).
+    expect(host.querySelector(".float-toolbar")).not.toBeNull();
     await unmountAndRemove(root, host);
   });
 

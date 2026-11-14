@@ -134,7 +134,7 @@ export function Legend({
               type="color"
               className="legend-color"
               name={`legend-color-${tt.index}`}
-              aria-label={`${tt.name || `${t.geneTree} ${tt.index + 1}`} · ${t.changeColor}`}
+              aria-label={`${t.changeColor}: ${tt.name || `${t.geneTree} ${tt.index + 1}`}`}
               title={t.changeColor}
               value={geneColors[tt.index] ?? geneColor(theme, tt.index)}
               onChange={(e) => setGeneColor(tt.index, e.target.value)}

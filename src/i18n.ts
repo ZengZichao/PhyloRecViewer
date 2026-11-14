@@ -125,6 +125,7 @@ export interface Dict {
   legendLocate: string;
   /** Help overlay / settings entry that opens the first-run tutorial. */
   viewTour: string;
+  replayTour: string;
   // tree orientation
   orientation: string;
   orientTop: string;
@@ -132,10 +133,6 @@ export interface Dict {
   orientLeft: string;
   orientRight: string;
   hint: string;
-  /** Title of the tips box, centered above the bullet list. */
-  tipsTitle: string;
-  /** The individual tip lines, listed at the bottom of the sidebar. */
-  tips: string[];
   /** Hover hint on a gene node: the click gestures it offers. */
   hintClickHighlight: string;
   hintShiftAnnotate: string;
@@ -144,7 +141,6 @@ export interface Dict {
   hintAltCollapse: string;
   hintHighlightAction: string;
   /** Hover-hint wording for the collapse/expand gesture. */
-  hintCollapseAction: string;
   collapseExpandAction: string;
   // legend
   events: string;
@@ -157,7 +153,7 @@ export interface Dict {
   leavesUnit: string;
   expandHint: string;
   // app states + stats
-  emptyBody: string;
+  emptyFormats: string;
   errorTitle: string;
   errorHint: string;
   /** Error panel action that takes the user back to the file picker. */
@@ -167,7 +163,6 @@ export interface Dict {
   /** Error panel action that loads one of the bundled samples. */
   errorSample: string;
   dropToOpen: string;
-  emptyOrSample: string;
   /** Display names of the bundled samples, used in the menu, empty state and tabs. */
   sampleShowcase: string;
   sampleCompare: string;
@@ -255,14 +250,11 @@ export interface Dict {
   resetAll: string;
   resetAllTitle: string;
   /** The stats section's expand / collapse all toggle. */
-  expandAll: string;
-  collapseAll: string;
   /** The one-line per-species summary stats show while a section is folded. */
   /** The preferences dialog. */
   prefsTitle: string;
   defaultView: string;
   saveDefaultView: string;
-  saveDefaultViewTitle: string;
   clearDefaultView: string;
   restorePrefs: string;
   /** The first-run onboarding tour. */
@@ -288,7 +280,6 @@ export interface Dict {
 matchCount: string;
 noMatches: string;
 noEvents: string;
-donutTotal: string;
   prevMatch: string;
   nextMatch: string;
   filterEvents: string;
@@ -298,6 +289,7 @@ donutTotal: string;
   statsByFamily: string;
   statsTransferMatrix: string;
   statsBySpecies: string;
+  topOfShort: string;
   exportCsv: string;
   donor: string;
   recipient: string;
@@ -315,8 +307,8 @@ donutTotal: string;
   colEvent: string;
   nodeLeaf: string;
   nodeInternal: string;
+  geneTreesCol: string;
   eventDistribution: string;
-  transferOverlayNote: string;
   filterConfidence: string;
   /** Search: "show only matching nodes" toggle. */
   searchOnlyMatch: string;
@@ -324,7 +316,6 @@ donutTotal: string;
   rendering: string;
   pngResolution: string;
   noTransfers: string;
-  networkHint: string;
   panelChecks: string;
   checkAllGood: string;
   checkUnknownSpecies: string;
@@ -333,8 +324,8 @@ donutTotal: string;
   checkLeafInternalSpecies: string;
   checkNoSpecies: string;
   checkDuplicateSpecies: string;
-  checksIntro: string;
   checksWithIssues: string;
+  checksPassing: string;
   checkNameUnknownSpecies: string;
   checkNameDuplicateSpecies: string;
   checkNameNoSpecies: string;
@@ -394,7 +385,8 @@ donutTotal: string;
   compareWarningsLabel: string;
   compareWarningsNamed: string;
   exportReport: string;
-  locateFirst: string;
+  locateNode: string;
+  locateNodeTitle: string;
   levelError: string;
   levelWarning: string;
   levelInfo: string;
@@ -627,26 +619,17 @@ const en: Dict = {
   legendHorizontal: "Horizontal layout",
   legendLocate: "Located node",
   viewTour: "Tutorial",
+  replayTour: "Replay tour",
   orientation: "Orientation",
   orientTop: "Root top",
   orientBottom: "Root bottom",
   orientLeft: "Root left",
   orientRight: "Root right",
   hint: "Tip: scroll to zoom, drag to pan. Click a gene node to highlight its lineage; click a species branch to mirror it; Alt/⌥- or ⌘-click an internal gene node to collapse / expand; Shift-click a node to annotate; click empty space to clear.",
-  tipsTitle: "Tips",
-  tips: [
-    "Scroll to zoom, drag to pan",
-    "Click a gene node to highlight its lineage",
-    "Click a species branch to mirror it",
-    "Alt/⌥- or ⌘-click an internal gene node to collapse / expand",
-    "Shift-click a node to annotate",
-    "Click empty space to clear",
-  ],
   hintClickHighlight: "Click",
   hintShiftAnnotate: "Shift",
   hintAltCollapse: "Alt / ⌥ / ⌘",
   hintHighlightAction: "highlight lineage",
-  hintCollapseAction: "collapse / expand",
   collapseExpandAction: "Collapse or expand a clade",
   events: "Evolutionary events",
   geneFamilies: "Gene families",
@@ -656,21 +639,20 @@ const en: Dict = {
   collapsedClade: "Collapsed clade",
   leavesUnit: "extant genes",
   expandHint: "Alt/⌥- or ⌘-click to expand",
-  emptyBody: "Drop a file here, or open one from the File menu.",
+  emptyFormats: "recPhyloXML, NHX, Newick",
   errorTitle: "Could not parse this file",
   errorHint: "Supported: recPhyloXML (.recphyloxml / .recphylo / .phyloxml / .xml), NHX (.nhx), Newick (.nwk / .newick). Check the file format and encoding.",
   errorRetry: "Choose another file",
   errorBack: "Back to previous",
   errorSample: "Load sample",
   dropToOpen: "Drop to open",
-  emptyOrSample: "Load sample:",
   sampleShowcase: "Showcase",
   sampleCompare: "Comparison",
   sampleCompareB: "Outcome B (duplication-rich)",
   sampleNested: "Nested",
   sampleNestedB: "Symbiont → Host",
   parsing: "Parsing…",
-  parsingLarge: "Large file — this may take a moment…",
+  parsingLarge: "Opening a large file…",
   helpButton: "Help",
   helpTitle: "Shortcuts & interactions",
   helpKeyboard: "Keyboard",
@@ -701,11 +683,11 @@ const en: Dict = {
   zoomOut: "Zoom out",
   fit: "Fit to window",
   analyze: "Analysis",
-  panelSearch: "Search & filter",
+  panelSearch: "Search",
   panelStats: "Statistics",
-  panelNetwork: "Transfer network",
+  panelNetwork: "Network",
   panelAnnotate: "Annotations",
-  panelDiff: "Differences",
+  panelDiff: "Diff",
   noAnnotations: "No annotations yet. Shift-click a gene node (or use annotation mode) to add one.",
   diffLegend: "Nodes differing between files",
   diffHide: "Hide highlight",
@@ -715,23 +697,20 @@ const en: Dict = {
   mergedToast: "Merged {n} files into one document",
   resetAll: "Reset all",
   resetAllTitle: "Reset every layout and style option to its default",
-  expandAll: "Expand all",
-  collapseAll: "Collapse all",
   prefsTitle: "Preferences",
   defaultView: "Default view",
   saveDefaultView: "Set as default view",
-  saveDefaultViewTitle: "Apply the current layout / style to every new document",
   clearDefaultView: "Clear default view",
   restorePrefs: "Reset preferences",
   onboardSkip: "Skip",
   onboardNext: "Next",
   onboardPrev: "Back",
   onboardDone: "Done",
-  tourStep1Title: "Controls — shape the drawing",
+  tourStep1Title: "Controls",
   tourStep1Body: "The left panel composes the picture: orientation, spacing, style and labels. Everything here updates the canvas live.",
-  tourStep2Title: "Analysis — read the data",
+  tourStep2Title: "Analysis",
   tourStep2Body: "The right panel inspects it: search & filter, statistics, the transfer network and data checks.",
-  tourStep3Title: "Canvas — nodes are interactive",
+  tourStep3Title: "Canvas",
   tourStep3Body: "Click a gene node to highlight its lineage, Shift-click to annotate, Alt/⌥- or ⌘-click an internal node to collapse it. Click a species branch to mirror it.",
   tourStep4Title: "Nested & compare views",
   tourStep4Body: "Add a nested level for a 3-level gene → symbiont → host view, or load a second reconciliation to compare.",
@@ -744,7 +723,6 @@ const en: Dict = {
 matchCount: "matches",
 noMatches: "No matches",
 noEvents: "No events",
-donutTotal: "Total events",
   prevMatch: "Previous",
   nextMatch: "Next",
   filterEvents: "By event type",
@@ -753,7 +731,8 @@ donutTotal: "Total events",
   statsTotals: "Summary",
   statsByFamily: "By gene family",
   statsTransferMatrix: "Transfer matrix",
-  statsBySpecies: "By species (top {n})",
+  statsBySpecies: "By species",
+  topOfShort: "top {n}",
   exportCsv: "Export CSV",
   donor: "Donor",
   recipient: "Recipient",
@@ -769,15 +748,14 @@ donutTotal: "Total events",
   colEvent: "Event",
   nodeLeaf: "Tip node",
   nodeInternal: "Internal node",
+  geneTreesCol: "Gene trees",
   eventDistribution: "Event distribution",
-  transferOverlayNote: "Transfer arrivals are an overlay event, not part of the composition above; the count is shown in Summary.",
   filterConfidence: "Confidence range",
   searchOnlyMatch: "Show only matches",
   rendering: "Rendering…",
   pngResolution: "PNG resolution (DPI)",
   noTransfers: "No transfers",
-  networkHint: "Nodes = species, arrows = transfers (thicker = more). Hover to focus.",
-  panelChecks: "Data checks",
+  panelChecks: "Checks",
   checkAllGood: "All data checks passed",
   checkUnknownSpecies: "references to species missing from the species tree",
   checkDonorNoTransferBack: "transfer donors without a transfer-arrival child",
@@ -785,8 +763,8 @@ donutTotal: "Total events",
   checkLeafInternalSpecies: "extant genes placed on internal (non-leaf) species",
   checkNoSpecies: "gene nodes with no species assignment",
   checkDuplicateSpecies: "duplicated species names in the species tree",
-  checksIntro: "Structural checks on the loaded data:",
   checksWithIssues: "{n} of {m} checks flagged",
+  checksPassing: "Passing",
   checkNameUnknownSpecies: "Species references resolve",
   checkNameDuplicateSpecies: "Species names are unique",
   checkNameNoSpecies: "Every gene has a species",
@@ -803,7 +781,7 @@ donutTotal: "Total events",
   checkNameNonBinaryNode: "Speciation / duplication are binary",
   checkTransferBackwardsInTime: "transfers into an ancestor species (backwards in time)",
   checkNameTransferBackwardsInTime: "Transfers move forward in time",
-  overviewMode: "Overview mode — zoom in to see labels",
+  overviewMode: "Zoom in to show labels",
   renameLabel: "Rename label",
   renameAllSameName: "Apply to all {n} labels with this name",
   menuNew: "New document",
@@ -837,7 +815,7 @@ donutTotal: "Total events",
   aboutTitle: "About PhyloRecViewer",
   aboutVersion: "Version",
   aboutCitation: "Citation",
-  aboutLicense: "Released under the MIT License. Runs fully offline; no telemetry.",
+  aboutLicense: "MIT License. Runs offline without telemetry.",
   copyDiagnostics: "Copy diagnostics",
   dataHealth: "Data checks",
   parseWarnings: "Parser warnings",
@@ -846,7 +824,8 @@ donutTotal: "Total events",
   compareWarningsLabel: "Compare layer warnings",
   compareWarningsNamed: "Compare layer warnings ({name})",
   exportReport: "Export quality report",
-  locateFirst: "Scroll to first match",
+  locateNode: "Locate",
+  locateNodeTitle: "Locate this node on the canvas",
   levelError: "Error",
   levelWarning: "Warning",
   levelInfo: "Note",
@@ -866,7 +845,7 @@ donutTotal: "Total events",
   topOfSpecies: "Top {n} of {total} species",
   unknownSpeciesRow: "(no species)",
   nodeLoss: "Loss",
-  regexInvalid: "Invalid regular expression — plain-text matching is used instead",
+  regexInvalid: "Invalid expression. Using plain-text matching.",
   resultsList: "Matches",
   restoreTitle: "Restore last session?",
   restoreBody: "An autosaved snapshot from {time} is available.",
@@ -878,16 +857,16 @@ donutTotal: "Total events",
   unsavedChanges: "Unsaved changes",
   close: "Close",
   autosaveSection: "Autosave",
-  autosaveOn: "On — last saved {time}",
-  autosaveNone: "On — nothing saved yet this session",
-  autosaveFailedLabel: "Autosave failed — export a session file to be safe",
+  autosaveOn: "Last saved {time}",
+  autosaveNone: "Not saved yet this session",
+  autosaveFailedLabel: "Autosave failed. Export a session file to avoid losing work.",
   clearAutosave: "Clear autosave data",
   clearAutosaveDone: "Autosave data cleared",
   recoverySection: "Recovery",
   recoveryFound: "A snapshot that failed to restore was kept. Export it to inspect or re-import:",
   recoveryExport: "Export snapshot (JSON)",
   renameTab: "Rename tab",
-  tabTooltipMerged: "Merged document — {n} source files",
+  tabTooltipMerged: "Merged from {n} source files",
   batchPreview: "Labels to replace: {n}",
   batchPreviewEmpty: "No label matches this pattern",
   batchInvalidRegex: "Invalid regular expression",
@@ -921,7 +900,7 @@ donutTotal: "Total events",
   notApplicable: "—",
   parseEmptyFile: "The file is empty. Choose a recPhyloXML, NHX or Newick file with tree data.",
   supportedFormats: "Supported: {formats}.",
-  mergedTabTitle: "{n} families · {name}",
+  mergedTabTitle: "{name} ({n} families)",
   fileTooLarge: "Exceeds the 64 MiB limit: {names}",
   tabFileOpenFailed: "Failed to open a file in tab “{title}”",
   tabCorrupt: "Could not open tab “{title}”: the document is corrupt or from another version",
@@ -1012,7 +991,7 @@ const zh: Dict = {
   includeLegendTitle: "在画布上显示图例，并在导出图像时一并包含",
   loadFailed: "载入失败",
   exportFailed: "导出失败",
-  levelHeight: "层高",
+  levelHeight: "层级高度",
   geneSpacing: "基因间距",
   speciesSpacing: "物种间距",
   speciesWidth: "物种枝粗细",
@@ -1078,26 +1057,17 @@ const zh: Dict = {
   legendHorizontal: "图例水平排布",
   legendLocate: "定位节点",
   viewTour: "新手指南",
+  replayTour: "重新播放导览",
   orientation: "树朝向",
   orientTop: "根在上",
   orientBottom: "根在下",
   orientLeft: "根在左",
   orientRight: "根在右",
   hint: "提示：滚轮缩放、拖拽平移；点击基因节点高亮其谱系；点击物种枝镜像；Alt/⌥ 或 ⌘ 单击内部基因节点折叠 / 展开；Shift 点击节点添加批注；点击空白清除。",
-  tipsTitle: "提示",
-  tips: [
-    "滚轮缩放、拖拽平移",
-    "点击基因节点高亮其谱系",
-    "点击物种枝镜像",
-    "Alt/⌥ 或 ⌘ 单击内部基因节点折叠 / 展开",
-    "Shift 点击节点添加批注",
-    "点击空白清除",
-  ],
   hintClickHighlight: "点击",
   hintShiftAnnotate: "Shift",
   hintAltCollapse: "Alt / ⌥ / ⌘",
   hintHighlightAction: "高亮谱系",
-  hintCollapseAction: "折叠 / 展开",
   collapseExpandAction: "折叠或展开演化支",
   events: "演化事件",
   geneFamilies: "基因家族",
@@ -1107,21 +1077,20 @@ const zh: Dict = {
   collapsedClade: "折叠分支",
   leavesUnit: "个现存基因",
   expandHint: "Alt/⌥ 或 ⌘ 单击展开",
-  emptyBody: "将文件拖拽到此处，或使用「文件」菜单打开。",
+  emptyFormats: "recPhyloXML、NHX、Newick",
   errorTitle: "无法解析该文件",
   errorHint: "支持格式：recPhyloXML（.recphyloxml / .recphylo / .phyloxml / .xml）、NHX（.nhx）、Newick（.nwk / .newick）。请检查文件格式与编码。",
   errorRetry: "重新选择文件",
   errorBack: "返回上一份",
   errorSample: "装入示例",
   dropToOpen: "释放以打开",
-  emptyOrSample: "装入示例：",
   sampleShowcase: "完整示例",
   sampleCompare: "对比示例",
   sampleCompareB: "结果 B（重复为主）",
   sampleNested: "嵌套示例",
   sampleNestedB: "共生体 → 宿主",
   parsing: "解析中…",
-  parsingLarge: "文件较大 — 可能需要稍候…",
+  parsingLarge: "正在打开较大的文件…",
   helpButton: "帮助",
   helpTitle: "快捷键与操作",
   helpKeyboard: "键盘快捷键",
@@ -1152,9 +1121,9 @@ const zh: Dict = {
   zoomOut: "缩小",
   fit: "适应窗口",
   analyze: "分析面板",
-  panelSearch: "搜索与筛选",
+  panelSearch: "搜索",
   panelStats: "结果统计",
-  panelNetwork: "转移网络",
+  panelNetwork: "网络",
   panelAnnotate: "批注",
   panelDiff: "差异",
   noAnnotations: "还没有批注。Shift 点击基因节点（或使用批注模式）添加一条。",
@@ -1166,23 +1135,20 @@ const zh: Dict = {
   mergedToast: "已将 {n} 个文件合并为一个文档",
   resetAll: "全部重置",
   resetAllTitle: "将所有布局与样式选项重置为默认",
-  expandAll: "全部展开",
-  collapseAll: "全部收起",
   prefsTitle: "设置",
   defaultView: "默认视图",
   saveDefaultView: "设为默认视图",
-  saveDefaultViewTitle: "对每个新文档应用当前的布局 / 样式",
   clearDefaultView: "清除默认视图",
   restorePrefs: "重置偏好",
   onboardSkip: "跳过",
   onboardNext: "下一步",
   onboardPrev: "上一步",
   onboardDone: "完成",
-  tourStep1Title: "控制面板 — 构图",
+  tourStep1Title: "控制面板",
   tourStep1Body: "左侧面板用于构图：方向、间距、样式与标签，所有调整都会实时反映在画布上。",
-  tourStep2Title: "分析面板 — 读数据",
+  tourStep2Title: "分析面板",
   tourStep2Body: "右侧面板用于检视：搜索与筛选、结果统计、转移网络与数据检查。",
-  tourStep3Title: "画布 — 节点可交互",
+  tourStep3Title: "画布",
   tourStep3Body: "点击基因节点高亮谱系，Shift 点击添加批注，Alt/⌥ 或 ⌘ 单击内部节点折叠 / 展开，点击物种枝镜像。",
   tourStep4Title: "嵌套与对比视图",
   tourStep4Body: "添加嵌套层可展示基因 → 共生体 → 宿主三层视图；或载入另一份调和结果进行对比。",
@@ -1195,7 +1161,6 @@ const zh: Dict = {
 matchCount: "个匹配",
 noMatches: "无匹配",
 noEvents: "无事件",
-donutTotal: "事件总数",
   prevMatch: "上一个",
   nextMatch: "下一个",
   filterEvents: "按事件类型",
@@ -1204,7 +1169,8 @@ donutTotal: "事件总数",
   statsTotals: "汇总",
   statsByFamily: "按基因家族",
   statsTransferMatrix: "转移矩阵",
-  statsBySpecies: "按物种（前 {n}）",
+  statsBySpecies: "按物种",
+  topOfShort: "前 {n}",
   exportCsv: "导出 CSV",
   donor: "供体",
   recipient: "受体",
@@ -1220,15 +1186,14 @@ donutTotal: "事件总数",
   colEvent: "事件",
   nodeLeaf: "末端节点",
   nodeInternal: "内部节点",
+  geneTreesCol: "基因树",
   eventDistribution: "事件分布",
-  transferOverlayNote: "转移到达为叠加事件，不计入上面的构成占比；其计数见「汇总」。",
   filterConfidence: "置信度区间",
   searchOnlyMatch: "仅显示匹配",
   rendering: "渲染中…",
   pngResolution: "PNG 分辨率（DPI）",
   noTransfers: "无转移事件",
-  networkHint: "节点 = 物种，箭头 = 转移（越粗越多）；悬停可聚焦。",
-  panelChecks: "数据检查",
+  panelChecks: "检查",
   checkAllGood: "全部数据检查通过",
   checkUnknownSpecies: "处引用了物种树中不存在的物种",
   checkDonorNoTransferBack: "个转移供体缺少转移到达子节点",
@@ -1236,8 +1201,8 @@ donutTotal: "事件总数",
   checkLeafInternalSpecies: "个现存基因位于内部（非叶）物种",
   checkNoSpecies: "个基因节点未分配物种",
   checkDuplicateSpecies: "处物种树中存在重名物种",
-  checksIntro: "对载入数据的结构检查：",
   checksWithIssues: "{m} 项检查中 {n} 项异常",
+  checksPassing: "通过",
   checkNameUnknownSpecies: "物种引用有效",
   checkNameDuplicateSpecies: "物种命名唯一",
   checkNameNoSpecies: "基因均有物种归属",
@@ -1254,7 +1219,7 @@ donutTotal: "事件总数",
   checkNameNonBinaryNode: "物种形成 / 基因重复应为二叉",
   checkTransferBackwardsInTime: "转移到祖先物种（时间倒流）",
   checkNameTransferBackwardsInTime: "转移沿时间正向",
-  overviewMode: "总览模式 — 放大后显示标签",
+  overviewMode: "放大后显示标签",
   renameLabel: "重命名标签",
   renameAllSameName: "应用到所有 {n} 个同名标签",
   menuNew: "新建文档",
@@ -1288,7 +1253,7 @@ donutTotal: "事件总数",
   aboutTitle: "关于 PhyloRecViewer",
   aboutVersion: "版本",
   aboutCitation: "引用",
-  aboutLicense: "基于 MIT 许可证发布。完全离线运行，无遥测。",
+  aboutLicense: "MIT 许可证。完全离线运行，无遥测。",
   copyDiagnostics: "复制诊断信息",
   dataHealth: "数据检查",
   parseWarnings: "解析警告",
@@ -1297,7 +1262,8 @@ donutTotal: "事件总数",
   compareWarningsLabel: "对比层警告",
   compareWarningsNamed: "对比层警告（{name}）",
   exportReport: "导出质量报告",
-  locateFirst: "滚动到第一处",
+  locateNode: "定位",
+  locateNodeTitle: "在画布中定位该节点",
   levelError: "错误",
   levelWarning: "警告",
   levelInfo: "说明",
@@ -1317,7 +1283,7 @@ donutTotal: "事件总数",
   topOfSpecies: "前 {n} / 共 {total} 个物种",
   unknownSpeciesRow: "（无物种）",
   nodeLoss: "基因丢失",
-  regexInvalid: "正则表达式无效 — 已改用普通文本匹配",
+  regexInvalid: "表达式无效，已改用普通文本匹配。",
   resultsList: "匹配结果",
   restoreTitle: "恢复上次会话？",
   restoreBody: "发现 {time} 自动保存的会话快照。",
@@ -1329,16 +1295,16 @@ donutTotal: "事件总数",
   unsavedChanges: "未保存的更改",
   close: "关闭",
   autosaveSection: "自动保存",
-  autosaveOn: "已开启 — 上次保存 {time}",
-  autosaveNone: "已开启 — 本次会话尚未保存",
-  autosaveFailedLabel: "自动保存失败 — 请导出会话文件以防丢失",
+  autosaveOn: "上次保存 {time}",
+  autosaveNone: "本次会话尚未保存",
+  autosaveFailedLabel: "自动保存失败，请导出会话文件以免丢失数据。",
   clearAutosave: "清除自动保存数据",
   clearAutosaveDone: "已清除自动保存数据",
   recoverySection: "恢复",
   recoveryFound: "存在一份未能恢复的快照，已保留。可导出以便检查或重新导入：",
   recoveryExport: "导出快照（JSON）",
   renameTab: "重命名标签页",
-  tabTooltipMerged: "合并文档 — {n} 个源文件",
+  tabTooltipMerged: "由 {n} 个源文件合并",
   batchPreview: "将替换 {n} 个标签",
   batchPreviewEmpty: "没有标签匹配该模式",
   batchInvalidRegex: "正则表达式无效",
@@ -1372,7 +1338,7 @@ donutTotal: "事件总数",
   notApplicable: "—",
   parseEmptyFile: "文件为空。请选择包含树数据的 recPhyloXML、NHX 或 Newick 文件。",
   supportedFormats: "支持格式：{formats}。",
-  mergedTabTitle: "{n} 个基因家族 · {name}",
+  mergedTabTitle: "{name}（{n} 个基因家族）",
   fileTooLarge: "超过 64 MiB 上限的文件：{names}",
   tabFileOpenFailed: "标签页「{title}」中的文件打开失败",
   tabCorrupt: "无法打开标签页「{title}」：文档已损坏或来自其它版本",

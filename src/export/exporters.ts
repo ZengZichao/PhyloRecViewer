@@ -810,13 +810,11 @@ export function sceneToInteractiveHtml(
     // Buttons carry real names now: a bare +/−/⤢ glyph is unreadable to a
     // screen reader, and the page documents its keyboard controls.
     "<div id=\"ctrl\">" +
-    // The keys each control answers to are spliced on with ` · `, never in
-    // brackets: this one line is read out under BOTH locales, and §2.4 gives
-    // English `()` and Chinese `（）` - half-width pairs would put English
-    // punctuation into a Chinese page (` · ` is the separator §2.6 allows).
-    "<button id=\"zin\" aria-label=\"" + ui.zoomIn + " · + / =\">+</button>" +
-    "<button id=\"zout\" aria-label=\"" + ui.zoomOut + " · −\">−</button>" +
-    "<button id=\"fit\" aria-label=\"" + ui.fit + " · 0 / Enter\">\u2922</button>" +
+    // The key each control answers to rides in parentheses rather than after a
+    // separator, so the accessible name reads the same in both locales.
+    "<button id=\"zin\" aria-label=\"" + ui.zoomIn + " (+ / =)\">+</button>" +
+    "<button id=\"zout\" aria-label=\"" + ui.zoomOut + " (−)\">−</button>" +
+    "<button id=\"fit\" aria-label=\"" + ui.fit + " (0 / Enter)\">\u2922</button>" +
     "</div>" +
     (prov ? "<div id=\"provenance\" hidden>" + safeProv + "</div>" : "") +
     "<script>" + script + "</script></body></html>"

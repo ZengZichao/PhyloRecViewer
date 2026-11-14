@@ -8,6 +8,7 @@ import {
   type ReactNode,
 } from "react";
 import { useT } from "../i18n";
+import { Icon } from "./Icon";
 import type { LabelStyle } from "../render/options";
 import { defaultLayoutOptions } from "../layout";
 import { defaultRenderOptions } from "../render/options";
@@ -298,7 +299,9 @@ function Section({
             setOpen((o) => !o);
           }}
         >
-          <span className="chev" aria-hidden="true">{isOpen ? "▾" : "▸"}</span>
+          <span className={`chev${isOpen ? " open" : ""}`} aria-hidden="true">
+            <Icon name="chevron" size={12} />
+          </span>
           <h3>{title}</h3>
         </button>
         <button
@@ -424,7 +427,7 @@ export function Sidebar({ width }: { width?: number }) {
         <button
           className="panel-collapse"
           onClick={() => setSidebarOpen(false)}
-          data-tooltip={`${t.collapse} · ${t.controlsPanel}`}
+          data-tooltip={t.collapse}
           aria-label={t.collapse}
         >
           ‹
@@ -600,14 +603,6 @@ export function Sidebar({ width }: { width?: number }) {
         <p className="hint">{t.renameHint}</p>
       </Section>
 
-      <div className="tips">
-        <div className="tips-title">{t.tipsTitle}</div>
-        <ul className="tips-list">
-          {t.tips.map((tip, i) => (
-            <li key={i}>{tip}</li>
-          ))}
-        </ul>
-      </div>
     </aside>
     {showRenameDialog && <LabelReplaceDialog onClose={() => setShowRenameDialog(false)} />}
     </>

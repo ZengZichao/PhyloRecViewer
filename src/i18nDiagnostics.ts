@@ -107,8 +107,8 @@ export const RULES: Rule[] = [
     zh: '物种 "$1" 携带支持度 $2，看起来是 0–100 百分比而非 0–1 概率。',
   },
   {
-    re: /^Gene node "(.+?)" carries (\d+) <transferBack> arrivals; the node's species and the NHX export use the first · (.*)\.$/,
-    zh: '基因节点 "$1" 含 $2 个 <transferBack> 转移到达；节点的物种与 NHX 导出使用第一个 · $3。',
+    re: /^Gene node "(.+?)" carries (\d+) <transferBack> arrivals; the node's species and the NHX export use the first \((.*)\)\.$/,
+    zh: '基因节点 "$1" 含 $2 个 <transferBack> 转移到达；节点的物种与 NHX 导出使用第一个（$3）。',
   },
   {
     re: /^Gene node "(.+?)" carries multiple terminal events \((.+?)\); keeping "(.+?)"\.$/,
@@ -474,5 +474,5 @@ export function localizeExample(raw: string, locale: Locale): string {
     .replace(/: time slice /g, "：时间片 ")
     // STYLE §2.9: a full-width bracket needs no space in front of it.
     .replace(/ \(into ancestor (.+?)\)/g, "（进入祖先 $1）")
-    .replace(/ · time slice (\S+) < (\S+)/g, " · 时间片 $1 < $2");
+    .replace(/: time slice (\S+) < (\S+)/g, "：时间片 $1 < $2");
 }

@@ -183,7 +183,7 @@ describe("export and load failure toasts are localized", () => {
       const host = document.createElement("div");
       const root = await mount(host);
       try {
-        const csvBtn = Array.from(host.querySelectorAll(".rp-toolbar .btn")).find(
+        const csvBtn = Array.from(host.querySelectorAll(".btn")).find(
           (b) => (b.textContent ?? "").trim() === translations.zh.exportCsv,
         );
         expect(csvBtn).toBeDefined();
@@ -366,14 +366,18 @@ describe("empty-state hub copy", () => {
     const hub = host.querySelector(".empty-hub")!;
     const text = hub.textContent ?? "";
     expect(text).not.toContain(".recphyloxml / .recphylo");
-    // One drag instruction only: the hub used to say it twice.
-    expect(text.match(/拖拽|Drop a file/g) ?? []).toHaveLength(1);
-    expect(host.querySelectorAll(".empty-actions .btn")).toHaveLength(3);
+    // No prose instruction: the hub states the formats once and leaves the
+    // action to the button, so nothing explains what the button already says.
+    expect(text.match(/拖拽|Drop a /g) ?? []).toHaveLength(0);
+    expect(hub.querySelector(".empty-formats")?.textContent).toBe(
+      translations[useStore.getState().locale].emptyFormats,
+    );
+    expect(host.querySelectorAll(".empty-actions .btn")).toHaveLength(2);
     expect(host.querySelectorAll(".empty-sample-list .empty-sample-btn")).toHaveLength(
       samples.length,
     );
     const locale = useStore.getState().locale;
-    const labels = [...host.querySelectorAll(".empty-sample-name")].map((n) => n.textContent);
+    const labels = [...host.querySelectorAll(".empty-sample-btn")].map((n) => n.textContent);
     expect(labels).toEqual(samples.map((s) => translations[locale][s.labelKey]));
     // Per-sample explainer badges ("Differences", "Gene → Symbiont…") are gone.
     expect(host.querySelector(".empty-samples .multi-open-badge")).toBeNull();
@@ -386,13 +390,12 @@ describe("empty-state hub copy", () => {
       css.match(new RegExp(`${selector.replace(/\./g, "\\.") }\\s*\\{([\\s\\S]*?)\\}`))?.[1] ?? "";
     const actions = block(".empty-actions");
     const samples = block(".empty-sample-list");
-    for (const rule of [
-      "grid-template-columns: repeat(3, var(--hub-btn-w))",
-      "gap: 8px",
-    ]) {
-      expect(actions).toContain(rule);
-      expect(samples).toContain(rule);
-    }
+    // Both rows center their buttons; the button width comes from one token
+    // so the action row and the sample row measure the same.
+    expect(actions).toContain("justify-content: center");
+    expect(samples).toContain("grid-template-columns: repeat(3, var(--hub-btn-w))");
+    expect(actions).toContain("gap: 8px");
+    expect(samples).toContain("gap: 8px");
     expect(block(".empty-sample-btn")).toContain("width: var(--hub-btn-w)");
     expect(block(".empty-actions .btn")).toContain("width: var(--hub-btn-w)");
   });
@@ -792,8 +795,16 @@ describe("the preferences dialog formats the autosave time for the UI locale", (
     const t = translations[locale];
     // The two tags must really disagree, or the absent-the-other-tag assertion
     // below would prove nothing.
-    const fromTag = new Date(TS).toLocaleString(tag);
-    const fromOther = new Date(TS).toLocaleString(otherTag);
+    // The row shows a compact stamp (month day, time) rather than a full
+    // toLocaleString: the dialog is a settings list, not a log.
+    const STAMP: Intl.DateTimeFormatOptions = {
+      month: "short",
+      day: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+    };
+    const fromTag = new Date(TS).toLocaleString(tag, STAMP);
+    const fromOther = new Date(TS).toLocaleString(otherTag, STAMP);
     expect(fromTag).not.toBe(fromOther);
     useStore.setState({ locale, autosaveAt: TS, autosaveFailed: false });
     const host = document.createElement("div");
@@ -801,7 +812,7 @@ describe("the preferences dialog formats the autosave time for the UI locale", (
     const root = createRoot(host);
     try {
       act(() => root.render(<Settings open onClose={() => undefined} />));
-      const notes = Array.from(host.querySelectorAll("p.settings-note")).map((n) => n.textContent ?? "");
+      const notes = Array.from(host.querySelectorAll(".settings-value")).map((n) => n.textContent ?? "");
       expect(notes, "the autosave line is rendered").toContain(t.autosaveOn.replace("{time}", fromTag));
       expect(notes.join(" ")).not.toContain(fromOther);
     } finally {
