@@ -17,7 +17,6 @@ analysis panel, located-node visibility, duplication rendering and PDF export.
 A dedicated visual pass over the interface — headless-browser screenshots of
 every major surface at 1440/1280/1024 window widths, light and dark themes,
 both languages — with every finding traced back to its root cause and fixed.
-Full report with evidence: `docs/UI-REVIEW-2026-11-06.md`.
 
 **Added**
 
