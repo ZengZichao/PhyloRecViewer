@@ -132,6 +132,10 @@ export function parseNewick(text: string): NewickNode[] {
 
   const parseLabel = (): string => {
     skipWs();
+    // Double quotes are not the Newick standard (single quotes are), but
+    // GenBank/EBI-derived trees routinely wrap labels in them; treating the
+    // quote as an ordinary character truncated names like "weird:;()[],=name"
+    // at the first colon and reported a bogus syntax error.
     if (s[pos] === "'") {
       pos++;
       let out = "";
@@ -139,6 +143,23 @@ export function parseNewick(text: string): NewickNode[] {
         if (s[pos] === "'") {
           if (s[pos + 1] === "'") {
             out += "'";
+            pos += 2;
+            continue;
+          }
+          pos++;
+          break;
+        }
+        out += s[pos++];
+      }
+      return out;
+    }
+    if (s[pos] === '"') {
+      pos++;
+      let out = "";
+      while (pos < n) {
+        if (s[pos] === '"') {
+          if (s[pos + 1] === '"') {
+            out += '"';
             pos += 2;
             continue;
           }

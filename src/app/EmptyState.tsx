@@ -57,7 +57,7 @@ export function EmptyState() {
           aria-hidden="true"
           type="file"
           multiple
-          accept=".xml,.recphyloxml,.recphylo,.phyloxml,.nhx,.nwk,.newick"
+          accept=".xml,.recphyloxml,.recphylo,.nhx,.nwk,.newick"
           hidden
           onChange={(e) => {
             const files = Array.from(e.target.files ?? []);

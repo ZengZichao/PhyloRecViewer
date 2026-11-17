@@ -3,7 +3,8 @@ import {
   defaultLayoutOptions,
   type LayoutOptions,
 } from "../layout";
-import { optimizeCrossings } from "../layout/optimize";
+import { optimizeCrossings, transferCrossings } from "../layout/optimize";
+import { computeTransfers } from "../layout/transfers";
 import type { Reconciliation } from "../model/types";
 import { ALL_EVENTS, type EventFilter } from "../analysis/focus";
 import { detectEncodingProblem, parseMerged, parseReconciliation, detectFormat } from "../parser/formats";
@@ -308,6 +309,7 @@ interface AppState {
   loadCompareXml: (xml: string, fileName: string | null) => void;
   clearCompare: () => void;
   newTab: () => void;
+  newDocument: () => void;
   switchTab: (id: string) => void;
   closeTab: (id: string) => void;
   openInNewTab: (files: { name: string; text: string }[]) => void;
@@ -342,6 +344,7 @@ interface AppState {
   setAnnotating: (sel: { id: string; name: string } | null) => void;
   setAnnotation: (id: string, text: string, color: string) => void;
   removeAnnotation: (id: string) => void;
+  clearAnnotations: () => void;
   /** Rename a single species or gene label (key = original label text). */
   setLabelOverride: (key: string, value: string) => void;
   /** Rename ONE node (by stable id) without touching same-named labels. */
@@ -1032,6 +1035,12 @@ export const useStore = create<AppState>((set, get) => ({
       if (hadCompare) {
         const locale = get().locale;
         get().showToast(translations[locale].nestedSwitchToast, "info");
+      } else {
+        const locale = get().locale;
+        get().showToast(
+          translations[locale].nestedAddedToast.replace("{name}", name ?? ""),
+          "success",
+        );
       }
     } catch (e) {
       set((st) => ({
@@ -1087,6 +1096,12 @@ export const useStore = create<AppState>((set, get) => ({
       if (hadNested) {
         const locale = get().locale;
         get().showToast(translations[locale].compareSwitchToast, "info");
+      } else {
+        const locale = get().locale;
+        get().showToast(
+          translations[locale].compareAddedToast.replace("{name}", name ?? ""),
+          "success",
+        );
       }
     } catch (e) {
       set((st) => ({
@@ -1129,6 +1144,32 @@ export const useStore = create<AppState>((set, get) => ({
         rightPanelTab: s.rightPanelTab === "diff" ? "search" : s.rightPanelTab,
       };
     }),
+
+  newDocument: () => {
+    const s = get();
+    // "New document" on an empty, untouched Untitled tab reuses that tab.
+    // Adding a second identical Untitled tab made the tab bar look like the
+    // app had opened two documents when it had opened none. (The "+" button
+    // still always adds a tab - it is an explicit "one more tab" request.)
+    const activeBlank =
+      !s.recon &&
+      !s.error &&
+      !s.xml &&
+      !s.nested &&
+      !s.compare &&
+      s.sampleId == null &&
+      !isDocDirty({ editSeq: s.editSeq, savedSeq: s.savedSeq });
+    const activeTitle = s.tabs.find((tb) => tb.id === s.activeTabId)?.title ?? "";
+    if (activeBlank && activeTitle === "") {
+      resetCommitMerge();
+      set({
+        ...blankDoc(),
+        tabs: s.tabs.map((tb) => (tb.id === s.activeTabId ? { ...tb, title: "" } : tb)),
+      });
+      return;
+    }
+    s.newTab();
+  },
 
   switchTab: (id) => {
     const s = get();
@@ -1248,7 +1289,9 @@ export const useStore = create<AppState>((set, get) => ({
     // async, and the tab that is frontmost when the read finishes may be one
     // the user created meanwhile.
     const multi = accepted.length > 1;
+    const beforeTabId = get().activeTabId;
     const tabId = claimTabForLoad(get());
+    const createdTab = tabId !== beforeTabId;
     inflightTabs.add(tabId);
     beginLoading();
     // Yield one frame so the overlay paints before the (synchronous) parse +
@@ -1273,7 +1316,20 @@ export const useStore = create<AppState>((set, get) => ({
         focusTab(tabId);
         set({ pendingMulti: parsed, pendingMultiTabId: tabId });
       } else {
-        writeFilesToTab(tabId, parsed);
+        // Re-opening a file that is already on a tab focuses that tab instead
+        // of stacking an indistinguishable duplicate. Comparison is by content,
+        // so the same tree under two file names still counts as one document.
+        const dup = findOpenTabWithText(parsed[0].text, parsed[0].name, tabId);
+        if (dup) {
+          if (createdTab) get().closeTab(tabId);
+          get().switchTab(dup);
+          get().showToast(
+            translations[get().locale].alreadyOpenTab.replace("{name}", parsed[0].name),
+            "info",
+          );
+        } else {
+          writeFilesToTab(tabId, parsed);
+        }
       }
     } catch (e) {
       // Reading a dropped directory / unreadable file rejects here; surface it
@@ -1311,14 +1367,31 @@ export const useStore = create<AppState>((set, get) => ({
       ...commit(s),
     })),
 
-  optimizeSwaps: (scope = "primary") =>
-    set((s) => ({
-      swapped: s.recon ? optimizeCrossings(s.recon) : s.swapped,
+  optimizeSwaps: (scope = "primary") => {
+    const s = get();
+    const next = s.recon ? optimizeCrossings(s.recon) : s.swapped;
+    // Report the effect on the REAL crossing count: the button used to look
+    // like a no-op on documents where the heuristic found nothing to improve.
+    if (s.recon) {
+      const before = transferCrossings(s.recon, s.swapped);
+      const after = transferCrossings(s.recon, next);
+      const dict = translations[s.locale];
+      const msg =
+        computeTransfers(s.recon).length === 0
+          ? dict.crossingsNoTransfers
+          : after < before
+            ? dict.crossingsReduced.replace("{before}", String(before)).replace("{after}", String(after))
+            : dict.crossingsNone;
+      get().showToast(msg, after < before ? "success" : "info");
+    }
+    set((st) => ({
+      swapped: next,
       // The nested/compare panes follow their own mirror sets; a heuristic
       // pass on the primary drawing no longer silently rearranges them.
-      nestedSwapped: scope === "both" && s.nested ? optimizeCrossings(s.nested) : s.nestedSwapped,
-      ...commit(s),
-    })),
+      nestedSwapped: scope === "both" && st.nested ? optimizeCrossings(st.nested) : st.nestedSwapped,
+      ...commit(st),
+    }));
+  },
 
   clearSwaps: () =>
     set((s) => ({
@@ -1366,6 +1439,9 @@ export const useStore = create<AppState>((set, get) => ({
       delete next[id];
       return { annotations: next, annotating: null, ...commit(s) };
     }),
+
+  clearAnnotations: () =>
+    set((s) => ({ annotations: {}, annotating: null, ...commit(s) })),
 
   setLabelOverride: (key, value) =>
     set((s) => {
@@ -1502,8 +1578,18 @@ export const useStore = create<AppState>((set, get) => ({
   setOnlyMatches: (on) => set({ onlyMatches: on }),
   setConfidenceRange: (min, max) => set({ confidenceMin: min, confidenceMax: max }),
   toggleEventFilter: (k) =>
-    set((s) => ({ eventFilter: { ...s.eventFilter, [k]: !s.eventFilter[k] } })),
-  resetEventFilter: () => set({ eventFilter: { ...ALL_EVENTS } }),
+    set((s) => {
+      const eventFilter = { ...s.eventFilter, [k]: !s.eventFilter[k] };
+      const prefs = loadPrefs();
+      savePrefs({ ...prefs, eventFilter });
+      return { eventFilter };
+    }),
+  resetEventFilter: () => {
+    const eventFilter = { ...ALL_EVENTS };
+    const prefs = loadPrefs();
+    savePrefs({ ...prefs, eventFilter });
+    set({ eventFilter });
+  },
   toggleFamilyFilter: (index) =>
     set((s) => {
       // null (all) -> start an explicit set that excludes the toggled family.
@@ -1718,6 +1804,21 @@ function claimTabForLoad(s: AppState): string {
   if (disposable && !inflightTabs.has(s.activeTabId)) return s.activeTabId;
   s.newTab();
   return useStore.getState().activeTabId;
+}
+
+/** The tab already showing exactly this source file, if any. Compares the
+ *  stored file name AND its text: re-opening the same file focuses its tab,
+ *  while two different files that happen to share a sample body are not
+ *  collapsed into one. */
+function findOpenTabWithText(text: string, name: string, excludeTabId: string): string | null {
+  const s = useStore.getState();
+  if (s.activeTabId !== excludeTabId && s.fileName === name && s.xml === text) return s.activeTabId;
+  for (const tb of s.tabs) {
+    if (tb.id === excludeTabId) continue;
+    const d = s.docs[tb.id];
+    if (d && d.fileName === name && d.xml === text) return tb.id;
+  }
+  return null;
 }
 
 /** Bring `tabId` back to the front; no-op when it already is frontmost or gone. */

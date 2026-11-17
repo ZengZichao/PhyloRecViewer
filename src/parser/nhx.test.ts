@@ -126,7 +126,9 @@ describe("diagnostics name only what the NHX reader can actually do", () => {
   it("internal nodes without S= get told what to DO", () => {
     let msg = "";
     try {
-      parseNhxReconciliation("((A,B)R,C)root;");
+      // Partially annotated: some internal nodes carry S=, so this is a broken
+      // reconciliation rather than a plain tree (which loads topology-only).
+      parseNhxReconciliation("((A[&&NHX:S=A],B[&&NHX:S=B])R[&&NHX:S=R],C[&&NHX:S=C])root;");
     } catch (e) {
       msg = (e as Error).message;
     }
@@ -357,5 +359,40 @@ describe("the banned \"?\" empty mark never enters the model", () => {
     const w = recon.warnings.find((x) => x.includes("conflicting event tags"))!;
     expect(w).toContain('Gene node "—"');
     expect(w).not.toContain('Gene node "?"');
+  });
+});
+
+describe("plain Newick (no S= annotations)", () => {
+  it("loads in topology-only mode instead of refusing the format", () => {
+    const recon = parseNhxReconciliation("((A:0.1,B:0.2)R:0.3,(C:0.4,D:0.5)S:0.6)root;");
+    expect(recon.species.byName.has("R")).toBe(true);
+    expect(recon.warnings.some((w) => /topology-only/i.test(w))).toBe(true);
+    const gt = recon.geneTrees[0];
+    expect(gt.nodes.find((n) => n.name === "A")?.speciesId).toBe("A");
+  });
+
+  it("still refuses arbitrary text that is not a tree", () => {
+    expect(() => parseNhxReconciliation("###not a tree###")).toThrow();
+  });
+
+  it("does not treat a partially annotated tree as topology-only", () => {
+    expect(() => parseNhxReconciliation("((A[&&NHX:S=A],B)R,C)root;")).toThrow(/S=/);
+  });
+
+  it("warns about several trees in one file", () => {
+    const recon = parseNhxReconciliation("((A,B)R)root;((C,D)S)root2;");
+    expect(recon.warnings.some((w) => /2 Newick trees/.test(w))).toBe(true);
+  });
+
+  it("warns about negative branch lengths", () => {
+    const recon = parseNhxReconciliation("((A:-1,B:0.2)R:0.3)root;");
+    expect(recon.warnings.some((w) => /negative branch length/.test(w))).toBe(true);
+  });
+
+  it("strips wrapping quotes from S= values", () => {
+    const recon = parseNhxReconciliation(
+      '((A[&&NHX:S="species one"],B[&&NHX:S=B])R[&&NHX:S=R])root[&&NHX:S=root];',
+    );
+    expect(recon.geneTrees[0].nodes.find((n) => n.name === "A")?.speciesId).toBe("species one");
   });
 });

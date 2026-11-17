@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { localizeDiagnostic } from "../i18nDiagnostics";
 import { countLabel, htmlLang, useT } from "../i18n";
 import type { LayoutResult } from "../layout";
@@ -27,6 +27,7 @@ import {
 import { themes, geneColor } from "../render/theme";
 import { reconToNhx } from "../export/newickExport";
 import { parseSession, serializeSession } from "../session";
+import { parseSpeciesTree } from "../parser/speciesTree";
 import { samples } from "../samples";
 import { useStore } from "../state/store";
 import { restoreSessionData, sessionDataOfStore } from "../state/autosave";
@@ -62,6 +63,10 @@ export interface ExportPane {
  * when an item calls the `close` callback passed to the render-prop children.
  * Escape returns focus to the trigger button instead of dropping it on body.
  */
+/** Top-level menus currently open, by their Dropdown uid. Shared module state:
+ *  hover-switching only makes sense when one of them is already open. */
+const openMenus = new Set<string>();
+
 function Dropdown({
   label,
   title,
@@ -80,6 +85,45 @@ function Dropdown({
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
+  const uid = useId();
+  const hoverOpened = useRef(false);
+  // Standard menu-bar behaviour: once a menu is open, moving the pointer to
+  // another top-level item switches to it. Hovering does nothing while NO menu
+  // is open, so the trigger's click still opens it (a hover-then-click would
+  // otherwise toggle it straight back shut).
+  useEffect(() => {
+    if (open) openMenus.add(uid);
+    else openMenus.delete(uid);
+    return () => {
+      openMenus.delete(uid);
+    };
+  }, [open, uid]);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const onEnter = () => {
+      if (openMenus.size > 0 && !openMenus.has(uid)) {
+        document.dispatchEvent(new CustomEvent("rpv:menu-hover", { detail: uid }));
+      }
+    };
+    el.addEventListener("pointerenter", onEnter);
+    return () => el.removeEventListener("pointerenter", onEnter);
+  }, [uid]);
+  useEffect(() => {
+    const onHover = (e: Event) => {
+      const detail = (e as CustomEvent<string>).detail;
+      if (detail === uid) {
+        // Remember that hover (not a click) opened this menu, so the click
+        // that follows the pointer does not immediately toggle it shut.
+        hoverOpened.current = true;
+        setOpen(true);
+      } else {
+        setOpen(false);
+      }
+    };
+    document.addEventListener("rpv:menu-hover", onHover);
+    return () => document.removeEventListener("rpv:menu-hover", onHover);
+  }, [uid]);
   useEffect(() => {
     if (!open) return;
     const onDoc = (e: MouseEvent) => {
@@ -144,7 +188,14 @@ function Dropdown({
         aria-label={ariaLabel}
         title={title}
         disabled={disabled}
-        onClick={() => setOpen((o) => !o)}
+        onClick={() => {
+          if (hoverOpened.current) {
+            hoverOpened.current = false;
+            setOpen(true);
+            return;
+          }
+          setOpen((o) => !o);
+        }}
         data-tauri-drag-region="false"
       >
         {label}
@@ -222,7 +273,7 @@ export function MenuBar({
   const pngDpi = useStore((s) => s.pngDpi);
   const setPngDpi = useStore((s) => s.setPngDpi);
   const showToast = useStore((s) => s.showToast);
-  const newTab = useStore((s) => s.newTab);
+  const newDocument = useStore((s) => s.newDocument);
   const closeTab = useStore((s) => s.closeTab);
   const tabs = useStore((s) => s.tabs);
   const activeTabId = useStore((s) => s.activeTabId);
@@ -236,6 +287,20 @@ export function MenuBar({
   const [background, setBackground] = useState<"theme" | "white" | "transparent">("theme");
   const dlgRef = useRef<HTMLDivElement>(null);
   useFocusTrap(dialogKind !== null, dlgRef);
+  // Escape closes either dialog, and so does a click on the backdrop: a modal
+  // that can only be left through one small button reads as a dead end (the
+  // About card in particular was blocked on Esc and on outside clicks).
+  useEffect(() => {
+    if (dialogKind === null) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.stopPropagation();
+        setDialogKind(null);
+      }
+    };
+    window.addEventListener("keydown", onKey, true);
+    return () => window.removeEventListener("keydown", onKey, true);
+  }, [dialogKind]);
 
   const loadSampleById = (id: string) => {
     const s = samples.find((x) => x.id === id);
@@ -523,9 +588,16 @@ export function MenuBar({
     try {
       if (kind === "svg") {
         const { svg } = buildDocSvg(doc);
-        await navigator.clipboard.write([
-          new ClipboardItem({ "text/plain": new Blob([svg], { type: "text/plain" }) }),
-        ]);
+        const text = new Blob([svg], { type: "text/plain" });
+        const markup = new Blob([svg], { type: "image/svg+xml" });
+        // Offer the vector form as an image too, so a vector editor pastes
+        // artwork rather than source text. Some browsers refuse the SVG MIME
+        // type on the clipboard; the plain-text copy is the fallback.
+        try {
+          await navigator.clipboard.write([new ClipboardItem({ "text/plain": text, "image/svg+xml": markup })]);
+        } catch {
+          await navigator.clipboard.write([new ClipboardItem({ "text/plain": text })]);
+        }
       } else {
         const { blob } = await renderPngBlob(doc, Math.min(pngDpi, 300));
         await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
@@ -626,12 +698,12 @@ export function MenuBar({
         <Dropdown label={t.menuFile} ariaLabel={t.menuFile} id="menu-file">
           {(close) => (
             <>
-              <button className="menu-item" onClick={() => { close(); newTab(); }}>
+              <button className="menu-item" onClick={() => { close(); newDocument(); }}>
                 {t.menuNew}
               </button>
               <button className="menu-item" onClick={() => { close(); void onOpenClick(); }}>
                 {t.openFile}
-                <span className="menu-shortcut">{modKey}O</span>
+                <span className="menu-shortcut">{modKey}+O</span>
               </button>
               <button className="menu-item" onClick={() => { close(); void pasteTree(); }}>
                 {t.pasteTree}
@@ -650,7 +722,7 @@ export function MenuBar({
               <div className="menu-divider" />
               <button className="menu-item" disabled={!(panes.length > 0)} onClick={() => { close(); void saveSession(); }}>
                 {t.saveSessionAs}
-                <span className="menu-shortcut">{modKey}S</span>
+                <span className="menu-shortcut">{modKey}+S</span>
               </button>
               <button className="menu-item" onClick={() => { close(); sessionInput.current?.click(); }}>
                 {t.openSession}
@@ -661,7 +733,7 @@ export function MenuBar({
                 onClick={() => { close(); closeTab(activeTabId); }}
               >
                 {t.closeTabMenu}
-                <span className="menu-shortcut">{modKey}W</span>
+                <span className="menu-shortcut">{modKey}+W</span>
               </button>
               <div className="menu-divider" />
               {externalSpeciesTree ? (
@@ -837,7 +909,7 @@ export function MenuBar({
         </Dropdown>
 
         {/* ---- View menu ---- */}
-        <Dropdown label={t.menuView} ariaLabel={t.menuView}>
+        <Dropdown label={t.menuView} ariaLabel={t.menuView} id="menu-view">
           {(close) => (
             <>
               <div className="menu-label">{t.menuLanguage}</div>
@@ -853,6 +925,10 @@ export function MenuBar({
                   onClick={() => { close(); setTheme(o.id); }}
                 />
               ))}
+              <div className="menu-divider" />
+              <button className="menu-item" onClick={() => { close(); onOpenSettings(); }}>
+                {t.morePreferences}
+              </button>
             </>
           )}
         </Dropdown>
@@ -862,6 +938,7 @@ export function MenuBar({
         <button
           className="menu-bar-item"
           aria-label={t.prefsTitle}
+          aria-haspopup="dialog"
           title={t.prefsTitle}
           onClick={onOpenSettings}
           data-tauri-drag-region="false"
@@ -870,7 +947,7 @@ export function MenuBar({
         </button>
 
         {/* ---- Help menu ---- */}
-        <Dropdown label={t.helpButton} ariaLabel={t.helpButton}>
+        <Dropdown label={t.helpButton} ariaLabel={t.helpButton} id="menu-help">
           {(close) => (
             <>
               <button className="menu-item" onClick={() => { close(); setHelpOpen(true); }}>
@@ -914,7 +991,7 @@ export function MenuBar({
           aria-hidden="true"
           type="file"
           multiple
-          accept=".xml,.recphyloxml,.recphylo,.phyloxml,.nhx,.nwk,.newick"
+          accept=".xml,.recphyloxml,.recphylo,.nhx,.nwk,.newick"
           hidden
           onChange={(e) => {
             const files = Array.from(e.target.files ?? []);
@@ -927,7 +1004,7 @@ export function MenuBar({
           name="nested-file"
           aria-hidden="true"
           type="file"
-          accept=".xml,.recphyloxml,.recphylo,.phyloxml,.nhx,.nwk,.newick"
+          accept=".xml,.recphyloxml,.recphylo,.nhx,.nwk,.newick"
           hidden
           onChange={(e) => {
             const f = e.target.files?.[0];
@@ -940,7 +1017,7 @@ export function MenuBar({
           name="compare-file"
           aria-hidden="true"
           type="file"
-          accept=".xml,.recphyloxml,.recphylo,.phyloxml,.nhx,.nwk,.newick"
+          accept=".xml,.recphyloxml,.recphylo,.nhx,.nwk,.newick"
           hidden
           onChange={(e) => {
             const f = e.target.files?.[0];
@@ -959,6 +1036,18 @@ export function MenuBar({
             const f = e.target.files?.[0];
             if (f) {
               void f.text().then((tx) => {
+                // Validate now rather than at the next gene-tree open: the menu
+                // item otherwise reports success for a file it cannot parse, and
+                // the failure surfaces later under a misleading message.
+                try {
+                  parseSpeciesTree(tx);
+                } catch (err) {
+                  showToast(
+                    `${t.loadFailed}: ${localizeDiagnostic((err as Error).message, locale)}`,
+                    "error",
+                  );
+                  return;
+                }
                 setExternalSpeciesTree({ name: f.name, text: tx });
                 showToast(t.speciesTreeLoaded.replace("{name}", f.name), "success");
               });
@@ -1000,8 +1089,8 @@ export function MenuBar({
       {/* NHX export disclosure: the dialect drops real data; the user gets the
           list and a one-click recPhyloXML alternative instead of a silent loss. */}
       {dialogKind === "nhx" && (
-        <div className="multi-open" role="dialog" aria-modal="true" aria-label={t.nhxDialectTitle}>
-          <div className="multi-open-card" ref={dlgRef}>
+        <div className="multi-open" role="dialog" aria-modal="true" aria-label={t.nhxDialectTitle} onClick={() => setDialogKind(null)}>
+          <div className="multi-open-card" ref={dlgRef} onClick={(e) => e.stopPropagation()}>
             <h3>{t.nhxDialectTitle}</h3>
             <p>{t.nhxLossList}</p>
             <ul className="multi-open-files">
@@ -1032,8 +1121,8 @@ export function MenuBar({
 
       {/* About: version + citation + diagnostics, reachable without the repo. */}
       {dialogKind === "about" && (
-        <div className="multi-open" role="dialog" aria-modal="true" aria-label={t.aboutTitle}>
-          <div className="multi-open-card" ref={dlgRef}>
+        <div className="multi-open" role="dialog" aria-modal="true" aria-label={t.aboutTitle} onClick={() => setDialogKind(null)}>
+          <div className="multi-open-card" ref={dlgRef} onClick={(e) => e.stopPropagation()}>
             <h3>{t.aboutTitle}</h3>
             <p>
               <strong>{APP_NAME}</strong> {t.aboutVersion} {APP_VERSION}

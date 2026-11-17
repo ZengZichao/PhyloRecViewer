@@ -1,6 +1,7 @@
 import type { LayoutOptions } from "../layout";
 import type { RenderOptions } from "../render/options";
 import type { ThemePref } from "../render/theme";
+import type { EventFilter } from "../analysis/focus";
 import { sanitizeLayoutOptions, sanitizeRenderOptions } from "../session";
 
 /**
@@ -30,6 +31,9 @@ export interface Prefs {
   panelWidths?: { sidebar: number; right: number };
   /** Default view applied when opening a new document/tab. */
   defaultView?: DefaultViewPrefs | null;
+  /** Event-type filter chips (Search → By event type), persisted like the
+   *  other view preferences so a working set survives a reload. */
+  eventFilter?: EventFilter;
 }
 
 const KEY = "rpv.prefs";
@@ -57,6 +61,20 @@ export function loadPrefs(): Prefs {
           ? sanitizeRenderOptions(dv.renderOptions)
           : undefined,
       };
+    }
+    // The event filter is five booleans; a corrupted entry must not be able to
+    // invent event keys the search layer then reads as false.
+    if (d.eventFilter && typeof d.eventFilter === "object") {
+      const f = d.eventFilter as unknown as Record<string, unknown>;
+      d.eventFilter = {
+        speciation: f.speciation !== false,
+        duplication: f.duplication !== false,
+        loss: f.loss !== false,
+        transfer: f.transfer !== false,
+        leaf: f.leaf !== false,
+      };
+    } else {
+      delete d.eventFilter;
     }
     return d;
   } catch {

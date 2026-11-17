@@ -294,12 +294,31 @@ export function restoreTabs(
 ): string[] {
   if (!tabs || tabs.length === 0) return [];
   const replace = opts.replace !== false;
-  const entries = tabs
+  const raw = tabs
     .filter((t): t is SavedTab => !!t && !!t.xml)
     .map((tab) => {
       const id = `autosave-${docsSeq++}`;
       return { id, title: tab.title || null, doc: lazyDocFrom(tab) };
     });
+  // Restoring over the current workspace must not stack a second copy of a
+  // document that is already on a tab: saving one Showcase tab and reopening
+  // that session used to produce two identical tabs.
+  let entries = raw;
+  if (replace) {
+    const s = useStore.getState();
+    const open = new Set<string>();
+    if (s.xml) open.add(s.xml);
+    for (const t of s.tabs) {
+      const d = s.docs[t.id];
+      if (d?.xml) open.add(d.xml);
+    }
+    const seen = new Set<string>();
+    entries = raw.filter((e) => {
+      if (!e.doc.xml || open.has(e.doc.xml) || seen.has(e.doc.xml)) return false;
+      seen.add(e.doc.xml);
+      return true;
+    });
+  }
   if (entries.length === 0) return [];
   const wanted = opts.activeTabIndex ?? tabsActiveTabIndex(tabs);
 

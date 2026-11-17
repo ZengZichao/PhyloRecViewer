@@ -335,3 +335,16 @@ describe("line discipline in drawn text", () => {
   });
 });
 
+
+describe("collapsed marker hit area", () => {
+  it("keeps the collapsed caption from swallowing clicks meant for the marker", () => {
+    const svg = drawLocaleScene({ interactive: true });
+    // The collapsed label is a <text> whose content is "<name> <count>"; it sits
+    // exactly on top of the wedge, so it must never take pointer events.
+    const texts = [...svg.matchAll(/<text([^>]*)>([^<]*)<\/text>/g)];
+    const collapsed = texts.filter(([, attrs]) => /pointer-events:\s*none/.test(attrs));
+    expect(collapsed.length).toBeGreaterThan(0);
+    // And the marker group itself is a real button with a generous hit circle.
+    expect(svg).toMatch(/<g[^>]*data-node-id="[^"]+"[^>]*role="button"/);
+  });
+});

@@ -334,13 +334,20 @@ export function parseRecPhyloXML(xml: string, ns = ""): Reconciliation {
     );
   }
   const spRoots = asArray(spPhylo?.clade);
-  const spRootRaw = spRoots[0];
+  const spRootRaw = spRoots[0] ?? asArray(spTree?.clade as RawClade | RawClade[] | undefined)[0];
   if (!spRootRaw) {
-    throw new RecPhyloParseError("Species tree (<spTree>) has no clades.");
+    throw new RecPhyloParseError(
+      'Species tree (<spTree>) has no <clade> elements. recPhyloXML expects <spTree><phylogeny rooted="true"><clade>…; if the <phylogeny> wrapper is missing, the clade must sit directly under <spTree>.',
+    );
   }
   if (spRoots.length > 1) {
     warnings.push(
       `Species tree contains ${spRoots.length} root <clade> elements; only the first is used.`,
+    );
+  }
+  if (spPhylos.length === 0) {
+    warnings.push(
+      'The species tree <spTree> omits the <phylogeny> wrapper; its <clade> children were read directly.',
     );
   }
   const species = buildSpeciesTree(spRootRaw, seq, warnings);
@@ -357,11 +364,22 @@ export function parseRecPhyloXML(xml: string, ns = ""): Reconciliation {
   const geneTrees: GeneTree[] = [];
   const recGeneTrees = asArray(recPhylo.recGeneTree as unknown) as Array<{
     phylogeny?: RawPhylogeny[];
+    clade?: RawClade | RawClade[];
   }>;
   let treeIndex = 0;
   let missingRooted = 0;
   for (const rgt of recGeneTrees) {
-    for (const phy of asArray(rgt.phylogeny)) {
+    // Some producers omit the <phylogeny> wrapper around a gene tree's clades.
+    // Read them directly rather than reporting an empty document.
+    const phys = asArray(rgt.phylogeny);
+    const physToUse: RawPhylogeny[] =
+      phys.length > 0 ? phys : [{ clade: asArray(rgt.clade) }];
+    if (phys.length === 0 && physToUse[0].clade !== undefined) {
+      warnings.push(
+        `A <recGeneTree> omits the <phylogeny> wrapper; its <clade> children were read directly.`,
+      );
+    }
+    for (const phy of physToUse) {
       const phyRooted = checkRooted(phy["@_rooted"]);
       if (phyRooted === "false") {
         throw new RecPhyloParseError(

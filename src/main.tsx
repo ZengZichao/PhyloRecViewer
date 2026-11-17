@@ -34,6 +34,7 @@ if (prefs.locale) useStore.getState().setLocale(prefs.locale);
 if (prefs.pngDpi) useStore.getState().setPngDpi(prefs.pngDpi);
 if (prefs.showLegend !== undefined) useStore.setState({ showLegend: prefs.showLegend });
 if (prefs.minimap !== undefined) useStore.setState({ minimap: prefs.minimap });
+if (prefs.eventFilter) useStore.setState({ eventFilter: prefs.eventFilter });
 
 // Write the DOM theme attributes before the first paint, so a dark-mode user
 // never sees a white flash: the useEffect in App.tsx runs only after paint,
@@ -81,6 +82,16 @@ window.addEventListener("unhandledrejection", (ev) => reportAsyncError(ev.reason
 // not be reported as a crash; registered before the first render so an export
 // clicked later in the session is already covered.
 installPreloadRecovery();
+
+// Offline cache (stale-while-revalidate). The Tauri shell serves the same build
+// from a local filesystem origin where a service worker adds nothing.
+if (!isTauri() && "serviceWorker" in navigator && import.meta.env.PROD) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("/sw.js").catch(() => {
+      /* offline support is best effort */
+    });
+  });
+}
 
 const root = document.getElementById("root");
 if (root) {

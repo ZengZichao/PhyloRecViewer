@@ -11,6 +11,7 @@ import { useT } from "../i18n";
 import { Icon } from "./Icon";
 import type { LabelStyle } from "../render/options";
 import { defaultLayoutOptions } from "../layout";
+import { hasUsableSpeciesLengths } from "../layout/species";
 import { defaultRenderOptions } from "../render/options";
 import type { Orientation } from "../render/geometry";
 import { useStore } from "../state/store";
@@ -169,6 +170,7 @@ function Switch({
       role="switch"
       className="switch"
       aria-label={ariaLabel}
+      aria-checked={checked}
       checked={checked}
       onChange={(e) => onChange(e.target.checked)}
     />
@@ -362,6 +364,7 @@ const ORIENTATION_ICONS: Record<Orientation, ReactElement> = {
 
 export function Sidebar({ width }: { width?: number }) {
   const t = useT();
+  const recon = useStore((s) => s.recon);
   const layoutOptions = useStore((s) => s.layoutOptions);
   const renderOptions = useStore((s) => s.renderOptions);
   const setLayout = useStore((s) => s.setLayout);
@@ -504,12 +507,15 @@ export function Sidebar({ width }: { width?: number }) {
         <Row label={t.geneThickness}>
           <Slider value={renderOptions.geneThickness} min={1} max={5} step={0.2} onChange={(v) => setRender({ geneThickness: v })} />
         </Row>
-        <Row label={t.alignTips}>
+        <Row label={t.alignTips} title={t.alignTipsTitle}>
           <Switch checked={layoutOptions.alignTips} onChange={(v) => setLayout({ alignTips: v })} />
         </Row>
-        <Row label={t.branchLengths}>
+        <Row label={t.branchLengths} title={t.branchLengthsTitle}>
           <Switch checked={layoutOptions.useBranchLengths} onChange={(v) => setLayout({ useBranchLengths: v })} />
         </Row>
+        {!recon || !hasUsableSpeciesLengths(recon.species) ? (
+          <p className="control-hint">{t.branchLengthsHint}</p>
+        ) : null}
         <Row label={t.compactTidy} title={t.compactTidyTitle}>
           <Switch
             checked={layoutOptions.layoutMode === "tidy"}

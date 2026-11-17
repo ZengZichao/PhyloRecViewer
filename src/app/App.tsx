@@ -328,9 +328,64 @@ export function App() {
       if (document.querySelector(".dropdown-menu")) return;
       e.preventDefault();
       closePanel();
+      // "Close panel / clear selection": the click-driven lineage highlight and
+      // the inspector live in the canvas, so Esc has to reach them explicitly.
+      document.dispatchEvent(new CustomEvent("rpv:clear-selection"));
+      useStore.getState().setInspector(null);
     },
     { allowInModals: true },
   );
+
+  // Document-level navigation the help panel promises - Delete closes the
+  // active tab, arrows / Home / End move between document tabs. They used to
+  // fire only while a tab (or the panel tablist) held focus, so the same key
+  // worked or did nothing depending on where the click happened last. A focused
+  // canvas node stops propagation on its own arrow handling, so in-canvas node
+  // navigation keeps precedence over tab switching.
+  useGlobalShortcuts((e) => {
+    if (isTextInput(e)) return;
+    // Only act from a non-interactive focus (body / canvas background). A
+    // focused button, tab, slider or panel tab has its OWN arrow / delete
+    // semantics, and letting the document-level handler fire there too would
+    // switch tabs under the user's hands.
+    const ae = document.activeElement as HTMLElement | null;
+    if (
+      ae &&
+      ae !== document.body &&
+      ae.closest('button, input, select, textarea, a[href], [role], [tabindex]')
+    ) {
+      return;
+    }
+    const s = useStore.getState();
+    if (e.key === "Delete") {
+      e.preventDefault();
+      if (s.tabs.length > 0) s.closeTab(s.activeTabId);
+      return;
+    }
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
+    if (e.key !== "ArrowRight" && e.key !== "ArrowLeft" && e.key !== "Home" && e.key !== "End") return;
+    if (s.tabs.length < 2) return;
+    e.preventDefault();
+    const idx = s.tabs.findIndex((tb) => tb.id === s.activeTabId);
+    let next = idx;
+    if (e.key === "Home") next = 0;
+    else if (e.key === "End") next = s.tabs.length - 1;
+    else if (e.key === "ArrowRight") next = (idx + 1) % s.tabs.length;
+    else next = (idx - 1 + s.tabs.length) % s.tabs.length;
+    const tab = s.tabs[next];
+    if (tab) s.switchTab(tab.id);
+  });
+
+  // Presentation mode is meant to be a full-screen, chrome-free view: hide the
+  // menu bar and ask the browser for fullscreen (best effort - some embeds
+  // refuse, and the drawing is still maximised without it).
+  useEffect(() => {
+    if (presenting) {
+      document.documentElement.requestFullscreen?.().catch(() => {});
+    } else if (document.fullscreenElement) {
+      document.exitFullscreen?.().catch(() => {});
+    }
+  }, [presenting]);
 
   // Panel widths saved on a wide screen must not crush the canvas on a small
   // one: clamp both to the current viewport. Narrow FIRST launches collapse
@@ -492,6 +547,21 @@ export function App() {
     useStore.setState({ pendingRestore: null });
     useStore.getState().showToast(t.restoreCleared, "info");
   };
+  // The restore prompt is a dead end without a third exit: Esc and an explicit
+  // close both mean "start blank", so no choice locks the user out of the app.
+  useEffect(() => {
+    if (!pendingRestore) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        e.stopPropagation();
+        onRestoreDecline();
+      }
+    };
+    window.addEventListener("keydown", onKey, true);
+    return () => window.removeEventListener("keydown", onKey, true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingRestore]);
 
   const stats = useMemo(() => {
     if (!recon) return null;
@@ -566,6 +636,7 @@ export function App() {
             className="rail rail-left"
             onClick={() => setSidebarOpen(true)}
             title={`${t.expand} ${t.controlsPanel}`}
+            aria-label={`${t.expand} ${t.controlsPanel}`}
           >
             <span className="rail-chevron" aria-hidden="true">›</span>
             <span className="rail-text">{t.controlsPanel}</span>
@@ -595,7 +666,7 @@ export function App() {
                   aria-hidden="true"
                   type="file"
                   multiple
-                  accept=".xml,.recphyloxml,.recphylo,.phyloxml,.nhx,.nwk,.newick"
+                  accept=".xml,.recphyloxml,.recphylo,.nhx,.nwk,.newick"
                   hidden
                   onChange={(e) => {
                     const files = Array.from(e.target.files ?? []);
@@ -817,6 +888,14 @@ export function App() {
             <div className="multi-open" role="dialog" aria-modal="true" aria-label={t.restoreTitle}>
               <div className="multi-open-card">
                 <h3>{t.restoreTitle}</h3>
+                <button
+                  className="panel-collapse restore-close"
+                  aria-label={t.restoreDecline}
+                  title={t.restoreDecline}
+                  onClick={onRestoreDecline}
+                >
+                  <Icon name="close" size={12} />
+                </button>
                 <p className="muted">
                   {t.restoreBody.replace(
                     "{time}",
@@ -873,6 +952,7 @@ export function App() {
             className="rail rail-right"
             onClick={() => openPanel(rightPanelTab)}
             title={`${t.expand} ${t.analyze}`}
+            aria-label={`${t.expand} ${t.analyze}`}
           >
             <span className="rail-chevron" aria-hidden="true">‹</span>
             <span className="rail-text">{t.analyze}</span>

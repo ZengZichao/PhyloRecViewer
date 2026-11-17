@@ -849,6 +849,9 @@ function renderGeneGlyphs(
       return (
         <g
           key={`gg-${g.id}`}
+          // Stable, class-independent anchor for tests and assistive tooling
+          // (a CSS-class rename once silently broke every node-counting script).
+          data-node-id={g.id}
           role={h.interactive ? "button" : undefined}
           // Roving tabindex: the gene layer is ONE stop in the tab order
           // and the arrow keys move focus between nodes. Giving every glyph
@@ -894,7 +897,17 @@ function renderGeneGlyphs(
               native one only where the custom tooltip is not in play. */}
           {!(h.interactive && h.onGeneEnter) && <title>{title}</title>}
           {h.interactive && (
-            <circle cx={c.x} cy={c.y} r={s + 4} fill="transparent" />
+            // A collapsed wedge is the ONLY representation of the whole clade,
+            // so its hit area has to cover the marker (and the label drawn on
+            // top of it). The old r=s+4 circle left the wedge's centre - the
+            // point every click lands on - outside the clickable region, and
+            // the label above swallowed the click even inside it.
+            <circle
+              cx={c.x}
+              cy={c.y}
+              r={isCollapsed ? Math.max(s * 2.2, 13) : s + 4}
+              fill="transparent"
+            />
           )}
           {glyph}
           {isDiff && (
@@ -1111,6 +1124,11 @@ function renderGeneLabels(
     if (!options.fullLabels && displayName.length > LABEL_MAX) {
       displayName = displayName.slice(0, LABEL_MAX - 1) + "\u2026";
     }
+    // A collapsed clade's label sits exactly on top of its wedge, and an
+    // interactive <text> there swallows the click meant for the marker (the
+    // wedge's own hit circle is underneath). The label is a caption for the
+    // marker, not a rename handle, so it must never take pointer events.
+    const labelClickable = !!onLabelClick && !!overrideKey && !isCollapsed;
     const st = isBottom ? options.geneTipLabelStyle : options.geneInternalLabelStyle;
     const font = labelFont(st);
     const anchor = resolveAnchor(st.align, options.orientation);
@@ -1136,9 +1154,9 @@ function renderGeneLabels(
           stroke: theme.background,
           strokeWidth: 3,
           strokeLinejoin: "round",
-          ...(onLabelClick && overrideKey ? { cursor: "pointer" } : {}),
+          ...(labelClickable ? { cursor: "pointer" } : { pointerEvents: "none" }),
         }}
-        onClick={onLabelClick && overrideKey ? (e) => { e.stopPropagation(); onLabelClick(overrideKey, g.id, e); } : undefined}
+        onClick={labelClickable ? (e) => { e.stopPropagation(); onLabelClick(overrideKey, g.id, e); } : undefined}
       >
         {displayName}
       </text>,

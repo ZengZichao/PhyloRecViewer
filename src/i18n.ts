@@ -9,6 +9,7 @@ export interface Dict {
   menuFile: string;
   menuView: string;
   menuLanguage: string;
+  morePreferences: string;
   /** Language endonyms: each language is named in itself, so both dictionaries
    *  hold the same pair and the label does not move with the locale. */
   langNameZh: string;
@@ -53,14 +54,20 @@ export interface Dict {
   speciesSpacing: string;
   speciesWidth: string;
   alignTips: string;
+  alignTipsTitle: string;
   compactTidy: string;
   compactTidyTitle: string;
   midwayDup: string;
   midwayDupTitle: string;
   branchLengths: string;
+  branchLengthsTitle: string;
+  branchLengthsHint: string;
   minimap: string;
   reduceCrossings: string;
   reduceCrossingsTitle: string;
+  crossingsReduced: string;
+  crossingsNone: string;
+  crossingsNoTransfers: string;
   resetSwaps: string;
   undo: string;
   redo: string;
@@ -68,6 +75,8 @@ export interface Dict {
   annoPlaceholder: string;
   annoColor: string;
   annoRemove: string;
+  annoClearAll: string;
+  annoClearAllConfirm: string;
   annoCancel: string;
   // sidebar - style
   style: string;
@@ -224,6 +233,7 @@ export interface Dict {
   // canvas
   zoomIn: string;
   zoomOut: string;
+  zoomLimit: string;
   fit: string;
   // analysis panel
   analyze: string;
@@ -283,6 +293,7 @@ noEvents: string;
   prevMatch: string;
   nextMatch: string;
   filterEvents: string;
+  filterEvent: string;
   filterFamilies: string;
   clearFilters: string;
   statsTotals: string;
@@ -422,6 +433,7 @@ noEvents: string;
   autosaveNone: string;
   autosaveFailedLabel: string;
   clearAutosave: string;
+  clearAutosaveConfirm: string;
   clearAutosaveDone: string;
   recoverySection: string;
   recoveryFound: string;
@@ -495,9 +507,12 @@ noEvents: string;
   mergedTabTitle: string;
   fileTooLarge: string;
   tabFileOpenFailed: string;
+  alreadyOpenTab: string;
   tabCorrupt: string;
   nestedSwitchToast: string;
   compareSwitchToast: string;
+  nestedAddedToast: string;
+  compareAddedToast: string;
   restoreFailed: string;
   someDocsFailed: string;
   unknownFile: string;
@@ -518,6 +533,7 @@ const en: Dict = {
   menuFile: "File",
   menuView: "View",
   menuLanguage: "Language",
+  morePreferences: "More preferences…",
   langNameZh: "中文",
   langNameEn: "English",
   openFile: "Open file",
@@ -558,14 +574,20 @@ const en: Dict = {
   speciesSpacing: "Species spacing",
   speciesWidth: "Species branch thickness",
   alignTips: "Align tips",
+  alignTipsTitle: "Align extant species tips to a common baseline. Only visible when species sit at different depths.",
   compactTidy: "Compact layout",
   compactTidyTitle: "Pack sibling subtrees closer together (contour packing) instead of using fixed-width leaf slots.",
   midwayDup: "Center duplications",
   midwayDupTitle: "Place gene-duplication nodes at the midpoint of their species branch (otherwise nearer the ancestor).",
   branchLengths: "Branch lengths",
+  branchLengthsTitle: "Scale species depths by their branch lengths. Requires branch lengths in the file.",
+  branchLengthsHint: "This document has no species branch lengths, so the toggle changes nothing.",
   minimap: "Minimap",
   reduceCrossings: "Reduce crossings",
   reduceCrossingsTitle: "Automatically mirror subtrees to reduce transfer crossings",
+  crossingsReduced: "Crossings reduced: {before} → {after}",
+  crossingsNone: "No crossings could be reduced — this layout is already optimal",
+  crossingsNoTransfers: "This document has no transfers to rearrange",
   resetSwaps: "Reset mirroring",
   undo: "Undo",
   redo: "Redo",
@@ -573,6 +595,8 @@ const en: Dict = {
   annoPlaceholder: "Add a note…",
   annoColor: "Color",
   annoRemove: "Remove",
+  annoClearAll: "Clear all annotations",
+  annoClearAllConfirm: "Remove all annotations from this document? This can be undone with Ctrl+Z.",
   annoCancel: "Cancel",
   style: "Style",
   curvedBranches: "Curved branches",
@@ -641,7 +665,7 @@ const en: Dict = {
   expandHint: "Alt/⌥- or ⌘-click to expand",
   emptyFormats: "recPhyloXML, NHX, Newick",
   errorTitle: "Could not parse this file",
-  errorHint: "Supported: recPhyloXML (.recphyloxml / .recphylo / .phyloxml / .xml), NHX (.nhx), Newick (.nwk / .newick). Check the file format and encoding.",
+  errorHint: "Supported: recPhyloXML (.recphyloxml / .recphylo / .xml), NHX (.nhx), Newick (.nwk / .newick). Check the file format and encoding.",
   errorRetry: "Choose another file",
   errorBack: "Back to previous",
   errorSample: "Load sample",
@@ -681,6 +705,7 @@ const en: Dict = {
   paneSymbiontHostNamed: "Symbiont → Host ({name})",
   zoomIn: "Zoom in",
   zoomOut: "Zoom out",
+  zoomLimit: "limit reached",
   fit: "Fit to window",
   analyze: "Analysis",
   panelSearch: "Search",
@@ -698,9 +723,9 @@ const en: Dict = {
   resetAll: "Reset all",
   resetAllTitle: "Reset every layout and style option to its default",
   prefsTitle: "Preferences",
-  defaultView: "Default view",
-  saveDefaultView: "Set as default view",
-  clearDefaultView: "Clear default view",
+  defaultView: "Default layout & display options",
+  saveDefaultView: "Save as default layout",
+  clearDefaultView: "Clear default layout",
   restorePrefs: "Reset preferences",
   onboardSkip: "Skip",
   onboardNext: "Next",
@@ -726,6 +751,7 @@ noEvents: "No events",
   prevMatch: "Previous",
   nextMatch: "Next",
   filterEvents: "By event type",
+  filterEvent: "Show {name} events",
   filterFamilies: "By gene family",
   clearFilters: "Clear",
   statsTotals: "Summary",
@@ -861,6 +887,7 @@ noEvents: "No events",
   autosaveNone: "Not saved yet this session",
   autosaveFailedLabel: "Autosave failed. Export a session file to avoid losing work.",
   clearAutosave: "Clear autosave data",
+  clearAutosaveConfirm: "Discard the saved snapshot? The next refresh will start from a blank tab.",
   clearAutosaveDone: "Autosave data cleared",
   recoverySection: "Recovery",
   recoveryFound: "A snapshot that failed to restore was kept. Export it to inspect or re-import:",
@@ -903,9 +930,12 @@ noEvents: "No events",
   mergedTabTitle: "{name} ({n} families)",
   fileTooLarge: "Exceeds the 64 MiB limit: {names}",
   tabFileOpenFailed: "Failed to open a file in tab “{title}”",
+  alreadyOpenTab: "“{name}” is already open — switched to its tab",
   tabCorrupt: "Could not open tab “{title}”: the document is corrupt or from another version",
   nestedSwitchToast: "Switched to nested view; compare layer removed",
   compareSwitchToast: "Switched to compare view; nested layer removed",
+  nestedAddedToast: "Nested level added: {name}",
+  compareAddedToast: "Comparison added: {name}",
   restoreFailed: "Last session could not be restored: {names}. The raw snapshot is kept.",
   someDocsFailed: "Some documents could not be restored: {names}",
   unknownFile: "unknown file",
@@ -956,6 +986,7 @@ const zh: Dict = {
   menuFile: "文件",
   menuView: "视图",
   menuLanguage: "语言",
+  morePreferences: "更多偏好设置…",
   langNameZh: "中文",
   langNameEn: "English",
   openFile: "打开文件",
@@ -996,14 +1027,20 @@ const zh: Dict = {
   speciesSpacing: "物种间距",
   speciesWidth: "物种枝粗细",
   alignTips: "末端对齐",
+  alignTipsTitle: "把现存物种末端对齐到同一基线。仅当物种处于不同深度时才有可见变化。",
   compactTidy: "紧凑布局",
   compactTidyTitle: "把相邻子树尽量靠拢排列（轮廓法），而不是使用固定宽度的叶槽。",
   midwayDup: "重复事件居中",
   midwayDupTitle: "把基因重复节点放在其物种分支的中点（否则更靠近祖先端）。",
   branchLengths: "分支长度",
+  branchLengthsTitle: "按分支长度缩放物种深度。需要文件中带分支长度。",
+  branchLengthsHint: "本文档没有物种分支长度，因此该开关不会产生变化。",
   minimap: "小地图",
   reduceCrossings: "减少交叉",
   reduceCrossingsTitle: "自动镜像子树以减少转移交叉",
+  crossingsReduced: "交叉已减少：{before} → {after}",
+  crossingsNone: "无法进一步减少交叉 — 当前布局已是最优",
+  crossingsNoTransfers: "本文档没有可重排的转移",
   resetSwaps: "重置镜像",
   undo: "撤销",
   redo: "重做",
@@ -1011,6 +1048,8 @@ const zh: Dict = {
   annoPlaceholder: "输入批注内容…",
   annoColor: "颜色",
   annoRemove: "删除",
+  annoClearAll: "清除全部批注",
+  annoClearAllConfirm: "移除本文档的全部批注？可用 Ctrl+Z 撤销。",
   annoCancel: "取消",
   style: "样式",
   curvedBranches: "曲线分支",
@@ -1079,7 +1118,7 @@ const zh: Dict = {
   expandHint: "Alt/⌥ 或 ⌘ 单击展开",
   emptyFormats: "recPhyloXML、NHX、Newick",
   errorTitle: "无法解析该文件",
-  errorHint: "支持格式：recPhyloXML（.recphyloxml / .recphylo / .phyloxml / .xml）、NHX（.nhx）、Newick（.nwk / .newick）。请检查文件格式与编码。",
+  errorHint: "支持格式：recPhyloXML（.recphyloxml / .recphylo / .xml）、NHX（.nhx）、Newick（.nwk / .newick）。请检查文件格式与编码。",
   errorRetry: "重新选择文件",
   errorBack: "返回上一份",
   errorSample: "装入示例",
@@ -1119,6 +1158,7 @@ const zh: Dict = {
   paneSymbiontHostNamed: "共生体 → 宿主（{name}）",
   zoomIn: "放大",
   zoomOut: "缩小",
+  zoomLimit: "已到缩放边界",
   fit: "适应窗口",
   analyze: "分析面板",
   panelSearch: "搜索",
@@ -1136,9 +1176,9 @@ const zh: Dict = {
   resetAll: "全部重置",
   resetAllTitle: "将所有布局与样式选项重置为默认",
   prefsTitle: "设置",
-  defaultView: "默认视图",
-  saveDefaultView: "设为默认视图",
-  clearDefaultView: "清除默认视图",
+  defaultView: "默认布局与显示选项",
+  saveDefaultView: "保存为默认布局",
+  clearDefaultView: "清除默认布局",
   restorePrefs: "重置偏好",
   onboardSkip: "跳过",
   onboardNext: "下一步",
@@ -1164,6 +1204,7 @@ noEvents: "无事件",
   prevMatch: "上一个",
   nextMatch: "下一个",
   filterEvents: "按事件类型",
+  filterEvent: "显示{name}事件",
   filterFamilies: "按基因家族",
   clearFilters: "清除筛选",
   statsTotals: "汇总",
@@ -1299,6 +1340,7 @@ noEvents: "无事件",
   autosaveNone: "本次会话尚未保存",
   autosaveFailedLabel: "自动保存失败，请导出会话文件以免丢失数据。",
   clearAutosave: "清除自动保存数据",
+  clearAutosaveConfirm: "丢弃已保存的快照？下次刷新将从空白标签页开始。",
   clearAutosaveDone: "已清除自动保存数据",
   recoverySection: "恢复",
   recoveryFound: "存在一份未能恢复的快照，已保留。可导出以便检查或重新导入：",
@@ -1341,9 +1383,12 @@ noEvents: "无事件",
   mergedTabTitle: "{name}（{n} 个基因家族）",
   fileTooLarge: "超过 64 MiB 上限的文件：{names}",
   tabFileOpenFailed: "标签页「{title}」中的文件打开失败",
+  alreadyOpenTab: "「{name}」已打开 — 已切换到该标签页",
   tabCorrupt: "无法打开标签页「{title}」：文档已损坏或来自其它版本",
   nestedSwitchToast: "已切换到嵌套视图，对比层已移除",
   compareSwitchToast: "已切换到对比视图，嵌套层已移除",
+  nestedAddedToast: "已添加嵌套层级：{name}",
+  compareAddedToast: "已添加对比：{name}",
   restoreFailed: "上次的会话无法恢复：{names}。原始快照已保留。",
   someDocsFailed: "部分文档无法恢复：{names}",
   unknownFile: "未知文件",
@@ -1435,7 +1480,7 @@ export const translations: Record<Locale, Dict> = { zh, en };
 
 /** Single source for the accepted file types shown in errors and menus. */
 export const SUPPORTED_FORMATS =
-  "recPhyloXML (.recphyloxml / .recphylo / .phyloxml / .xml), NHX (.nhx), Newick (.nwk / .newick)";
+  "recPhyloXML (.recphyloxml / .recphylo / .xml), NHX (.nhx), Newick (.nwk / .newick)";
 
 /** Hook: current-locale dictionary. */
 export function useT(): Dict {

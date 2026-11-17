@@ -181,7 +181,12 @@ export function Settings({ open, onClose }: { open: boolean; onClose: () => void
             <button
               className="btn ghost"
               onClick={() => {
+                if (!window.confirm(t.clearAutosaveConfirm)) return;
                 clearAutosaveSnapshot();
+                // The status line reads the store's snapshot timestamp, which
+                // clearing storage does not reset on its own: the row kept
+                // claiming "Last saved …" for a snapshot that was gone.
+                useStore.setState({ autosaveAt: null, autosaveFailed: false });
                 showToast(t.clearAutosaveDone, "success");
               }}
             >

@@ -162,6 +162,30 @@ describe("a nameless restored tab stays nameless", () => {
   });
 });
 
+describe("restoring over an open workspace", () => {
+  beforeEach(resetWorkspace);
+
+  const tab = (title: string, xml: string): SavedTab => ({
+    title,
+    xml,
+    swapped: [],
+    nestedSwapped: [],
+    collapsed: [],
+    geneColors: {},
+  });
+
+  it("does not stack a duplicate of a document already on a tab", () => {
+    useStore.setState({ xml: FRONT, fileName: "showcase.nhx" });
+    const before = useStore.getState().tabs.length;
+    const ids = restoreTabs([tab("showcase.nhx", FRONT)]);
+    expect(ids).toHaveLength(0);
+    expect(useStore.getState().tabs.length).toBe(before);
+    // An unrelated document from the same session still restores.
+    const other = restoreTabs([tab("other.nhx", OTHER)]);
+    expect(other).toHaveLength(1);
+  });
+});
+
 describe("restore failure toasts speak the UI language", () => {
   beforeEach(resetWorkspace);
 

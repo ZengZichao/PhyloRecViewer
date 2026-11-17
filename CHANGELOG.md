@@ -12,6 +12,45 @@ archived version carries its own immutable **version DOI**: v0.1.0 is
 A round of fixes against the published site, covering the empty-state hub, the
 analysis panel, located-node visibility, duplication rendering and PDF export.
 
+### External test-report round (2026-11-17)
+
+Fixes driven by five independent black-box test reports (A–E) against the
+published site, using each report's own review notes to separate real defects
+from tester-side false positives.
+
+**Fixed**
+
+- **Collapsed clades could not be expanded**: the marker's own caption was
+  drawn over its hit area and swallowed the click. The caption is now
+  non-interactive, the marker has a generous hit target, and plain click,
+  Alt/⌥/⌘-click and Enter/Space all toggle it.
+- **Modals with no exit**: `Help → About` and the refresh "Restore last
+  session?" prompt now close on Escape and on an outside click.
+- **Tab hygiene**: re-opening a file that is already on a tab focuses that tab
+  instead of stacking a duplicate; "New document" on an empty Untitled tab
+  reuses it instead of adding a second identical tab.
+- **Plain Newick** (no `[&&NHX:S=]`) was refused although the welcome page and
+  the file picker advertise Newick. It now loads in a clearly labelled
+  topology-only mode; partially annotated files keep the actionable error.
+- **recPhyloXML dialect**: files that omit the `<phylogeny>` wrapper under
+  `<spTree>` / `<recGeneTree>` are read instead of being reported as "no
+  clades"; `.phyloxml` is no longer advertised as a supported extension.
+- **Quoted names**: Newick labels wrapped in double quotes and NHX `S="…"`
+  values are read correctly; negative branch lengths are reported.
+- **Keyboard**: `Delete`, `←/→`, `Home`/`End` and `Esc` work regardless of which
+  surface last held focus; `Ctrl/⌘+0` resets the zoom to 100%.
+- **Feedback**: "Reduce crossings" reports the measured before → after crossing
+  count (or says the layout is already optimal / the document has no transfers);
+  `+ Nested level` / `+ Compare` confirm what they added.
+- **Preferences**: "Clear autosave data" confirms, clears the snapshot and
+  updates the status line; the event-type filter chips persist across reloads.
+- **Presentation mode** hides the menu bar and requests fullscreen.
+- **Offline**: a service worker caches the static build so a reload works
+  offline; the species-tree picker validates its input immediately.
+- **Accessibility / polish**: focus rings, switch `aria-checked`, rail button
+  names, legend button state, minimap labelling, menu shortcut separators and
+  print styles.
+
 ### UI design review round (2026-11-06)
 
 A dedicated visual pass over the interface — headless-browser screenshots of

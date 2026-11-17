@@ -55,8 +55,8 @@ export const RULES: Rule[] = [
     zh: '基因树 "$1" 声明 rooted="false"，但调和结果总是有根的：PhyloRecViewer 无法绘制无根树。请重新为该基因树定根（recPhyloXML 架构要求 rooted="true"）。',
   },
   {
-    re: /^Species tree \(<spTree>\) has no clades\.$/,
-    zh: "物种树（<spTree>）不含任何演化支。",
+    re: /^Species tree \(<spTree>\) has no <clade> elements\.[\s\S]*$/,
+    zh: "物种树（<spTree>）不含任何 <clade> 元素。recPhyloXML 要求 <spTree><phylogeny rooted=\"true\"><clade>…；若缺少 <phylogeny> 包装，clade 必须直接位于 <spTree> 之下。",
   },
   {
     re: /^Species tree contains duplicate species names; references resolve to the first occurrence\.$/,

@@ -94,6 +94,20 @@ describe("decodeNhxValue only reverses the known escapes", () => {
   });
 });
 
+describe("quoted labels", () => {
+  it("reads a double-quoted label containing Newick punctuation", () => {
+    const [t] = parseNewick('("weird:;()[],=name":0.4,Human:0.5)root:0.1;');
+    expect(t.children[0].name).toBe("weird:;()[],=name");
+    expect(t.children[0].length).toBe(0.4);
+    expect(t.children[1].name).toBe("Human");
+  });
+
+  it("reads a single-quoted label with a doubled quote escape", () => {
+    const [t] = parseNewick("('it''s':0.1,B:0.2)root;");
+    expect(t.children[0].name).toBe("it's");
+  });
+});
+
 describe("bracket-free Newick statements", () => {
   it("parses a single-leaf tree", () => {
     const trees = parseNewick("SpeciesA;");

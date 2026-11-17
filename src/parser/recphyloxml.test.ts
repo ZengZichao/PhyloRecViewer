@@ -540,3 +540,21 @@ describe("crossing optimizer", () => {
     expect(res.transfers.length).toBe(1);
   });
 });
+
+describe("producers that omit the <phylogeny> wrapper", () => {
+  const xml = `<recPhylo>
+    <spTree><clade><name>root</name><clade><name>A</name></clade><clade><name>B</name></clade></clade></spTree>
+    <recGeneTree><clade><name>g</name><eventsRec><speciation speciesLocation="root"/></eventsRec>
+      <clade><eventsRec><leaf speciesLocation="A" geneName="a"/></eventsRec></clade>
+      <clade><eventsRec><leaf speciesLocation="B" geneName="b"/></eventsRec></clade>
+    </clade></recGeneTree>
+  </recPhylo>`;
+
+  it("reads clades directly under spTree / recGeneTree", () => {
+    const recon = parseRecPhyloXML(xml);
+    expect(recon.species.root.name).toBe("root");
+    expect(recon.geneTrees).toHaveLength(1);
+    expect(recon.geneTrees[0].nodes).toHaveLength(3);
+    expect(recon.warnings.some((w) => /omits the <phylogeny> wrapper/.test(w))).toBe(true);
+  });
+});

@@ -293,10 +293,40 @@ export function Canvas({
     setHighlight(null);
   }, [result.reconciliation]);
 
+  // Esc ("clear selection") is a global shortcut, but the click-driven lineage
+  // highlight is canvas-local state: listen for the app-level request so the
+  // promised key actually clears it (and any annotation / rename mode).
+  useEffect(() => {
+    const clear = () => {
+      setHighlight(null);
+      setAnnotateMode(false);
+      setEditingLabel(null);
+      setTip(null);
+    };
+    document.addEventListener("rpv:clear-selection", clear);
+    return () => document.removeEventListener("rpv:clear-selection", clear);
+  }, []);
+
   const zoomBy = (factor: number) => {
     const el = containerRef.current;
     const zb = zoomRef.current;
     if (el && zb) d3select(el).call(zb.scaleBy, factor);
+  };
+
+  // ⌘/Ctrl+0: back to 100%. The zoom level is kept centred on whatever the
+  // middle of the viewport currently shows, so resetting never flings the
+  // drawing off screen.
+  const resetZoom = () => {
+    const el = containerRef.current;
+    const zb = zoomRef.current;
+    if (!el || !zb) return;
+    const k = 1;
+    const px = (el.clientWidth / 2 - view.x) / view.k;
+    const py = (el.clientHeight / 2 - view.y) / view.k;
+    d3select(el).call(
+      zb.transform,
+      zoomIdentity.translate(el.clientWidth / 2 - px * k, el.clientHeight / 2 - py * k).scale(k),
+    );
   };
 
   // Keyboard: F = fit to view, Cmd/Ctrl +/- = zoom in/out (ignored while typing
@@ -305,6 +335,8 @@ export function Canvas({
   fitRef.current = fit;
   const zoomByRef = useRef(zoomBy);
   zoomByRef.current = zoomBy;
+  const resetZoomRef = useRef(resetZoom);
+  resetZoomRef.current = resetZoom;
   useGlobalShortcuts((e) => {
     if (isTextInput(e)) return;
     if ((e.metaKey || e.ctrlKey) && (e.key === "=" || e.key === "+")) {
@@ -313,6 +345,9 @@ export function Canvas({
     } else if ((e.metaKey || e.ctrlKey) && e.key === "-") {
       e.preventDefault();
       zoomByRef.current(1 / 1.2);
+    } else if ((e.metaKey || e.ctrlKey) && (e.key === "0" || e.code === "Numpad0")) {
+      e.preventDefault();
+      resetZoomRef.current();
     } else if (!e.metaKey && !e.ctrlKey && !e.altKey && (e.key === "f" || e.key === "F")) {
       e.preventDefault();
       fitRef.current();
@@ -453,6 +488,13 @@ export function Canvas({
         setAnnotating({ id: node.id, name: node.name || node.endEvent.geneName || node.id });
         return;
       }
+      // A collapsed clade is expanded by a plain click as well: the wedge is
+      // the only visible part of the whole subtree, so requiring a modifier on
+      // a target that small made the documented expand gesture undiscoverable.
+      if (result.collapsedIds.has(node.id) && onToggleCollapse) {
+        onToggleCollapse(node.id);
+        return;
+      }
       // Alt/⌥- or ⌘(metaKey)-click collapses or expands an internal clade.
       // Ctrl is deliberately NOT a trigger, and the copy says so (STYLE §3.3).
       if ((evt.altKey || evt.metaKey) && node.children.length > 0 && onToggleCollapse) {
@@ -463,7 +505,7 @@ export function Canvas({
       // Plain click also opens the inspector: "select a node and read it".
       setInspector({ kind: "gene", id: node.id });
     },
-    [annotateMode, onToggleCollapse, setAnnotating, setInspector],
+    [annotateMode, onToggleCollapse, setAnnotating, setInspector, result.collapsedIds],
   );
 
   // Keyboard access to nodes (A11Y): Enter = highlight lineage, Shift+Enter =
@@ -475,13 +517,16 @@ export function Canvas({
       evt.stopPropagation();
       if (evt.shiftKey || annotateMode) {
         setAnnotating({ id: node.id, name: node.name || node.endEvent.geneName || node.id });
+      } else if (result.collapsedIds.has(node.id) && onToggleCollapse) {
+        // Enter/Space on a collapsed marker expands it, matching the mouse.
+        onToggleCollapse(node.id);
       } else if (evt.altKey && node.children.length > 0 && onToggleCollapse) {
         onToggleCollapse(node.id);
       } else {
         setHighlight(lineageIds(node));
       }
     },
-    [annotateMode, onToggleCollapse, setAnnotating],
+    [annotateMode, onToggleCollapse, setAnnotating, result.collapsedIds],
   );
 
   const gridStep = 24 * view.k;
@@ -638,11 +683,29 @@ export function Canvas({
           are the ones actually bound: ⌘/Ctrl +/- zoom and F fit in this canvas,
           ⌘Z / ⌘⇧Z / ⌘Y undo-redo in App.tsx. */}
       <div className="float-toolbar">
-        <button data-tooltip={`${t.zoomOut} (⌘/Ctrl -)`} aria-label={t.zoomOut} onClick={() => zoomBy(1 / 1.2)}>
+        <button
+          data-tooltip={
+            view.k <= 0.030001
+              ? `${t.zoomOut} (⌘/Ctrl -) — ${t.zoomLimit}`
+              : `${t.zoomOut} (⌘/Ctrl -)`
+          }
+          aria-label={t.zoomOut}
+          disabled={view.k <= 0.030001}
+          onClick={() => zoomBy(1 / 1.2)}
+        >
           <Icon name="minus" />
         </button>
         <span className="zoom-level" aria-label={`${t.zoomLevel} ${Math.round(view.k * 100)}%`}>{Math.round(view.k * 100)}%</span>
-        <button data-tooltip={`${t.zoomIn} (⌘/Ctrl +)`} aria-label={t.zoomIn} onClick={() => zoomBy(1.2)}>
+        <button
+          data-tooltip={
+            view.k >= 9.99999
+              ? `${t.zoomIn} (⌘/Ctrl +) — ${t.zoomLimit}`
+              : `${t.zoomIn} (⌘/Ctrl +)`
+          }
+          aria-label={t.zoomIn}
+          disabled={view.k >= 9.99999}
+          onClick={() => zoomBy(1.2)}
+        >
           <Icon name="plus" />
         </button>
         <div className="ft-divider" />
@@ -840,7 +903,7 @@ function MiniMap({
   };
 
   return (
-    <div className="minimap">
+    <div className="minimap" title={t.minimap} aria-label={t.minimap}>
       <svg
         ref={svgRef}
         width={mapW}
@@ -849,7 +912,7 @@ function MiniMap({
         role="group"
         aria-label={t.minimap}
         onKeyDown={onKeyDown}
-        style={{ display: "block", cursor: "pointer", touchAction: "none" }}
+        style={{ display: "block", cursor: "grab", touchAction: "none" }}
       >
         <rect x={0} y={0} width={mapW} height={mapH} fill={theme.background} />
         {lines}

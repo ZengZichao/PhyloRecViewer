@@ -84,18 +84,12 @@ describe("detectFormat routing", () => {
     expect(detectFormat("(A)B;", "tree.nwk")).toBe("nhx");
   });
 
-  it("routes a single-leaf Newick away from the XML 'missing root' error", () => {
-    let msg = "";
-    try {
-      // No S= annotations -> the NHX reader explains what to ADD, and the
-      // message is NOT the XML root-element one.
-      parseReconciliation("SpeciesA;", "SpeciesA.nwk");
-      throw new Error("should have thrown");
-    } catch (e) {
-      msg = (e as Error).message;
-    }
-    expect(msg).toMatch(/species/i);
-    expect(msg).not.toMatch(/recPhylo> root/);
+  it("opens an unannotated Newick in topology-only mode, not the XML 'missing root' error", () => {
+    // No S= annotations at all is a plain tree: it loads against its own clade
+    // names and says so, rather than being refused (or misreported as XML).
+    const recon = parseReconciliation("SpeciesA;", "SpeciesA.nwk");
+    expect(recon.species.nodes.length).toBeGreaterThan(0);
+    expect(recon.warnings.some((w) => /topology-only/i.test(w))).toBe(true);
   });
 
   it("keeps recPhyloXML detection for XML content", () => {

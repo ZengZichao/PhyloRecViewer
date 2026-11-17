@@ -2,6 +2,51 @@ import type { Reconciliation, SpeciesNode } from "../model/types";
 import { computeTransfers } from "./transfers";
 
 /**
+ * Count transfer-arc crossings for a given mirror set, using the species leaf
+ * order the layout will actually draw. This is the number the "Reduce
+ * crossings" button claims to reduce, so the UI can report a before → after
+ * result instead of leaving the user to guess whether anything happened.
+ */
+export function transferCrossings(recon: Reconciliation, swapped: Set<string>): number {
+  const species = recon.species;
+  const transfers = computeTransfers(recon);
+  if (transfers.length < 2) return 0;
+  const order = new Map<string, number>();
+  let p = 0;
+  const dfs = (n: SpeciesNode): void => {
+    if (n.children.length === 0) {
+      order.set(n.id, p++);
+      return;
+    }
+    const kids = n.children;
+    const flip = swapped.has(n.name);
+    for (let k = 0; k < kids.length; k++) {
+      dfs(kids[flip ? kids.length - 1 - k : k] as SpeciesNode);
+    }
+  };
+  dfs(species.root);
+  const arcs: [number, number][] = [];
+  for (const t of transfers) {
+    const a = species.byName.get(t.from.speciesId);
+    const b = species.byName.get(t.to.speciesId);
+    if (!a || !b) continue;
+    const ai = order.get(a.id);
+    const bi = order.get(b.id);
+    if (ai == null || bi == null) continue;
+    arcs.push(ai < bi ? [ai, bi] : [bi, ai]);
+  }
+  let crossings = 0;
+  for (let i = 0; i < arcs.length; i++) {
+    const [a, b] = arcs[i];
+    for (let j = i + 1; j < arcs.length; j++) {
+      const [c, d] = arcs[j];
+      if ((a < c && c < b && b < d) || (c < a && a < d && d < b)) crossings++;
+    }
+  }
+  return crossings;
+}
+
+/**
  * Heuristic crossing reduction: pick a set of species subtrees to mirror
  * (by name) so that transfer donor/recipient species sit closer together in
  * leaf order, which shortens transfer arcs and reduces crossings.

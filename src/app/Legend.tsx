@@ -97,22 +97,20 @@ export function Legend({
     }
   };
 
-  const familyNames = recon.geneTrees
-    .map((gt) => gt.name || `${t.geneTree} ${gt.index + 1}`)
-    .join(", ");
-  // Read from the same table the rows are drawn from, so the accessible name can
-  // never list a different set — or a different order — than the overlay shows.
-  const spokenRows = LEGEND_ROWS.map((r) => r.label({ t, events: t.event })).join(", ");
-
   return (
     <div
       className={`legend${horizontal ? " horizontal" : ""}`}
-      aria-label={`${t.events}: ${spokenRows}; ${t.geneFamilies}: ${familyNames}`}
+      role="group"
+      // A short group name: the full event list duplicated the canvas
+      // "Collapsed clade" marker's accessible name, so name-based lookups hit
+      // the legend instead of the marker.
+      aria-label={`${t.events} · ${t.geneFamilies}`}
     >
       <button
         className="legend-dir"
         data-tooltip={horizontal ? t.legendVertical : t.legendHorizontal}
         aria-label={horizontal ? t.legendVertical : t.legendHorizontal}
+        aria-pressed={horizontal}
         onClick={() => setHorizontal((h) => !h)}
       >
         {horizontal ? "\u22EE" : "\u22EF"}

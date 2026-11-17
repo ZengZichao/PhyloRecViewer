@@ -688,3 +688,38 @@ describe("a nameless load reproduces HEAD's node ids", () => {
     expect(compare).not.toEqual(nested);
   });
 });
+
+describe("new document tab reuse", () => {
+  it("reuses an empty Untitled tab instead of adding a second one", () => {
+    useStore.setState({ editSeq: 0, savedSeq: 0, xml: null, recon: null, error: null });
+    const before = useStore.getState().tabs.length;
+    useStore.getState().newDocument();
+    expect(useStore.getState().tabs.length).toBe(before);
+  });
+
+  it("adds a tab when the current one holds a document", () => {
+    useStore.getState().loadXml(NHX, "a.nhx");
+    const before = useStore.getState().tabs.length;
+    useStore.getState().newDocument();
+    expect(useStore.getState().tabs.length).toBe(before + 1);
+  });
+});
+
+describe("duplicate open", () => {
+  it("focuses the tab already showing the same file", async () => {
+    const raf = vi
+      .spyOn(window, "requestAnimationFrame")
+      .mockImplementation(() => 0 as unknown as number);
+    try {
+      useStore.getState().loadXml(NHX, "dup.nhx");
+      const tabA = useStore.getState().activeTabId;
+      useStore.getState().newTab();
+      await useStore.getState().openFiles([fakeFile("dup.nhx", NHX, 0)]);
+      const st = useStore.getState();
+      expect(st.tabs.length).toBe(2);
+      expect(st.activeTabId).toBe(tabA);
+    } finally {
+      raf.mockRestore();
+    }
+  });
+});

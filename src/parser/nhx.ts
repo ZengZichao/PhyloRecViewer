@@ -42,6 +42,7 @@ import type {
 import { assignStableGeneIds, assignStableSpeciesIds } from "../model/stableId";
 import { resolveEndEventType } from "./recphyloxml";
 import { parseNewick, type NewickNode } from "./newick";
+import { parseSpeciesTree } from "./speciesTree";
 
 let NHX_SEQ = 0;
 
@@ -66,13 +67,29 @@ const MAX_TREE_DEPTH = 1000;
 const markToAbsent = (v: string | undefined): string | undefined =>
   v === "?" ? undefined : v;
 
+/** Strip the wrapping quotes some NHX writers put around a value (`S="E. coli"`),
+ *  and undo the doubled-quote / backslash escapes they use inside. */
+const unquote = (v: string): string => {
+  const t = v.trim();
+  if (
+    t.length >= 2 &&
+    ((t.startsWith('"') && t.endsWith('"')) || (t.startsWith("'") && t.endsWith("'")))
+  ) {
+    const inner = t.slice(1, -1);
+    return inner.replace(/\\"/g, '"').replace(/''/g, "'").replace(/\\'/g, "'");
+  }
+  return t;
+};
+
 /**
  * Species tag for one node. `SP=` is accepted as an alias because some
  * third-party NHX writers emit it; it is part of this reader's dialect and is
  * covered by a test (see nhx.test.ts "accepts the SP= species alias").
  */
-const speciesOf = (node: NewickNode): string | undefined =>
-  markToAbsent(node.nhx.S || node.nhx.SP || undefined);
+const speciesOf = (node: NewickNode): string | undefined => {
+  const v = markToAbsent(node.nhx.S || node.nhx.SP || undefined);
+  return v == null ? undefined : unquote(v);
+};
 
 /**
  * NHX keys this reader interprets. Anything else is kept but reported.
@@ -321,9 +338,35 @@ export function parseNhxReconciliation(
     );
   }
 
+  // A Newick carrying NO species annotation at all is a plain tree, not a
+  // broken reconciliation. Refusing it made the "Newick" the welcome page and
+  // the file picker advertise unusable; instead it is loaded in topology-only
+  // mode, using its own clade names as the species tree, and says so.
+  let anySpeciesTag = false;
+  for (const root of forest) {
+    const stack = [root];
+    while (stack.length) {
+      const nd = stack.pop() as NewickNode;
+      if (speciesOf(nd)) {
+        anySpeciesTag = true;
+        break;
+      }
+      for (const c of nd.children) stack.push(c);
+    }
+    if (anySpeciesTag) break;
+  }
+  const looksLikeTree = /[();]/.test(text);
+  const topologyOnly = !externalSpecies && !anySpeciesTag && looksLikeTree;
+  if (forest.length > 1) {
+    warnings.push(
+      `This file contains ${forest.length} Newick trees; they were loaded as ${forest.length} gene trees in one document. Open them one at a time (or merge deliberately) if you expected a single tree.`,
+    );
+  }
+
   // Every internal node must carry a species tag for reconstruction to work -
-  // unless a separately provided species tree takes over that role.
-  if (!externalSpecies) {
+  // unless a separately provided species tree takes over that role, or the file
+  // is a plain tree with no annotations at all (topology-only mode).
+  if (!externalSpecies && !topologyOnly) {
     for (const root of forest) {
       const stack = [root];
       while (stack.length) {
@@ -360,6 +403,16 @@ export function parseNhxReconciliation(
     builtNames = new Set(species.nodes.map((n) => n.name));
     warnings.push(
       "Species tree taken from the separately provided file; NHX internal nodes without S= resolve to no species.",
+    );
+  } else if (topologyOnly) {
+    // The tree's own clade names ARE the species: every named node maps to a
+    // species of the same name, so the drawing keeps its structure. No
+    // reconciliation events exist in such a file, which the warnings above and
+    // the Checks panel both state.
+    species = parseSpeciesTree(text);
+    builtNames = new Set(species.nodes.map((n) => n.name));
+    warnings.push(
+      "No NHX species (S=) annotations were found, so this file was loaded in topology-only mode: its own clade names were used as the species tree and no duplication, loss or transfer events are available. Export the reconciliation as recPhyloXML (or add [&&NHX:S=…] tags) to see events.",
     );
   } else {
     const parentOf = new Map<string, string>();
@@ -463,7 +516,8 @@ export function parseNhxReconciliation(
         throw new NhxParseError("Gene tree is nested too deep (possible malformed input).");
       }
       const info = cls.get(nd)!;
-      const s = speciesOf(nd) ?? "";
+      // Topology-only mode has no S= tags: the clade's own label is its species.
+      const s = speciesOf(nd) ?? (topologyOnly ? nd.name ?? "" : "");
       const events: RecEvent[] = [];
       // Every arrival tag becomes its own transferBack event, so a node with
       // several arrivals survives the NHX round trip one-for-one.
@@ -484,6 +538,11 @@ export function parseNhxReconciliation(
       events.push(endEvent);
       if (s && !species.byName.has(s)) {
         warnings.push(`Gene node references unknown species "${s}".`);
+      }
+      if (info.branchLength != null && info.branchLength < 0) {
+        warnings.push(
+          `Gene node "${nd.name || "(no name)"}" declares a negative branch length (${info.branchLength}); it is clamped to 0 for drawing.`,
+        );
       }
       const gene: GeneNode = {
         id: `gn${seq}_${idx}_${nodes.length}`,

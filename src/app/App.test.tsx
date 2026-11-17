@@ -157,3 +157,40 @@ describe("App smoke render", () => {
     },
   );
 });
+
+describe("modal escape routes", () => {
+  it("closes the About dialog on Escape", async () => {
+    const host = document.createElement("div");
+    document.body.appendChild(host);
+    const root = await renderApp(host);
+    await act(async () => {
+      host.querySelector<HTMLButtonElement>('.menu-bar-item[aria-label="Help"]')!.click();
+    });
+    await act(async () => {
+      [...host.querySelectorAll<HTMLButtonElement>("#menu-help button")]
+        .find((b) => /About/.test(b.textContent ?? ""))!
+        .click();
+    });
+    expect(host.querySelector('[aria-label="About PhyloRecViewer"]')).not.toBeNull();
+    await act(async () => {
+      document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    });
+    expect(host.querySelector('[aria-label="About PhyloRecViewer"]')).toBeNull();
+    await unmountAndRemove(root, host);
+  });
+
+  it("closes the restore-session prompt on Escape (start blank)", async () => {
+    await act(async () => {
+      useStore.setState({ pendingRestore: { savedAt: Date.now() } });
+    });
+    const host = document.createElement("div");
+    document.body.appendChild(host);
+    const root = await renderApp(host);
+    expect(host.querySelector('[aria-label="Restore last session?"]')).not.toBeNull();
+    await act(async () => {
+      document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    });
+    expect(host.querySelector('[aria-label="Restore last session?"]')).toBeNull();
+    await unmountAndRemove(root, host);
+  });
+});

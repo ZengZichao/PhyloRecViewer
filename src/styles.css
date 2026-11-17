@@ -583,6 +583,14 @@ body {
   line-height: 1.25;
 }
 
+/* A precondition note under a control that has no effect on this document. */
+.control-hint {
+  margin: calc(-1 * var(--space-1)) 0 var(--space-2);
+  font-size: var(--fs-note);
+  color: var(--muted);
+  line-height: 1.35;
+}
+
 /* Root-direction picker: four icon buttons (top / bottom / left / right) — a
    direct, glanceable control for the root orientation. It is one joined track,
    the same object as the theme/language pickers, not four separate buttons. */
@@ -1066,7 +1074,15 @@ body {
   font-size: var(--fs-note);
 }
 
-/* Visible focus ring for keyboard users. */
+/* Visible focus ring for keyboard users. The broad rule covers controls this
+   list does not name (segmented buttons, the minimap, colour inputs); the
+   per-class list below keeps the ring consistent and the tab bar overrides it
+   with an inset ring so overflow:hidden never clips it. */
+:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
 .btn:focus-visible,
 .menu-item:focus-visible,
 .menu-bar-item:focus-visible,
@@ -3516,8 +3532,10 @@ kbd {
   pointer-events: none;
 }
 
-/* Presentation mode: the drawing owns the window. */
+/* Presentation mode: the drawing owns the window. The menu bar is hidden so
+   the tree fills the screen; the exit control stays reachable. */
 .app.presenting .body { inset: 0; }
+.app.presenting .top-bar { display: none; }
 .exit-presentation {
   position: fixed;
   /* Bottom-centre, clear of the menu bar: at top-right it sat on top of the
@@ -3599,3 +3617,37 @@ kbd {
 
 /* Warning badge is a button now. */
 button.warn-badge { cursor: pointer; font: inherit; }
+
+/* Printing a figure: the drawing is the artefact, so the application chrome
+   (menu bar, controls, analysis panel, floating toolbar, legend, minimap) is
+   dropped and the canvas is allowed to fill the page. */
+@media print {
+  .top-bar,
+  .sidebar,
+  .right-panel,
+  .rail,
+  .float-toolbar,
+  .legend,
+  .minimap,
+  .stats,
+  .match-badge,
+  .exit-presentation,
+  .toast,
+  .drop-overlay,
+  .loading-overlay {
+    display: none !important;
+  }
+  .body,
+  .main,
+  .canvas {
+    position: static !important;
+    inset: auto !important;
+    width: auto !important;
+    height: auto !important;
+    overflow: visible !important;
+    background: #fff !important;
+  }
+  .app {
+    display: block !important;
+  }
+}

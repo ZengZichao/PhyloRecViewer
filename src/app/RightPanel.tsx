@@ -299,6 +299,7 @@ function SearchFilterTab() {
               className="toggle"
               name={`rp-event-${ev.key}`}
               checked={eventFilter[ev.key]}
+              aria-label={t.filterEvent.replace("{name}", ev.label)}
               onChange={() => toggleEventFilter(ev.key)}
             />
             <span>{ev.label}</span>
@@ -975,6 +976,7 @@ function AnnotationsTab() {
   const compare = useStore((s) => s.compare);
   const setAnnotating = useStore((s) => s.setAnnotating);
   const removeAnnotation = useStore((s) => s.removeAnnotation);
+  const clearAnnotations = useStore((s) => s.clearAnnotations);
   const locateGene = useStore((s) => s.locateGene);
 
   // Names resolve across ALL panes: an annotation on a nested/compare node used
@@ -1050,6 +1052,14 @@ function AnnotationsTab() {
           </button>
         </div>
       ))}
+      <button
+        className="btn ghost anno-clear"
+        onClick={() => {
+          if (window.confirm(t.annoClearAllConfirm)) clearAnnotations();
+        }}
+      >
+        {t.annoClearAll}
+      </button>
     </div>
   );
 }
