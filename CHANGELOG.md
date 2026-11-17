@@ -12,11 +12,11 @@ archived version carries its own immutable **version DOI**: v0.1.0 is
 A round of fixes against the published site, covering the empty-state hub, the
 analysis panel, located-node visibility, duplication rendering and PDF export.
 
-### External test-report round (2026-11-17)
+### Published-site defect round (2026-11-17)
 
-Fixes driven by five independent black-box test reports (A–E) against the
-published site, using each report's own review notes to separate real defects
-from tester-side false positives.
+A round of fixes for defects found by black-box testing of the published
+site. Each finding was re-checked against the running build before being
+treated as real, so tester-side false positives are not encoded here.
 
 **Fixed**
 
