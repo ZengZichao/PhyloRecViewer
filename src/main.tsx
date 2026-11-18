@@ -7,6 +7,7 @@ import { friendlyParseError, useStore } from "./state/store";
 import { loadPrefs } from "./state/prefs";
 import { isTauri } from "./platform/desktop";
 import { installPreloadRecovery } from "./platform/preloadRecovery";
+import { swRegisterUrl } from "./platform/swUrl";
 import { themes } from "./render/theme";
 import "./styles.css";
 
@@ -87,7 +88,7 @@ installPreloadRecovery();
 // from a local filesystem origin where a service worker adds nothing.
 if (!isTauri() && "serviceWorker" in navigator && import.meta.env.PROD) {
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("/sw.js").catch(() => {
+    navigator.serviceWorker.register(swRegisterUrl()).catch(() => {
       /* offline support is best effort */
     });
   });
