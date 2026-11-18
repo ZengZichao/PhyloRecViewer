@@ -59,7 +59,7 @@ a version is superseded.
 * We will not ask you to disclose publicly before a fix or mitigation exists, and
   we will credit reporters who want credit.
 * A fix may land as a patch release; we may also publish a GitHub security
-  advisory so that dependabot and users are notified.
+  advisory so that users are notified.
 
 ## Scope
 

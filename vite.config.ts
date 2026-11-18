@@ -37,7 +37,7 @@ export default defineConfig({
     // statically imported into it (see the note at the top of
     // src/export/exporters.ts). Raising the limit rather than silencing it: the
     // default message tells you to "use dynamic import() to code-split", which is
-    // exactly the change that made PDF export fail in issue #11 - a lazily-fetched
+    // exactly the change that made PDF export fail - a lazily-fetched
     // chunk is renamed by every build, so a cached entry can ask for a hash the
     // server no longer has. The cost of the static import is ~129 kB gzip, and it
     // is what lets the raster fallback write a PDF with no network request at all.

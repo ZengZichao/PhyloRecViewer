@@ -14,7 +14,7 @@ export interface EventFilter {
   duplication: boolean;
   loss: boolean;
   transfer: boolean;
-  /** Extant gene tips (`leaf` terminal events). (B-01) */
+  /** Extant gene tips (`leaf` terminal events). */
   leaf: boolean;
 }
 
@@ -122,7 +122,7 @@ function nodeMatchesEvents(g: GeneNode, f: EventFilter): boolean {
   const t = g.endEvent.type;
   // A transfer is a donor (branchingOut or bifurcationOut) or a transferBack
   // arrival. bifurcationOut is a transfer by recPhyloXML definition, so it
-  // belongs in the `transfer` category (B-01).
+  // belongs in the `transfer` category.
   const isTransfer =
     t === "branchingOut" ||
     t === "bifurcationOut" ||

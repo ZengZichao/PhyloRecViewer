@@ -84,7 +84,7 @@ directory (or into `_build/aggregates/` for a non-destructive replay).
 ## Usage
 
 1. Launch PhyloRecViewer.
-2. Open a `.recphyloxml` / `.recphylo` / `.xml` / `.phyloxml` file (the app reads
+2. Open a `.recphyloxml` / `.recphylo` / `.xml` file (the app reads
    **recPhyloXML content**; plain PhyloXML trees without a `<recPhylo>` root are
    not reconciliations and are refused) or a `.nhx` / `.nwk` / `.newick` gene
    tree via **File → Open file**, drag & drop, or OS file association.
@@ -98,8 +98,8 @@ See the [full user manual (English)](./docs/USER_MANUAL.md) or [详细使用手�
 
 Every user-facing document ships in English and in Chinese. The English file is
 the primary one; the `.zh-CN.md` file is its translation and is kept in step
-with it. Editorial notes under `docs/` (UI glossary, style guide and dated UI
-review) are maintainer-facing and currently Chinese-only.
+with it. Editorial notes under `docs/` (UI glossary, style guide) are
+maintainer-facing and currently Chinese-only.
 
 - [User manual](./docs/USER_MANUAL.md) · [使用手册](./docs/USER_MANUAL.zh-CN.md)
 - [Contributing guide](./CONTRIBUTING.md) · [贡献指南](./CONTRIBUTING.zh-CN.md) — toolchain, checks, release process

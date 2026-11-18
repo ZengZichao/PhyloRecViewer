@@ -70,7 +70,7 @@ src/
 ├── samples/       # 随附示例调和结果（三个菜单项）
 ├── i18n.ts        # 中英词典（编译期类型检查）
 ├── session.ts     # 会话文件序列化（当前 schema 版本定义于此）
-└── styles.css     # 全局 CSS（TRAE Minimalist 设计系统）
+└── styles.css     # 全局 CSS（Radix tokens）
 src-tauri/
 └── src/           # Rust 桌面壳（文件关联、对话框、原子保存）
 data/              # 冻结的基准表与 MANIFEST.json（v0.1.0 测量）
@@ -84,11 +84,11 @@ docs/coverage-v0.1.2.json       # 手稿引用的 v0.1.2 覆盖率冻结摘要
 ├── release.yml    # 安装包：在 v* 标签上创建草稿发布，手动运行时产出工作流构件
 ├── codeql.yml     # JavaScript/TypeScript 与 Rust 的 CodeQL 扫描
 └── pages.yml      # 网页版的 GitHub Pages 部署
-tsconfig.json      # solution 文件（引用 app / node / test 三个项目）
+tsconfig.json      # solution 文件（引用 app / node / scripts / test 四个项目）
 tsconfig.app.json  # 面向浏览器构建的 src/
 tsconfig.node.json # vite.config.ts + scripts/（`tsc -b` 检查脚本时用的也是它）
 tsconfig.test.json # *.test.ts(x) 与 src/test/
-tsconfig.scripts.json  # `npm run measure` 所需的 jsx/类型设置
+tsconfig.scripts.json  # `npm run measure` 与 `npm run cli` 所需的 jsx/类型设置
 vite.config.ts     # 构建 + vitest（含覆盖率）配置
 .githooks/pre-commit            # 可选的本地守卫：npm run hooks:install
 ```
@@ -281,10 +281,9 @@ refactor: extract slider component into shared controls
 同一个提交里设置；`README.md` 与 `README.zh-CN.md` 中的引用块引用同一个标题与作者。
 只有当注册机构确实为某个已发布版本颁发了 `doi` 之后才填写它——绝不要凭空编造。
 
-### Dependabot
+### 依赖更新
 
-`.github/dependabot.yml` 为 npm、Cargo（`src-tauri`）和 GitHub Actions 每周开启更新
-PR。依赖升级与其他 PR 一样审阅：CI 必须全绿；对运行时依赖，合并前应当有人跑一遍
+依赖升级由维护者手动处理：修改版本、跑检查、开 PR。对运行时依赖，合并前应当有人跑一遍
 `npm run tauri dev` 加上各条导出路径（解析或渲染的回归对测试套件是不可见的）。一次只
 合并一个生态，这样回归只有一个原因。
 

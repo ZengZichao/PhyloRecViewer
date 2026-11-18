@@ -74,7 +74,7 @@ src/
 ├── samples/       # Bundled example reconciliations (three menu entries)
 ├── i18n.ts        # zh/en dictionary (compile-time type-checked)
 ├── session.ts     # Session file serialization (current schema version lives here)
-└── styles.css     # Global CSS (TRAE Minimalist design system)
+└── styles.css     # Global CSS (Radix tokens)
 src-tauri/
 └── src/           # Rust shell (file association, dialogs, atomic save)
 data/              # frozen benchmark tables and MANIFEST.json (v0.1.0 measurement)
@@ -88,11 +88,11 @@ docs/coverage-v0.1.2.json       # frozen v0.1.2 coverage summary cited by the ma
 ├── release.yml    # installers: draft release on a v* tag, artifacts on a manual run
 ├── codeql.yml     # CodeQL for JavaScript/TypeScript and Rust
 └── pages.yml      # GitHub Pages deployment of the web build
-tsconfig.json      # solution file (references app / node / test projects)
+tsconfig.json      # solution file (references app / node / scripts / test projects)
 tsconfig.app.json  # src/ for the browser build
 tsconfig.node.json # vite.config.ts + scripts/ (also what `tsc -b` checks the scripts with)
 tsconfig.test.json # *.test.ts(x) and src/test/
-tsconfig.scripts.json  # jsx/types for `npm run measure`
+tsconfig.scripts.json  # jsx/types for `npm run measure` and `npm run cli`
 vite.config.ts     # build + vitest (incl. coverage) configuration
 .githooks/pre-commit            # optional local guard: npm run hooks:install
 ```
@@ -297,12 +297,11 @@ the same commit as the version bump in `package.json`, `tauri.conf.json` and
 same title and author. Fill in a `doi` only once a registry has actually issued
 one for a published release — never invent it.
 
-### Dependabot
+### Dependency updates
 
-`.github/dependabot.yml` opens weekly update PRs for npm, Cargo (`src-tauri`) and
-GitHub Actions. Dependency bumps are reviewed like any other PR: CI must be green,
-and for runtime dependencies someone should run `npm run tauri dev` plus the
-export paths before merging (a parsing or rendering regression is invisible to the
+Dependency updates are handled manually: bump the package, run the checks, and
+open a PR. For runtime dependencies, run `npm run tauri dev` plus the export
+paths before merging (a parsing or rendering regression is invisible to the
 test suite). Merge one ecosystem at a time so a regression has a single cause.
 
 ## Adding a New File Format Parser

@@ -86,7 +86,7 @@ PhyloRecViewer is an **interactive gene–species reconciliation viewer** for ev
 ### 1.2 Quick start
 
 1. **Launch**: the app opens on an empty-state hub — **Open file**, **Load sample** (one of the three bundled samples), drag files into the window, or click **Shortcuts & help** to get oriented first.
-2. **Open your data**: **File → Open file** (or `⌘O` / `Ctrl+O`) and pick a supported file — `.recphyloxml` / `.recphylo` / `.xml` / `.phyloxml` holding **recPhyloXML content**, or `.nhx` / `.nwk` / `.newick` gene trees (see [Section 4.1](#41-opening-files)) — or simply drag files into the window.
+2. **Open your data**: **File → Open file** (or `⌘O` / `Ctrl+O`) and pick a supported file — `.recphyloxml` / `.recphylo` / `.xml` holding **recPhyloXML content**, or `.nhx` / `.nwk` / `.newick` gene trees (see [Section 4.1](#41-opening-files)) — or simply drag files into the window.
 3. **Navigate**: scroll to zoom, drag empty space to pan, press `F` to fit to window.
 4. **Interact**: click a gene node to highlight its lineage and open the Inspector; `Shift`-click to annotate; `Alt`/`⌥`- or `⌘`-click an internal gene node to collapse / expand it; click a species branch to mirror it.
 5. **Analyse**: click the **◧** button (top-left of the canvas) to open the right analysis panel — search & filter, statistics, transfer network, data checks (see [Section 7](#7-right-analysis-panel)).
@@ -185,7 +185,7 @@ Top to bottom, left to right:
 - **Desktop build**: native system file picker; multiple selection allowed.
 - **Browser build**: browser file picker.
 
-Accepted extensions: `.recphyloxml` `.recphylo` `.xml` `.phyloxml` — these are containers for **recPhyloXML content** (a plain PhyloXML tree is not a reconciliation and is refused) — plus `.nhx` `.nwk` `.newick` for NHX / Newick gene trees. The format is auto-detected — see [Section 15](#15-supported-file-formats).
+Accepted extensions: `.recphyloxml` `.recphylo` `.xml` — these are containers for **recPhyloXML content** (a plain PhyloXML tree is not a reconciliation and is refused) — plus `.nhx` `.nwk` `.newick` for NHX / Newick gene trees. The format is auto-detected — see [Section 15](#15-supported-file-formats).
 
 A single file opens in the current tab if that tab is blank or only shows a bundled sample **you have not edited**; if the tab holds a modified document (or an edited sample), a new tab is created to preserve your work.
 
@@ -204,7 +204,7 @@ Drag one or more files **anywhere onto the window**; a **"Drop to open"** overla
 
 ### 4.4 OS file association (double-click / "Open with")
 
-The desktop build registers file associations for `.recphyloxml` / `.recphylo` and `.xml` / `.phyloxml` (recPhyloXML), plus `.nhx` / `.nwk` / `.newick` (NHX / Newick). The associations only decide which app opens the file — the content must still be recPhyloXML or NHX/Newick (a plain PhyloXML tree is refused, see [Section 15](#15-supported-file-formats)). Because `.xml` is a generic extension, the app can become a candidate default for other XML documents after installation; drop the `.xml` association in your system settings if you do not want that. In your file manager:
+The desktop build registers file associations for `.recphyloxml` / `.recphylo` (recPhyloXML), plus `.nhx` / `.nwk` / `.newick` (NHX / Newick). The associations only decide which app opens the file — the content must still be recPhyloXML or NHX/Newick (a plain PhyloXML tree is refused, see [Section 15](#15-supported-file-formats)). In your file manager:
 
 - **Double-click** such a file, or **right-click → Open with → PhyloRecViewer**, to launch/wake the app with that file.
 - Files opened while the app is running load as new tabs (macOS delivers them via the `open-file` event).
@@ -626,7 +626,7 @@ The format is auto-detected; no manual selection needed:
 
 | Format | Extensions | Notes |
 |--------|------------|-------|
-| **recPhyloXML** | `.recphyloxml` `.recphylo` `.xml` `.phyloxml` | Native format; root element `<recPhylo>`. The extensions are only containers — the file content must be recPhyloXML |
+| **recPhyloXML** | `.recphyloxml` `.recphylo` `.xml` | Native format; root element `<recPhylo>`. The extensions are only containers — the file content must be recPhyloXML |
 | **NHX** | `.nhx` `.nwk` `.newick` | Reconciled gene trees (with `[&&NHX]` annotations) |
 | **Newick** | `.nwk` `.newick` | Phylogenetic tree (parsed via the NHX parser) |
 

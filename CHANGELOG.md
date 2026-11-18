@@ -354,7 +354,8 @@ the code.
   downgrade). The floor is now 72 (screen resolution).
 - **NHX export dialect extended** (`src/export/newickExport.ts`): writes every
   transfer arrival (`TB=` for the first, then `TB2=`, `TB3=` and so on, with no
-  upper limit, of which the reader interprets the first nine),
+  upper limit; at the time of this release the reader stopped at nine arrivals —
+  that ceiling was removed on 2026-11-13, see [Unreleased](#unreleased)),
   `TS=` timeSlice, `CN=` event confidence, `B=` node support and the branch
   length both as the standard Newick `:length` and a redundant `BL=` tag;
   `S=` species tags are inferred for internal nodes from their ancestors.

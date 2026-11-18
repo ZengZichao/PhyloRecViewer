@@ -82,7 +82,7 @@ npm run cli           # 无头导出（输入为保存的会话文件 .rpvsessio
 
 1. 启动 PhyloRecViewer。
 2. 通过 **文件 → 打开文件**、拖放或系统文件关联，打开 `.recphyloxml` / `.recphylo` /
-   `.xml` / `.phyloxml` 文件（软件读取的是 **recPhyloXML 内容**；不含 `<recPhylo>`
+   `.xml` 文件（软件读取的是 **recPhyloXML 内容**；不含 `<recPhylo>`
    根元素的普通 PhyloXML 树不是调和结果，会被拒绝），或 `.nhx` / `.nwk` /
    `.newick` 基因树文件。
 3. 使用左侧面板调整布局、样式和标签。
@@ -94,8 +94,8 @@ npm run cli           # 无头导出（输入为保存的会话文件 .rpvsessio
 ## 文档与社区
 
 所有面向用户的文档都提供英文和中文两个版本。英文文件是主版本；`.zh-CN.md`
-是它的译文，并与英文版保持同步。`docs/` 下的编辑说明（界面术语表、风格指南
-与带日期的 UI 审查）面向维护者，目前仅有中文。
+是它的译文，并与英文版保持同步。`docs/` 下的编辑说明（界面术语表、风格指南）
+面向维护者，目前仅有中文。
 
 - [使用手册](./docs/USER_MANUAL.zh-CN.md) · [User manual](./docs/USER_MANUAL.md)
 - [贡献指南](./CONTRIBUTING.zh-CN.md) · [Contributing guide](./CONTRIBUTING.md)——工具链、检查项与发布流程

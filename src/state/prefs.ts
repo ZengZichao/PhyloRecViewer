@@ -42,7 +42,7 @@ const ONBOARD_KEY = "rpv.onboarded";
 /** Read the persisted preferences (best effort; missing/corrupt -> {}).
  *  The `defaultView` block is sanitized with the same validators used for
  *  session files so a corrupted/malicious prefs entry cannot reach the layout
- *  or render engine (M-5: parity with the session-file trust boundary). */
+ *  or render engine (parity with the session-file trust boundary). */
 export function loadPrefs(): Prefs {
   try {
     const raw = localStorage.getItem(KEY);
@@ -50,7 +50,7 @@ export function loadPrefs(): Prefs {
     const d = JSON.parse(raw) as Prefs;
     if (!d || typeof d !== "object") return {};
     // Sanitize the default view so prefs and session files have the same
-    // trust level (M-5).
+    // trust level.
     if (d.defaultView) {
       const dv = d.defaultView;
       d.defaultView = {

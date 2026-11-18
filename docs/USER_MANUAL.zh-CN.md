@@ -86,7 +86,7 @@ PhyloRecViewer 是面向演化生物学研究者的**基因–物种调和（gen
 ### 1.2 快速入门
 
 1. **启动软件**：启动后显示空状态起始页——可**打开文件**、**装入示例**（三个内置示例之一）、把文件拖进窗口，或点**快捷键与帮助**先熟悉操作。
-2. **打开自己的数据**：菜单 **文件 → 打开文件**（或按 `⌘O` / `Ctrl+O`），选择受支持的文件——内容为 **recPhyloXML** 的 `.recphyloxml` / `.recphylo` / `.xml` / `.phyloxml` 文件，或 `.nhx` / `.nwk` / `.newick` 基因树文件（详见[第 4.1 节](#41-打开文件)）；也可以直接把文件拖进窗口。
+2. **打开自己的数据**：菜单 **文件 → 打开文件**（或按 `⌘O` / `Ctrl+O`），选择受支持的文件——内容为 **recPhyloXML** 的 `.recphyloxml` / `.recphylo` / `.xml` 文件，或 `.nhx` / `.nwk` / `.newick` 基因树文件（详见[第 4.1 节](#41-打开文件)）；也可以直接把文件拖进窗口。
 3. **浏览**：滚轮缩放、拖拽空白处平移、按 `F` 适应窗口。
 4. **交互**：单击基因节点高亮其谱系并打开节点检查器；`Shift` + 单击添加批注；`Alt`/`⌥` 或 `⌘` + 单击内部基因节点折叠 / 展开子树；单击物种枝进行镜像。
 5. **分析**：点击画布左上角 **◧** 按钮打开右侧分析面板，使用搜索、结果统计、网络与检查（详见[第 7 节](#7-右侧分析面板)）。
@@ -185,7 +185,7 @@ npm run cli -- --help   # 无头命令行：统计 / 检查 / SVG / HTML / recPh
 - **桌面版**：弹出系统原生文件选择器，可一次多选。
 - **浏览器版**：弹出浏览器文件选择器。
 
-支持的扩展名：`.recphyloxml` `.recphylo` `.xml` `.phyloxml`——它们只是**recPhyloXML 内容**的容器（普通 PhyloXML 树不是调和结果，会被拒绝）——以及 `.nhx` `.nwk` `.newick`（NHX / Newick 基因树）。格式自动识别，无需手动指定，详见[第 15 节](#15-支持的文件格式)。
+支持的扩展名：`.recphyloxml` `.recphylo` `.xml`——它们只是**recPhyloXML 内容**的容器（普通 PhyloXML 树不是调和结果，会被拒绝）——以及 `.nhx` `.nwk` `.newick`（NHX / Newick 基因树）。格式自动识别，无需手动指定，详见[第 15 节](#15-支持的文件格式)。
 
 打开单个文件时自动解析并渲染。若当前标签页是空白或只显示**未经编辑**的内置示例，则在当前标签打开；若标签页中的文档已被修改（或示例已被编辑过），则新建标签页以保留已有工作。
 
@@ -204,7 +204,7 @@ npm run cli -- --help   # 无头命令行：统计 / 检查 / SVG / HTML / recPh
 
 ### 4.4 系统关联打开（双击 / 「打开方式」）
 
-桌面版注册了文件关联：`.recphyloxml` / `.recphylo` 与 `.xml` / `.phyloxml`（recPhyloXML），以及 `.nhx` / `.nwk` / `.newick`（NHX / Newick）。文件关联只决定用哪个程序打开文件——文件内容仍须是 recPhyloXML 或 NHX / Newick（普通 PhyloXML 树会被拒绝，见[第 15 节](#15-支持的文件格式)）。由于 `.xml` 是通用扩展名，注册后本软件可能成为其它 XML 文档的候选默认程序；如不需要，可在系统设置中取消 `.xml` 的关联。在系统文件管理器中：
+桌面版注册了文件关联：`.recphyloxml` / `.recphylo`（recPhyloXML），以及 `.nhx` / `.nwk` / `.newick`（NHX / Newick）。文件关联只决定用哪个程序打开文件——文件内容仍须是 recPhyloXML 或 NHX / Newick（普通 PhyloXML 树会被拒绝，见[第 15 节](#15-支持的文件格式)）。在系统文件管理器中：
 
 - **双击**此类文件，或 **右键 → 打开方式 → PhyloRecViewer**，会用该文件启动 / 唤醒应用。
 - 应用已在运行时，新文件会作为新标签页载入（macOS 通过 `open-file` 事件）。
@@ -626,7 +626,7 @@ npm run cli -- --help   # 无头命令行：统计 / 检查 / SVG / HTML / recPh
 
 | 格式 | 扩展名 | 说明 |
 |------|--------|------|
-| **recPhyloXML** | `.recphyloxml` `.recphylo` `.xml` `.phyloxml` | 原生格式，根元素 `<recPhylo>`。这些扩展名只是容器——文件内容必须是 recPhyloXML |
+| **recPhyloXML** | `.recphyloxml` `.recphylo` `.xml` | 原生格式，根元素 `<recPhylo>`。这些扩展名只是容器——文件内容必须是 recPhyloXML |
 | **NHX** | `.nhx` `.nwk` `.newick` | 调和基因树（含 `[&&NHX]` 批注） |
 | **Newick** | `.nwk` `.newick` | 系统发育树（经 NHX 解析器） |
 
