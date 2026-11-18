@@ -9,8 +9,29 @@ archived version carries its own immutable **version DOI**: v0.1.0 is
 
 ## [Unreleased]
 
-A round of fixes against the published site, covering the empty-state hub, the
-analysis panel, located-node visibility, duplication rendering and PDF export.
+### Maintenance round (2026-11-18)
+
+**Fixed**
+
+- **The offline cache never installed on GitHub Pages**
+  (`src/platform/swUrl.ts`, `src/main.tsx`): the service worker was registered
+  from a hardcoded `/sw.js`, which resolves against the domain root while the
+  site lives at `/PhyloRecViewer/`; the request 404'd and the registration's
+  `.catch` swallowed it. The URL is now resolved from the app base, so the
+  worker installs on both a root and a sub-path deploy.
+
+**Changed**
+
+- Removed `src/types/shims.d.ts`: svg2pdf.js ships its own `types.d.ts`, so the
+  shim only masked the real types as `any`.
+- Documentation aligned with the code: the Dependabot section became manual
+  dependency updates (`.github/dependabot.yml` was removed on 2026-11-14),
+  `TRAE Minimalist` became Radix tokens, the tsconfig project count was
+  corrected, the removed `.phyloxml` extension and the moved-out dated UI
+  review were dropped, and the NHX `TB2..TB9` reader-ceiling note was clarified.
+- Removed dead exports (`branchPath`, `vLine`, `completeInternalNames`,
+  `MIN_PNG_DPI`, `screenLegendRows`, `exportLegendRows`) and the internal
+  review codes in comments.
 
 ### Published-site defect round (2026-11-17)
 
