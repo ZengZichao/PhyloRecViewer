@@ -19,8 +19,6 @@ import { themes, type Theme } from "../render/theme";
 import {
   LEGEND_ROWS,
   exportLegendRowDefs,
-  exportLegendRows,
-  screenLegendRows,
 } from "../render/legendRows";
 import { htmlLang, translations, type Dict } from "../i18n";
 import { APP_NAME } from "../version";
@@ -30,7 +28,6 @@ import cliSource from "../../scripts/cli.ts?raw";
 import { useStore } from "../state/store";
 import {
   DEFAULT_PNG_DPI,
-  MIN_PNG_DPI,
   buildDocSvg,
   exportPdf,
   exportPng,
@@ -159,7 +156,7 @@ function legendTextSequences(svg: string): string[][] {
 function expectedLegendSequence(t: Dict, families: string[]): string[] {
   return [
     t.events,
-    ...exportLegendRows({ t, events: t.event }),
+    ...exportLegendRowDefs({ t, events: t.event }).map((r) => r.label),
     t.geneFamilies,
     ...families,
   ];
@@ -264,7 +261,7 @@ describe("SVG export escaping of untrusted text", () => {
    * legend showed it, so both sides now point at one source of truth.
    */
   function legendRows(t: Dict): string[] {
-    return exportLegendRows({ t, events: t.event });
+    return exportLegendRowDefs({ t, events: t.event }).map((r) => r.label);
   }
 
   /** A legend config fed straight from a dictionary. The caller supplies only
@@ -294,7 +291,9 @@ describe("SVG export escaping of untrusted text", () => {
         expect(legendTextSequences(svg)).toEqual([expectedLegendSequence(t, ["famA"])]);
         // STYLE §6 in one line: the figure's key IS the overlay's key.
         expect(legendRows(t)).toEqual(
-          screenLegendRows({ t, events: t.event }).filter((r) => r !== t.legendLocate),
+          LEGEND_ROWS.map((row) => row.label({ t, events: t.event })).filter(
+            (r) => r !== t.legendLocate,
+          ),
         );
       } finally {
         useStore.setState({ locale: prev });
@@ -635,15 +634,13 @@ describe("PNG rasterization and canvas limits", () => {
     expect(out.blob.type).toBe("image/png");
   });
 
-  it("holds the DPI defaults the user manual documents (300 dpi)", () => {
+  it("holds the DPI default the user manual documents (300 dpi)", () => {
     expect(DEFAULT_PNG_DPI).toBe(300);
-    // The floor allows screen-resolution exports (72) as well.
-    expect(MIN_PNG_DPI).toBe(72);
   });
 
   it("keeps a 1x floor when the requested DPI is under the screen reference", async () => {
     const { width, height } = buildDocSvg(doc);
-    const out = await renderPngBlob(doc, MIN_PNG_DPI / 10);
+    const out = await renderPngBlob(doc, 7.2);
     expect(out.scale).toBe(1);
     expect(canvases[0].width).toBe(Math.ceil(width));
     expect(canvases[0].height).toBe(Math.ceil(height));

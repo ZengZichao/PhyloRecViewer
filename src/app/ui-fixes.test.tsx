@@ -10,7 +10,7 @@ import { NodeInspector } from "./NodeInspector";
 import { RightPanel } from "./RightPanel";
 import { Settings } from "./Settings";
 import { lightTheme } from "../render/theme";
-import { screenLegendRows } from "../render/legendRows";
+import { LEGEND_ROWS } from "../render/legendRows";
 import { samples } from "../samples";
 import { parseRecPhyloXML } from "../parser/recphyloxml";
 import { useStore } from "../state/store";
@@ -516,7 +516,9 @@ describe("legend event key", () => {
     try {
       // The overlay renders the shared `LEGEND_ROWS` table and nothing else, so
       // the exported key can be compared with it row for row (STYLE §6).
-      expect(screenRows(host)).toEqual(screenLegendRows({ t, events: t.event }));
+      expect(screenRows(host)).toEqual(
+        LEGEND_ROWS.map((row) => row.label({ t, events: t.event })),
+      );
       // The row that used to be missing from every export: without a key for
       // the arrival arrowhead, a reader of the figure cannot decode it.
       expect(screenRows(host)).toContain(t.event.transferBack);

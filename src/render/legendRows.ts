@@ -100,11 +100,6 @@ export const LEGEND_ROWS: readonly LegendRow[] = [
   { kind: "locate", label: ({ t }) => t.legendLocate },
 ];
 
-/** Every row of the table, labelled for the on-screen overlay. */
-export function screenLegendRows(s: LegendStrings): string[] {
-  return LEGEND_ROWS.map((row) => row.label(s));
-}
-
 /** The rows an exported figure keys: the table in the same order, minus the
  *  glyphs the export cannot contain. */
 export function exportLegendRowDefs(s: LegendStrings): { kind: ExportLegendKind; label: string }[] {
@@ -115,9 +110,4 @@ export function exportLegendRowDefs(s: LegendStrings): { kind: ExportLegendKind;
     rows.push({ kind, label: row.label(s) });
   }
   return rows;
-}
-
-/** Labels of `exportLegendRowDefs`, for assertions. */
-export function exportLegendRows(s: LegendStrings): string[] {
-  return exportLegendRowDefs(s).map((r) => r.label);
 }

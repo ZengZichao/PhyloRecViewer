@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseNewick, completeInternalNames } from "./newick";
+import { parseNewick } from "./newick";
 import { parseNhxReconciliation } from "./nhx";
 import { detectFormat, parseReconciliation } from "./formats";
 import { layout } from "../layout";
@@ -18,12 +18,6 @@ describe("parseNewick", () => {
     const dup = root.children[0];
     expect(dup.nhx.D).toBe("Y");
     expect(dup.children.map((c) => c.name)).toEqual(["rabbit_g1", "rabbit_g2"]);
-  });
-
-  it("completes unnamed internal nodes by post-order index", () => {
-    const [root] = parseNewick("(a,(b,c));");
-    completeInternalNames(root);
-    expect(root.name).not.toBe("");
   });
 });
 

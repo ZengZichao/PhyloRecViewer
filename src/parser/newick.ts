@@ -251,21 +251,3 @@ export function parseNewick(text: string): NewickNode[] {
   }
   return trees;
 }
-
-/**
- * Give post-order integer names to unnamed internal nodes.
- *
- * Used by the compare/analysis tests to give every internal node a key; the
- * production parse path does not call it (reconciled trees arrive pre-named or
- * are keyed by leaf-set signature in analysis/compare). The numbering is our
- * own post-order scheme, not a claim to match any particular tool.
- */
-export function completeInternalNames(root: NewickNode): void {
-  let i = 0;
-  const post = (node: NewickNode): void => {
-    for (const c of node.children) post(c);
-    if (!node.name) node.name = String(i);
-    i++;
-  };
-  post(root);
-}

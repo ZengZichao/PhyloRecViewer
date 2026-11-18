@@ -1,6 +1,7 @@
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-// jsPDF is a STATIC import, deliberately, and that is the fix for issue #11.
+// jsPDF is a STATIC import, deliberately, and that is the fix for the stale-chunk
+// PDF failure described below.
 //
 // A lazy `await import()` makes Vite emit the dependency as its own lazily-fetched
 // chunk (it was `assets/jspdf.es.min-<hash>.js`) whose name hashes the build's
@@ -99,8 +100,6 @@ const PANE_GAP = 28;
 const TITLE_H = 24;
 const LEGEND_GAP = 24;
 
-/** Floor and default of the PNG DPI (dots per inch) a user can ask for. */
-export const MIN_PNG_DPI = 72;
 export const PNG_DPI_CHOICES = [192, 300, 600, 1200, 2400, 4800] as const;
 export const DEFAULT_PNG_DPI = 300;
 
@@ -628,7 +627,7 @@ type VectorConverter = (typeof import("svg2pdf.js"))["svg2pdf"];
  * Load the vector converter, or null when it cannot be had.
  *
  * Kept lazy on purpose (see the import note at the top of this file), and NOT
- * memoized on failure: a browser that cannot fetch the chunk right now - issue #11's
+ * memoized on failure: a browser that cannot fetch the chunk right now - a
  * superseded hash, or a network that is down - may be able to later, and pinning the
  * failure would silently condemn every remaining export in the session to a raster
  * PDF. A successful import costs nothing to repeat, because the ES module map caches
@@ -721,7 +720,7 @@ export interface PdfResult {
  *
  * The fallback itself needs no network request: jsPDF is a static import (see the
  * note at the top of this file), which is precisely what stops a missing svg2pdf.js
- * chunk from turning into the failed export of issue #11.
+ * chunk from turning into the failed export that motivated the static import.
  */
 export async function renderPdfBlob(doc: ExportDoc): Promise<PdfResult> {
   const { svg, width, height } = buildDocSvg(doc);

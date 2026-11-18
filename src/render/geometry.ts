@@ -108,10 +108,6 @@ export function elbowH(p0: Pt, p1: Pt): string {
   return `M${p0.x},${p0.y} L${p0.x},${p1.y} L${p1.x},${p1.y}`;
 }
 
-export function branchPath(p0: Pt, p1: Pt, curved: boolean): string {
-  return curved ? smoothV(p0, p1) : elbowV(p0, p1);
-}
-
 // --------------------------------------------------------------------------
 // tree orientation
 // --------------------------------------------------------------------------
@@ -162,11 +158,6 @@ export function connect(proj: Projector, c0: Pt, c1: Pt, curved: boolean): strin
   const p1 = pj(proj, c1);
   if (proj.horizontal) return curved ? smoothH(p0, p1) : elbowH(p0, p1);
   return curved ? smoothV(p0, p1) : elbowV(p0, p1);
-}
-
-/** A straight vertical line, used for the stub above the species root. */
-export function vLine(x: number, y0: number, y1: number): string {
-  return `M${x},${y0} L${x},${y1}`;
 }
 
 /**
