@@ -102,8 +102,15 @@ function Slider({
     else setDraft(String(local));
     setEditing(false);
   };
+  const pct = Math.max(0, Math.min(100, ((local - min) / (max - min)) * 100));
   return (
     <span className="slider-wrap">
+      {/* The filled portion of the track is a solid-colour element, not a
+          gradient trick on the native track: the review brief bans gradients,
+          and a plain block also transitions like every other state. */}
+      <span className="slider-track" aria-hidden="true">
+        <span className="slider-fill" style={{ width: `${pct}%` }} />
+      </span>
       <input
         id={id}
         name={id}
@@ -114,29 +121,60 @@ function Slider({
         step={step}
         value={local}
         onChange={(e) => commit(Number(e.target.value))}
-        style={{
-          ["--slider-fill" as string]: `${
-            ((local - min) / (max - min)) * 100
-          }%`,
-        }}
       />
       {editing ? (
-        <input
-          className="slider-input"
-          type="number"
-          min={min}
-          max={max}
-          step={step}
-          value={draft}
-          aria-label={`${ariaLabel} ${t.valueSuffix}`}
-          autoFocus
-          onChange={(e) => setDraft(e.target.value)}
-          onBlur={commitDraft}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") { e.preventDefault(); commitDraft(); }
-            else if (e.key === "Escape") { setDraft(String(local)); setEditing(false); }
-          }}
-        />
+        /* A stepper, not just a text field: a small range often needs one
+           nudge of exactly one step, and the -/+ buttons are the control the
+           style guide asks for there. The field still takes a typed value for
+           a big jump. */
+        <span className="slider-stepper" role="group" aria-label={`${ariaLabel} ${t.valueSuffix}`}>
+          <button
+            type="button"
+            className="stepper-btn"
+            aria-label={`${ariaLabel} ${t.valueDecrease}`}
+            onClick={() => {
+              // Step from what is currently typed, not from the last committed
+              // value: typing 120 and pressing - must give 119, not 89.
+              const typed = Number.parseFloat(draft);
+              const from = Number.isFinite(typed) ? typed : local;
+              const next = Math.max(min, Math.min(max, Math.round((from - step) * 1000) / 1000));
+              setDraft(String(next));
+              commit(next);
+            }}
+          >
+            <Icon name="minus" size={12} />
+          </button>
+          <input
+            className="slider-input"
+            type="number"
+            min={min}
+            max={max}
+            step={step}
+            value={draft}
+            aria-label={`${ariaLabel} ${t.valueSuffix}`}
+            autoFocus
+            onChange={(e) => setDraft(e.target.value)}
+            onBlur={commitDraft}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") { e.preventDefault(); commitDraft(); }
+              else if (e.key === "Escape") { setDraft(String(local)); setEditing(false); }
+            }}
+          />
+          <button
+            type="button"
+            className="stepper-btn"
+            aria-label={`${ariaLabel} ${t.valueIncrease}`}
+            onClick={() => {
+              const typed = Number.parseFloat(draft);
+              const from = Number.isFinite(typed) ? typed : local;
+              const next = Math.max(min, Math.min(max, Math.round((from + step) * 1000) / 1000));
+              setDraft(String(next));
+              commit(next);
+            }}
+          >
+            <Icon name="plus" size={12} />
+          </button>
+        </span>
       ) : (
         <button
           className="slider-value"
@@ -301,10 +339,10 @@ function Section({
             setOpen((o) => !o);
           }}
         >
+          <h3>{title}</h3>
           <span className={`chev${isOpen ? " open" : ""}`} aria-hidden="true">
             <Icon name="chevron" size={12} />
           </span>
-          <h3>{title}</h3>
         </button>
         <button
           className={`panel-pin${pinned ? " active" : ""}`}
@@ -313,20 +351,7 @@ function Section({
           aria-pressed={pinned}
           onClick={() => setPinned((p) => !p)}
         >
-          <svg
-            viewBox="0 0 24 24"
-            width="13"
-            height="13"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            aria-hidden="true"
-          >
-            <line x1="12" y1="17" x2="12" y2="22" />
-            <path d="M5 17h14l-4.5-8V2H5v7z" />
-          </svg>
+          <Icon name="pin" size={13} />
         </button>
       </div>
       {isOpen && <div className="panel-body">{children}</div>}
@@ -422,7 +447,7 @@ export function Sidebar({ width }: { width?: number }) {
 
   return (
     <>
-    <aside className="sidebar" style={width ? { width } : undefined}>
+    <aside className="sidebar stagger-children" style={width ? { width } : undefined}>
       <div className="sidebar-header">
         <div>
           <span className="sidebar-title">{t.controlsPanel}</span>
@@ -433,7 +458,7 @@ export function Sidebar({ width }: { width?: number }) {
           data-tooltip={t.collapse}
           aria-label={t.collapse}
         >
-          ‹
+          <Icon name="chevronLeft" size={14} />
         </button>
       </div>
       {/* Actions: view toggles (legend / minimap) + arrange actions, grouped
@@ -693,9 +718,7 @@ function LabelReplaceDialog({ onClose }: { onClose: () => void }) {
   return (
     <div className="anno-overlay" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }} role="dialog" aria-modal="true" aria-label={t.renameLabels}>
       <div className="anno-editor label-rename-dialog" ref={dialogRef}>
-        <div className="anno-head">
-          <strong>{t.renameLabels}</strong>
-        </div>
+        <h2 className="dialog-title label-rename-title">{t.renameLabels}</h2>
         <div className="label-rename-field">
           <label htmlFor={findId}>{t.findLabel}</label>
           <input

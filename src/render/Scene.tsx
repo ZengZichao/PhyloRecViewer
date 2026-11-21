@@ -262,6 +262,10 @@ export function Scene(props: SceneProps) {
             <path d="M0,0 L7,3 L0,6 Z" fill={props.geneColors?.[ti] ?? geneColor(theme, ti)} />
           </marker>
         ))}
+        {/* This gradient is a DATA rendering (the opt-in "Tube gradient" style
+            for species branches), not interface decoration: the UI chrome is
+            flat and gradient-free. It is only emitted when that render option
+            is on. */}
         <linearGradient id={tubeGradId} x1={grad.x1} y1={grad.y1} x2={grad.x2} y2={grad.y2}>
           <stop offset="0" stopColor={theme.speciesFill} />
           <stop offset="1" stopColor={theme.speciesStroke} />

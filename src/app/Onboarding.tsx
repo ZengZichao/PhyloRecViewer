@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useT } from "../i18n";
 import { setOnboarded } from "../state/prefs";
-import { useFocusTrap } from "./hooks";
+import { useFocusTrap, usePresence } from "./hooks";
 
 /**
  * First-run spotlight tour. Walks a brand-new user through the five core
@@ -31,6 +31,7 @@ export function Onboarding({ visible, onClose }: { visible: boolean; onClose: ()
   const [box, setBox] = useState<{ x: number; y: number; w: number; h: number } | null>(null);
   const raf = useRef<number | null>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
+  const presence = usePresence(visible);
   useFocusTrap(visible, dialogRef);
 
   const steps = useCallback((): TourStep[] => {
@@ -119,18 +120,24 @@ export function Onboarding({ visible, onClose }: { visible: boolean; onClose: ()
     return () => window.removeEventListener("keydown", onKey, true);
   }, [visible, finish, next]);
 
-  if (!visible) return null;
+  if (!presence.mounted) return null;
   const isLast = step >= stepsList.length - 1;
 
   return (
-    <div className="onboard-overlay" role="dialog" aria-modal="true" aria-label={t.helpTitle}>
+    <div
+      className="onboard-overlay"
+      data-state={presence.phase}
+      role="dialog"
+      aria-modal="true"
+      aria-label={t.helpTitle}
+    >
       {box && (
         <div
           className="onboard-spotlight"
           style={{ left: box.x, top: box.y, width: box.w, height: box.h }}
         />
       )}
-      <div className="onboard-card" ref={dialogRef}>
+      <div className="onboard-card" data-state={presence.phase} ref={dialogRef}>
         <h3>{stepsList[step].title}</h3>
         <p>{stepsList[step].body}</p>
         <div className="onboard-dots" aria-hidden="true">

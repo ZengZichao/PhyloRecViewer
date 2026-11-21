@@ -7,19 +7,32 @@ import { defaultRenderOptions } from "../render/options";
 import { loadPrefs, savePrefs, setOnboarded } from "../state/prefs";
 import { hasUnrecoveredSnapshot, unrecoveredSnapshotText, clearAutosaveSnapshot } from "../state/autosave";
 import type { ThemePref } from "../render/theme";
-import { useFocusTrap } from "./hooks";
+import { useFocusTrap, usePresence } from "./hooks";
 import { Icon } from "./Icon";
 
 /**
- * Preferences: one setting per row, label on the left, control on the right,
- * hairline between rows. Choices are segmented where the option set is small
- * and closed (theme, language, PNG scale) and a single button where the action
- * is one-shot (default view, autosave, tour) — so no row asks the user to
- * invent a value.
+ * Preferences.
+ *
+ * Layout contract: one setting per row, name on the left, control on the
+ * right, every row in the same two-column grid so the eye scans two clean
+ * edges. Rows are grouped under short headings; the gap between groups is
+ * larger than the gap inside one, so the page reads as sections rather than
+ * as an undifferentiated list. There is no outer card frame: the dialog is a
+ * borderless surface lifted by a soft shadow, and the page's own whitespace
+ * does the grouping.
+ *
+ * Reset lives alone at the bottom: destructive actions do not sit next to the
+ * settings a user opens the dialog to change.
+ *
+ * Controls follow what each choice is: a segmented control for a closed set of
+ * two or three options (theme, language, PNG scale), and one button for a
+ * one-shot action (save defaults, clear data, replay the tour) — no row asks
+ * the user to invent a value.
  */
 export function Settings({ open, onClose }: { open: boolean; onClose: () => void }) {
   const t = useT();
   const dialogRef = useRef<HTMLDivElement>(null);
+  const presence = usePresence(open);
   useFocusTrap(open, dialogRef);
   const themeId = useStore((s) => s.themeId);
   const setTheme = useStore((s) => s.setTheme);
@@ -54,7 +67,7 @@ export function Settings({ open, onClose }: { open: boolean; onClose: () => void
     return () => window.removeEventListener("keydown", onKey, true);
   }, [open, onClose]);
 
-  if (!open) return null;
+  if (!presence.mounted) return null;
 
   const saveAsDefault = () => {
     const prefs = loadPrefs();
@@ -115,127 +128,156 @@ export function Settings({ open, onClose }: { open: boolean; onClose: () => void
       : t.autosaveNone;
 
   return (
-    <div className="help-overlay" onClick={onClose} role="dialog" aria-modal="true" aria-label={t.prefsTitle}>
-      <div className="help-card settings-card" ref={dialogRef} onClick={(e) => e.stopPropagation()}>
-        <div className="help-head">
-          <span className="settings-title">{t.prefsTitle}</span>
+    <div
+      className="help-overlay"
+      data-state={presence.phase}
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+      aria-label={t.prefsTitle}
+    >
+      <div
+        className="help-card settings-card"
+        data-state={presence.phase}
+        ref={dialogRef}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="settings-head">
+          <h2 className="settings-title">{t.prefsTitle}</h2>
           <button className="panel-collapse" onClick={onClose} data-tooltip={t.close} aria-label={t.close}>
-            <Icon name="close" />
+            <Icon name="close" size={14} />
           </button>
         </div>
 
-        <div className="settings-field">
-          <span className="settings-label">{t.theme}</span>
-          <Segmented groupLabel={t.theme} value={themeId} onChange={setTheme} options={themeOptions} />
-        </div>
+        <div className="settings-groups stagger-children">
+          <section className="settings-group">
+            <h3 className="settings-group-title">{t.prefsGroupAppearance}</h3>
+            <div className="settings-field">
+              <span className="settings-label">{t.theme}</span>
+              <Segmented groupLabel={t.theme} value={themeId} onChange={setTheme} options={themeOptions} />
+            </div>
+            <div className="settings-field">
+              <span className="settings-label">{t.menuLanguage}</span>
+              <Segmented
+                groupLabel={t.menuLanguage}
+                value={locale}
+                onChange={setLocale}
+                options={[
+                  { id: "zh", label: t.langNameZh },
+                  { id: "en", label: t.langNameEn },
+                ]}
+              />
+            </div>
+          </section>
 
-        <div className="settings-field">
-          <span className="settings-label">{t.menuLanguage}</span>
-          <Segmented
-            groupLabel={t.menuLanguage}
-            value={locale}
-            onChange={setLocale}
-            options={[
-              { id: "zh", label: t.langNameZh },
-              { id: "en", label: t.langNameEn },
-            ]}
-          />
-        </div>
+          <section className="settings-group">
+            <h3 className="settings-group-title">{t.prefsGroupExport}</h3>
+            <div className="settings-field">
+              <span className="settings-label">{t.pngResolution}</span>
+              <Segmented
+                groupLabel={t.pngResolution}
+                className="segmented-grid"
+                value={String(pngDpi)}
+                onChange={(v) => setPngDpi(Number(v))}
+                options={PNG_DPI_CHOICES.map((sc) => ({
+                  id: String(sc),
+                  // The row label already carries the unit: six cells of "300 DPI"
+                  // wrapped to two lines each and made the picker the tallest thing
+                  // in the dialog.
+                  label: String(sc),
+                  title: sc === 192 ? t.pngScreen : `${sc} DPI`,
+                }))}
+              />
+            </div>
+          </section>
 
-        <div className="settings-field">
-          <span className="settings-label">{t.pngResolution}</span>
-          <Segmented
-            groupLabel={t.pngResolution}
-            className="segmented-grid"
-            value={String(pngDpi)}
-            onChange={(v) => setPngDpi(Number(v))}
-            options={PNG_DPI_CHOICES.map((sc) => ({
-              id: String(sc),
-              // The row label already carries the unit: six cells of "300 DPI"
-              // wrapped to two lines each and made the picker the tallest thing
-              // in the dialog.
-              label: String(sc),
-              title: sc === 192 ? t.pngScreen : `${sc} DPI`,
-            }))}
-          />
-        </div>
-
-        <div className="settings-field">
-          <span className="settings-label">{t.defaultView}</span>
-          <div className="settings-actions">
-            {hasDefault && (
-              <button className="btn ghost" onClick={clearDefault}>
-                {t.clearDefaultView}
-              </button>
+          <section className="settings-group">
+            <h3 className="settings-group-title">{t.prefsGroupWorkspace}</h3>
+            <div className="settings-field">
+              <span className="settings-label">{t.defaultView}</span>
+              <div className="settings-actions">
+                {hasDefault && (
+                  <button className="btn ghost" onClick={clearDefault}>
+                    {t.clearDefaultView}
+                  </button>
+                )}
+                <button className="btn ghost" onClick={saveAsDefault}>
+                  {t.saveDefaultView}
+                </button>
+              </div>
+            </div>
+            <div className="settings-field">
+              <span className="settings-label">{t.autosaveSection}</span>
+              <div className="settings-actions">
+                <span className="settings-value">{autosaveLabel}</span>
+              </div>
+            </div>
+            {quarantined && (
+              <div className="settings-field">
+                <span className="settings-label">{t.recoverySection}</span>
+                <div className="settings-actions">
+                  <span className="settings-value">{t.recoveryFound}</span>
+                  <button
+                    className="btn ghost"
+                    onClick={() => {
+                      const text = unrecoveredSnapshotText();
+                      if (!text) return;
+                      const blob = new Blob([text], { type: "application/json" });
+                      const url = URL.createObjectURL(blob);
+                      const a = document.createElement("a");
+                      a.href = url;
+                      a.download = "recovered.rpvsession.json";
+                      document.body.appendChild(a);
+                      a.click();
+                      a.remove();
+                      setTimeout(() => URL.revokeObjectURL(url), 1000);
+                    }}
+                  >
+                    {t.recoveryExport}
+                  </button>
+                </div>
+              </div>
             )}
-            <button className="btn ghost" onClick={saveAsDefault}>
-              {t.saveDefaultView}
-            </button>
-          </div>
+          </section>
+
+          <section className="settings-group">
+            <h3 className="settings-group-title">{t.prefsGroupHelp}</h3>
+            <div className="settings-field">
+              <span className="settings-label">{t.viewTour}</span>
+              <div className="settings-actions">
+                <button className="btn ghost" onClick={replayTour}>
+                  {t.replayTour}
+                </button>
+              </div>
+            </div>
+          </section>
         </div>
 
-        <div className="settings-field">
-          <span className="settings-label">{t.autosaveSection}</span>
-          <div className="settings-actions">
-            <span className="settings-value">{autosaveLabel}</span>
-            <button
-              className="btn ghost"
-              onClick={() => {
-                if (!window.confirm(t.clearAutosaveConfirm)) return;
-                clearAutosaveSnapshot();
-                // The status line reads the store's snapshot timestamp, which
-                // clearing storage does not reset on its own: the row kept
-                // claiming "Last saved …" for a snapshot that was gone.
-                useStore.setState({ autosaveAt: null, autosaveFailed: false });
-                showToast(t.clearAutosaveDone, "success");
-              }}
-            >
-              {t.clearAutosave}
-            </button>
-          </div>
-        </div>
-
-        <div className="settings-field">
-          <span className="settings-label">{t.viewTour}</span>
-          <div className="settings-actions">
-            <button className="btn ghost" onClick={replayTour}>
-              {t.replayTour}
-            </button>
-          </div>
-        </div>
-
-        {quarantined && (
+        {/* Destructive actions live alone at the bottom of the page. */}
+        <section className="settings-group settings-group-danger">
           <div className="settings-field">
-            <span className="settings-label">{t.recoverySection}</span>
+            <h3 className="settings-group-title">{t.prefsGroupReset}</h3>
             <div className="settings-actions">
-              <span className="settings-value">{t.recoveryFound}</span>
               <button
                 className="btn ghost"
                 onClick={() => {
-                  const text = unrecoveredSnapshotText();
-                  if (!text) return;
-                  const blob = new Blob([text], { type: "application/json" });
-                  const url = URL.createObjectURL(blob);
-                  const a = document.createElement("a");
-                  a.href = url;
-                  a.download = "recovered.rpvsession.json";
-                  document.body.appendChild(a);
-                  a.click();
-                  a.remove();
-                  setTimeout(() => URL.revokeObjectURL(url), 1000);
+                  if (!window.confirm(t.clearAutosaveConfirm)) return;
+                  clearAutosaveSnapshot();
+                  // The status line reads the store's snapshot timestamp, which
+                  // clearing storage does not reset on its own: the row kept
+                  // claiming "Last saved …" for a snapshot that was gone.
+                  useStore.setState({ autosaveAt: null, autosaveFailed: false });
+                  showToast(t.clearAutosaveDone, "success");
                 }}
               >
-                {t.recoveryExport}
+                {t.clearAutosave}
+              </button>
+              <button className="btn ghost settings-reset" onClick={resetPrefs}>
+                {t.restorePrefs}
               </button>
             </div>
           </div>
-        )}
-
-        <div className="settings-foot">
-          <button className="btn ghost settings-reset" onClick={resetPrefs}>
-            {t.restorePrefs}
-          </button>
-        </div>
+        </section>
       </div>
     </div>
   );

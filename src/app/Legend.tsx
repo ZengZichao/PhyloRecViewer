@@ -4,6 +4,7 @@ import type { Reconciliation } from "../model/types";
 import { geneColor, type Theme } from "../render/theme";
 import { LEGEND_ROWS, type LegendKind } from "../render/legendRows";
 import { useStore } from "../state/store";
+import { IconSwap } from "./Icon";
 
 const DIR_KEY = "rpv.legend.dir";
 
@@ -17,9 +18,12 @@ const DIR_KEY = "rpv.legend.dir";
 export function Legend({
   theme,
   recon,
+  state,
 }: {
   theme: Theme;
   recon: Reconciliation;
+  /** Presence phase when the legend is being shown or is fading out. */
+  state?: "enter" | "shown" | "exit";
 }) {
   const t = useT();
   const s = 12;
@@ -100,11 +104,12 @@ export function Legend({
   return (
     <div
       className={`legend${horizontal ? " horizontal" : ""}`}
+      data-state={state}
       role="group"
       // A short group name: the full event list duplicated the canvas
       // "Collapsed clade" marker's accessible name, so name-based lookups hit
       // the legend instead of the marker.
-      aria-label={`${t.events} · ${t.geneFamilies}`}
+      aria-label={`${t.events} / ${t.geneFamilies}`}
     >
       <button
         className="legend-dir"
@@ -113,7 +118,7 @@ export function Legend({
         aria-pressed={horizontal}
         onClick={() => setHorizontal((h) => !h)}
       >
-        {horizontal ? "\u22EE" : "\u22EF"}
+        <IconSwap from="dotsH" to="dotsV" swapped={horizontal} size={14} />
       </button>
       <div className="legend-group events">
         <div className="legend-title">{t.events}</div>

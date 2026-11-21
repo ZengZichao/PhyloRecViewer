@@ -25,7 +25,8 @@ import { RightPanel } from "./RightPanel";
 import { Sidebar } from "./Sidebar";
 import { TabBar } from "./TabBar";
 import { MenuBar, type ExportPane } from "./MenuBar";
-import { modalOpen } from "./hooks";
+import { Icon, IconSwap } from "./Icon";
+import { modalOpen, usePresence } from "./hooks";
 
 /** A referentially-stable empty set: the nested view has no collapse state. */
 const NO_COLLAPSE: Set<string> = new Set();
@@ -54,7 +55,6 @@ import { Settings } from "./Settings";
 import { Onboarding } from "./Onboarding";
 import { TooltipProvider } from "./Tooltip";
 import { useGlobalShortcuts, useFocusTrap, isTextInput, useFocusMatches, useFocusMatchesFor } from "./hooks";
-import { Icon } from "./Icon";
 
 export function App() {
   const t = useT();
@@ -113,6 +113,14 @@ export function App() {
   const loadCompareXml = useStore((s) => s.loadCompareXml);
   const setSampleId = useStore((s) => s.setSampleId);
   const pendingRestore = useStore((s) => s.pendingRestore);
+  // A closing chooser/prompt keeps its last content mounted for the exit
+  // transition; the store already nulled the live value by then.
+  const lastPendingMulti = useRef(pendingMulti);
+  if (pendingMulti) lastPendingMulti.current = pendingMulti;
+  const lastPendingRestore = useRef(pendingRestore);
+  if (pendingRestore) lastPendingRestore.current = pendingRestore;
+  const multiPresence = usePresence(!!pendingMulti, 200);
+  const restorePresence = usePresence(!!pendingRestore, 200);
   const theme = themes[resolvedThemeId];
   const [dragOver, setDragOver] = useState(false);
   // Nested dragenter/dragleave events fire as the pointer crosses child
@@ -574,6 +582,10 @@ export function App() {
   }, [recon]);
 
   const splitClass = `split${splitRow ? "" : " split-row"}`;
+  // The legend follows the same gentle exit as every other floating overlay;
+  // `showLegend` is a persisted preference, so the panel outlives the toggle
+  // for one transition.
+  const legendPresence = usePresence(showLegend, 180);
 
   return (
     <TooltipProvider>
@@ -597,8 +609,19 @@ export function App() {
           void onDrop(e);
         }}
       >
+      <h1 className="sr-only">{APP_NAME}</h1>
       <div className="top-bar">
         <TabBar />
+        {/* View-level arrangement switch: belongs to the document view, so it
+            lives in the app bar rather than floating over the panes, where it
+            covered the second pane's toolbar in the side-by-side layout. */}
+        {(nestedResult && nested) || (compareResult && compare) ? (
+          <SplitOrientationToggle
+            splitRow={splitRow}
+            onChange={setSplitRowPersist}
+            className="top-split-orient"
+          />
+        ) : null}
         <MenuBar panes={exportPanes} onOpenSettings={() => setSettingsOpen(true)} />
       </div>
       <div className="body">
@@ -638,11 +661,13 @@ export function App() {
             title={`${t.expand} ${t.controlsPanel}`}
             aria-label={`${t.expand} ${t.controlsPanel}`}
           >
-            <span className="rail-chevron" aria-hidden="true">›</span>
+            <span className="rail-chevron" aria-hidden="true">
+              <Icon name="chevron" size={14} />
+            </span>
             <span className="rail-text">{t.controlsPanel}</span>
           </button>
         ))}
-        <main className="main">
+        <main className={`main${legendPresence.mounted ? " main-has-legend" : ""}`}>
           {error ? (
             <div className="state-panel error" role="alert">
               <h2>{t.errorTitle}</h2>
@@ -710,20 +735,7 @@ export function App() {
                     locate={locate}
                   />
                 </div>
-                {/* Orientation toggle for the nested split: the ⇔ button lives
-                    in the compare status bar, so without this the nested view
-                    had NO reachable way to switch stacked/side-by-side (the
-                    preference is shared, but only discoverable in compare). */}
-                <button
-                  className="btn ghost split-orient-btn"
-                  aria-label={splitRow ? t.splitSideBySide : t.splitStacked}
-                  aria-pressed={!splitRow}
-                  title={splitRow ? t.splitSideBySide : t.splitStacked}
-                  onClick={() => setSplitRowPersist(!splitRow)}
-                >
-                  {splitRow ? "⇔" : "⇕"}
-                </button>
-                {showLegend && <Legend theme={theme} recon={recon} />}
+                {legendPresence.mounted && <Legend theme={theme} recon={recon} state={legendPresence.phase} />}
               </div>
             ) : compareResult && compare && diff ? (
               <div className="split-outer">
@@ -804,22 +816,15 @@ export function App() {
                     data-tooltip={diffHidden ? t.diffShow : t.diffHide}
                     onClick={() => setDiffHidden((v) => !v)}
                   >
-                    {diffHidden ? "◉" : "◎"}
-                  </button>
-                  <button
-                    className="btn ghost"
-                    aria-label={splitRow ? t.splitSideBySide : t.splitStacked}
-                    aria-pressed={!splitRow}
-                    onClick={() => setSplitRowPersist(!splitRow)}
-                  >
-                    {splitRow ? "⇔" : "⇕"}
+                    <IconSwap from="eye" to="eyeOff" swapped={diffHidden} size={14} />
                   </button>
                   {!diffHidden && (
                     <span className="diff-legend-inline">
                       <span className="diff-swatch" aria-hidden="true" />
                       {t.diffLegend}
                       <button className="btn ghost diff-jump" onClick={() => openPanel("diff")}>
-                        {t.panelDiff} ▸
+                        {t.panelDiff}
+                        <Icon name="arrowRight" size={12} />
                       </button>
                     </span>
                   )}
@@ -839,7 +844,7 @@ export function App() {
                   labelOverridesById={labelOverridesById}
                   locate={locate}
                 />
-                {showLegend && <Legend theme={theme} recon={recon} />}
+                {legendPresence.mounted && <Legend theme={theme} recon={recon} state={legendPresence.phase} />}
                 {stats && (
                   <div className="stats">
                     <span>{countLabel(stats.species, t.species)}</span>
@@ -875,18 +880,25 @@ export function App() {
               {compareError && <div>{t.compareErrorPrefix} {compareError}</div>}
             </div>
           )}
-          {pendingMulti && (
+          {multiPresence.mounted && lastPendingMulti.current && (
             <MultiFileDialog
-              files={pendingMulti}
+              files={lastPendingMulti.current}
+              state={multiPresence.phase}
               onMerge={confirmMerge}
               onTabs={confirmTabs}
               onCancel={cancelPendingMulti}
               dialogRef={multiDialogRef}
             />
           )}
-          {pendingRestore && (
-            <div className="multi-open" role="dialog" aria-modal="true" aria-label={t.restoreTitle}>
-              <div className="multi-open-card">
+          {restorePresence.mounted && lastPendingRestore.current && (
+            <div
+              className="multi-open"
+              data-state={restorePresence.phase}
+              role="dialog"
+              aria-modal="true"
+              aria-label={t.restoreTitle}
+            >
+              <div className="multi-open-card" data-state={restorePresence.phase}>
                 <h3>{t.restoreTitle}</h3>
                 <button
                   className="panel-collapse restore-close"
@@ -899,8 +911,8 @@ export function App() {
                 <p className="muted">
                   {t.restoreBody.replace(
                     "{time}",
-                    pendingRestore.savedAt
-                      ? new Date(pendingRestore.savedAt).toLocaleString(intlTag[locale])
+                    lastPendingRestore.current.savedAt
+                      ? new Date(lastPendingRestore.current.savedAt).toLocaleString(intlTag[locale])
                       : t.inspNone,
                   )}
                 </p>
@@ -954,7 +966,9 @@ export function App() {
             title={`${t.expand} ${t.analyze}`}
             aria-label={`${t.expand} ${t.analyze}`}
           >
-            <span className="rail-chevron" aria-hidden="true">‹</span>
+            <span className="rail-chevron" aria-hidden="true">
+              <Icon name="chevronLeft" size={14} />
+            </span>
             <span className="rail-text">{t.analyze}</span>
           </button>
         )}
@@ -977,12 +991,14 @@ export function App() {
  */
 function MultiFileDialog({
   files,
+  state,
   onMerge,
   onTabs,
   onCancel,
   dialogRef,
 }: {
   files: { name: string; text: string }[];
+  state: "enter" | "shown" | "exit";
   onMerge: () => void;
   onTabs: () => void;
   onCancel: () => void;
@@ -1033,8 +1049,14 @@ function MultiFileDialog({
   }, [onCancel]);
 
   return (
-    <div className="multi-open" role="dialog" aria-modal="true" aria-label={t.multiOpenTitle.replace("{n}", String(files.length))}>
-      <div className="multi-open-card" ref={dialogRef}>
+    <div
+      className="multi-open"
+      data-state={state}
+      role="dialog"
+      aria-modal="true"
+      aria-label={t.multiOpenTitle.replace("{n}", String(files.length))}
+    >
+      <div className="multi-open-card" data-state={state} ref={dialogRef}>
         <h3>{t.multiOpenTitle.replace("{n}", String(files.length))}</h3>
         <ul className="multi-open-files">
           {files.map((f, i) => (
@@ -1065,21 +1087,90 @@ function MultiFileDialog({
   );
 }
 
+/** Two-option view switch for split arrangements (stacked / side by side).
+ *  A segmented control, not a rotating glyph: each arrangement is a stable,
+ *  directly selectable state, and the pressed segment shows the current one. */
+function SplitOrientationToggle({
+  splitRow,
+  onChange,
+  className,
+}: {
+  splitRow: boolean;
+  onChange: (row: boolean) => void;
+  className?: string;
+}) {
+  const t = useT();
+  return (
+    <span
+      className={`split-orient${className ? ` ${className}` : ""}`}
+      role="group"
+      aria-label={`${t.splitStacked} / ${t.splitSideBySide}`}
+    >
+      {/* `row` follows the app's stored preference: true = panes stacked
+          vertically (a column of panes), false = side by side. The icons show
+          the pane arrangement, so the pressed segment is the current one. */}
+      <button
+        type="button"
+        className={splitRow ? "active" : ""}
+        aria-pressed={splitRow}
+        aria-label={t.splitStacked}
+        data-tooltip={t.splitStacked}
+        onClick={() => onChange(true)}
+      >
+        <Icon name="splitRows" size={14} />
+      </button>
+      <button
+        type="button"
+        className={splitRow ? "" : "active"}
+        aria-pressed={!splitRow}
+        aria-label={t.splitSideBySide}
+        data-tooltip={t.splitSideBySide}
+        onClick={() => onChange(false)}
+      >
+        <Icon name="splitColumns" size={14} />
+      </button>
+    </span>
+  );
+}
+
 /** App-level singleton toast — rendered once so MenuBar and RightPanel never
  *  overlap each other's status messages. Errors use role="alert" (they must
  *  interrupt) and can be dismissed by hand. */
 function ToastSingleton() {
   const toast = useStore((s) => s.toast);
   const clearToast = useStore((s) => s.clearToast);
-  if (!toast) return null;
-  return <ToastView data={toast} onClose={clearToast} />;
+  // The last message is kept for one exit transition: dismissing a toast
+  // should slide it down and out, not blink it away.
+  const last = useRef<ToastData | null>(null);
+  if (toast) last.current = toast;
+  const presence = usePresence(!!toast, 180);
+  if (!presence.mounted || !last.current) return null;
+  return (
+    <ToastView
+      data={last.current}
+      onClose={clearToast}
+      state={presence.phase}
+    />
+  );
 }
 
-function ToastView({ data, onClose }: { data: ToastData; onClose: () => void }) {
+function ToastView({
+  data,
+  onClose,
+  state,
+}: {
+  data: ToastData;
+  onClose: () => void;
+  state: "enter" | "shown" | "exit";
+}) {
   const t = useT();
   const isError = data.kind === "error";
   return (
-    <div className={`toast ${data.kind}`} role={isError ? "alert" : "status"}>
+    <div
+      className={`toast ${data.kind}`}
+      data-state={state}
+      role={isError ? "alert" : "status"}
+    >
       <span className="toast-msg">{data.msg}</span>
       <button className="toast-close" aria-label={t.close} onClick={onClose}>
         <Icon name="close" size={12} />

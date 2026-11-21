@@ -37,7 +37,7 @@ export function EmptyState() {
   };
 
   return (
-    <div className="state-panel empty-hub">
+    <div className="state-panel empty-hub stagger-children">
       <div className="empty-logo">
         <AppLogo size={88} />
       </div>

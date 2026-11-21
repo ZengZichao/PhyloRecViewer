@@ -31,7 +31,8 @@ import { parseSpeciesTree } from "../parser/speciesTree";
 import { samples } from "../samples";
 import { useStore } from "../state/store";
 import { restoreSessionData, sessionDataOfStore } from "../state/autosave";
-import { useGlobalShortcuts, isTextInput, useFocusTrap } from "./hooks";
+import { useGlobalShortcuts, isTextInput, useFocusTrap, usePresence } from "./hooks";
+import { Icon } from "./Icon";
 import { baseName } from "./export-names";
 import { APP_CITATION, APP_NAME, APP_VERSION } from "../version";
 
@@ -178,6 +179,7 @@ function Dropdown({
     root.addEventListener("keydown", onKey);
     return () => root.removeEventListener("keydown", onKey);
   }, [open]);
+  const presence = usePresence(open);
   return (
     <div className="dropdown" id={id} ref={ref}>
       <button
@@ -199,9 +201,18 @@ function Dropdown({
         data-tauri-drag-region="false"
       >
         {label}
+        <span className="menu-caret" aria-hidden="true">
+          <Icon name="chevronDown" size={10} />
+        </span>
       </button>
-      {open && (
-        <div ref={menuRef} className="dropdown-menu" role="menu" data-tauri-drag-region="false">
+      {presence.mounted && (
+        <div
+          ref={menuRef}
+          className="dropdown-menu"
+          data-state={presence.phase}
+          role="menu"
+          data-tauri-drag-region="false"
+        >
           {children(() => setOpen(false))}
         </div>
       )}
@@ -211,7 +222,11 @@ function Dropdown({
 
 /** A checkmark prefix for the currently-active menu item. */
 function Check({ on }: { on: boolean }) {
-  return <span className="menu-check" aria-hidden="true">{on ? "✓" : ""}</span>;
+  return (
+    <span className="menu-check" aria-hidden="true">
+      {on && <Icon name="check" size={12} />}
+    </span>
+  );
 }
 
 /** A checked menu entry with radio semantics for screen readers. */
@@ -229,6 +244,14 @@ function RadioItem({
       <Check on={on} /> {label}
     </button>
   );
+}
+
+/** Which dialog to draw: the live one while open, the last one during exit. */
+function shownDialogKind(
+  live: "nhx" | "about" | null,
+  last: { kind: "nhx" | "about" } | null,
+): "nhx" | "about" | null {
+  return live ?? last?.kind ?? null;
 }
 
 export function MenuBar({
@@ -283,6 +306,13 @@ export function MenuBar({
   const [busy, setBusy] = useState<string | null>(null);
   const [dialogKind, setDialogKind] = useState<"nhx" | "about" | null>(null);
   const [nhxLosses, setNhxLosses] = useState<string[]>([]);
+  // The closing dialog keeps rendering its last content for one exit
+  // transition; a null `dialogKind` alone would blank the card mid-fade.
+  const lastDialog = useRef<{ kind: "nhx" | "about"; losses: string[] } | null>(null);
+  if (dialogKind) lastDialog.current = { kind: dialogKind, losses: nhxLosses };
+  const dialogPresence = usePresence(dialogKind !== null);
+  const shownDialog = shownDialogKind(dialogKind, lastDialog.current);
+  const shownLosses = dialogKind ? nhxLosses : (lastDialog.current?.losses ?? []);
   const [customDpi, setCustomDpi] = useState<number | null>(null);
   const [background, setBackground] = useState<"theme" | "white" | "transparent">("theme");
   const dlgRef = useRef<HTMLDivElement>(null);
@@ -659,9 +689,9 @@ export function MenuBar({
   });
 
   const themeOptions: { id: "light" | "dark" | "system"; label: string }[] = [
-    { id: "light", label: `${t.lightTheme} ☀` },
-    { id: "dark", label: `${t.darkTheme} 🌙` },
-    { id: "system", label: `${t.systemTheme} 🖥` },
+    { id: "light", label: t.lightTheme },
+    { id: "dark", label: t.darkTheme },
+    { id: "system", label: t.systemTheme },
   ];
 
   // Pixel-size estimate for the current PNG DPI, so "600" stops being an
@@ -745,7 +775,8 @@ export function MenuBar({
                     className="menu-item"
                     onClick={() => { close(); setExternalSpeciesTree(null); showToast(t.speciesTreeCleared, "info"); }}
                   >
-                    {t.removeSpeciesTree} ✕
+                    {t.removeSpeciesTree}
+                    <Icon name="close" size={12} />
                   </button>
                 </>
               ) : (
@@ -767,8 +798,8 @@ export function MenuBar({
                   {t.nestedPrefix.replace(
                     "{name}",
                     nestedName.length > 20 ? nestedName.slice(0, 18) + "…" : nestedName,
-                  )}{" "}
-                  ✕
+                  )}
+                  <Icon name="close" size={12} />
                 </button>
               ) : (
                 <button className="menu-item" title={t.nestedTitle} onClick={() => { close(); void onNestedClick(); }}>
@@ -784,8 +815,8 @@ export function MenuBar({
                   {t.comparePrefix.replace(
                     "{name}",
                     compareName.length > 20 ? compareName.slice(0, 18) + "…" : compareName,
-                  )}{" "}
-                  ✕
+                  )}
+                  <Icon name="close" size={12} />
                 </button>
               ) : (
                 <button className="menu-item" title={t.compareTitle} onClick={() => { close(); void onCompareClick(); }}>
@@ -978,6 +1009,7 @@ export function MenuBar({
             title={t.dataHealth}
             aria-label={`${t.dataHealth}: ${countLabel(totalWarnings, t.warnings)}`}
           >
+            <Icon name="flag" size={13} />
             {countLabel(totalWarnings, t.warnings)}
           </button>
         )}
@@ -1088,13 +1120,20 @@ export function MenuBar({
 
       {/* NHX export disclosure: the dialect drops real data; the user gets the
           list and a one-click recPhyloXML alternative instead of a silent loss. */}
-      {dialogKind === "nhx" && (
-        <div className="multi-open" role="dialog" aria-modal="true" aria-label={t.nhxDialectTitle} onClick={() => setDialogKind(null)}>
-          <div className="multi-open-card" ref={dlgRef} onClick={(e) => e.stopPropagation()}>
+      {dialogPresence.mounted && shownDialog === "nhx" && (
+        <div
+          className="multi-open"
+          data-state={dialogPresence.phase}
+          role="dialog"
+          aria-modal="true"
+          aria-label={t.nhxDialectTitle}
+          onClick={() => setDialogKind(null)}
+        >
+          <div className="multi-open-card" data-state={dialogPresence.phase} ref={dlgRef} onClick={(e) => e.stopPropagation()}>
             <h3>{t.nhxDialectTitle}</h3>
             <p>{t.nhxLossList}</p>
             <ul className="multi-open-files">
-              {nhxLosses.map((l) => (
+              {shownLosses.map((l) => (
                 <li key={l}>{localizeDiagnostic(l, locale)}</li>
               ))}
             </ul>
@@ -1120,9 +1159,16 @@ export function MenuBar({
       )}
 
       {/* About: version + citation + diagnostics, reachable without the repo. */}
-      {dialogKind === "about" && (
-        <div className="multi-open" role="dialog" aria-modal="true" aria-label={t.aboutTitle} onClick={() => setDialogKind(null)}>
-          <div className="multi-open-card" ref={dlgRef} onClick={(e) => e.stopPropagation()}>
+      {dialogPresence.mounted && shownDialog === "about" && (
+        <div
+          className="multi-open"
+          data-state={dialogPresence.phase}
+          role="dialog"
+          aria-modal="true"
+          aria-label={t.aboutTitle}
+          onClick={() => setDialogKind(null)}
+        >
+          <div className="multi-open-card" data-state={dialogPresence.phase} ref={dlgRef} onClick={(e) => e.stopPropagation()}>
             <h3>{t.aboutTitle}</h3>
             <p>
               <strong>{APP_NAME}</strong> {t.aboutVersion} {APP_VERSION}

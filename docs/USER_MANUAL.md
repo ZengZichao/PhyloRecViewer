@@ -172,7 +172,7 @@ Top to bottom, left to right:
 - **Main canvas**: the visualization area. Floating toolbar top-left (zoom, fit, undo/redo, annotation mode, analysis toggle); legend bottom-left; minimap top-right (see [Section 5](#5-canvas-navigation--interaction)).
 - **Right panel (Analysis)**: five fixed tabs (Search, Statistics, Network, Checks, Annotations); a sixth **Diff** tab appears in compare mode (see [Section 7](#7-right-analysis-panel)).
 
-> Both side panels are resizable by dragging their dividers; the `‹` / `›` buttons collapse and re-expand them. Nothing is shown until a document is loaded: the empty screen is a single centred start panel with Open file, Shortcuts & help and the sample files, and both side panels appear with the first document. The narrow-window policy runs at launch and again whenever the window shrinks: below 1180 px the analysis panel collapses, below 920 px the left panel follows (both can be reopened manually, and they stay open until the window crosses the threshold again).
+> Both side panels are resizable by dragging their dividers; the chevron buttons at the top of each panel collapse and re-expand them. Nothing is shown until a document is loaded: the empty screen is a single centred start panel with Open file, Shortcuts & help and the sample files, and both side panels appear with the first document. The narrow-window policy runs at launch and again whenever the window shrinks: below 1180 px the analysis panel collapses, below 920 px the left panel follows (both can be reopened manually, and they stay open until the window crosses the threshold again).
 
 ---
 
@@ -228,7 +228,7 @@ The empty-state hub shows the same set of buttons. Loading a sample marks the ta
 - Left canvas: **Gene → Symbiont**
 - Right canvas: **Symbiont → Host**
 
-Once loaded the menu item becomes **"Nested: <filename> ✕"** (a name longer than 20 characters is elided to the first 18 plus `…`); click it to remove the nested level. The nested canvas keeps its species-mirror state independently of the main canvas (internally two sets, `nestedSwapped` vs `swapped`), so identically named species never interfere.
+Once loaded the menu item becomes **"Nested: <filename>"** with a close icon (a name longer than 20 characters is elided to the first 18 plus `…`); click it to remove the nested level. The nested canvas keeps its species-mirror state independently of the main canvas (internally two sets, `nestedSwapped` vs `swapped`), so identically named species never interfere.
 
 > Note: loading a new primary file clears any nested level and comparison. If the nested file fails to parse, a yellow banner appears above the canvas ("Nested file error: …").
 
@@ -236,14 +236,14 @@ Once loaded the menu item becomes **"Nested: <filename> ✕"** (a name longer th
 
 **File → + Compare** loads an alternative reconciliation of the same family (e.g. from another tool or parameter set), entering compare view:
 
-- Two canvases, titled by file name (A / B). Panes start in the **Split stacked** arrangement; the ⇕ / ⇔ button in the compare status bar switches to **Side by side**, and the choice is remembered.
+- Two canvases, titled by file name (A / B). Panes start in the **Split stacked** arrangement; the two-segment arrangement control in the app bar (left of the menus) switches to **Side by side**, and the choice is remembered.
 - Gene nodes that **disagree** between the two are highlighted automatically. Comparison covers **three dimensions** — terminal event type, species mapping, and transfer donor/recipient — so a result that only moves a gene to another species no longer scores 100% agreement. The status bar gains a "Nodes differing between files" chip.
 - The **status bar** under the panes shows the breakdown: the agreement percentage (nodes agreeing on **all** dimensions, divided by the union of comparable nodes), the species-mapping agreement among matched nodes, and the counts of matched / only-in-A / only-in-B nodes — e.g. `71% in agreement · 80% species match · 7 matched · 1 only in A · 0 only in B`.
 - The **Link views** checkbox keeps the two panes' zoom/pan in sync; when unchecked each pane can be navigated independently.
 - The compare pane keeps its **own** mirror, collapse and family-color state, independent of the primary document — and the session file stores it too (see [Section 10](#10-session-save--load)).
-- The ◎ / ◉ button in the status bar hides or restores the diff highlighting; the right panel gains a **Diff** tab (see 7.6).
+- The eye button in the status bar hides or restores the diff highlighting; the right panel gains a **Diff** tab (see 7.6).
 
-Once loaded the menu item becomes **"Compare: <filename> ✕"** (a name longer than 20 characters is elided to the first 18 plus `…`); click it to remove the comparison.
+Once loaded the menu item becomes **"Compare: <filename>"** with a close icon (a name longer than 20 characters is elided to the first 18 plus `…`); click it to remove the comparison.
 
 > Note: nesting and comparison are **mutually exclusive** — loading one clears the other.
 
@@ -251,7 +251,7 @@ Once loaded the menu item becomes **"Compare: <filename> ✕"** (a name longer t
 
 - **＋** at the right end of the tab bar: new blank tab.
 - Click a tab to switch; each tab independently stores its own file, mirroring, collapses, family colors, annotations, renames, search criteria, and undo history.
-- Hovering a tab reveals its **✕** close button. If the document holds unsaved edits (annotations, mirroring, colors, renames, …), a confirmation appears before an unsaved document is closed; closing the last tab resets it to blank rather than quitting.
+- Hovering a tab reveals its close button. If the document holds unsaved edits (annotations, mirroring, colors, renames, …), a confirmation appears before an unsaved document is closed; closing the last tab resets it to blank rather than quitting.
 - Closing the active tab activates an adjacent tab.
 - Keyboard support on the tab bar: `←` / `→` to move, `Home` / `End` for first/last, `Enter` / `Space` to activate.
 
@@ -270,7 +270,7 @@ A floating button cluster sits at the **top-left** of the canvas, and every pane
 | `＋` | Zoom in (1.2×) |
 | `⤢` | Fit to window (same as `F`) |
 | `↶` / `↷` | Undo / redo (same as `⌘Z` / `⌘⇧Z`) |
-| `✎` | **Annotation mode** toggle (see 5.8) |
+| Pencil icon | **Annotation mode** toggle (see 5.8) |
 | `◧` | Open / close the right analysis panel |
 
 ### 5.2 Zoom & pan
@@ -330,7 +330,7 @@ Highlight priority: manual click lineage > search/filter dimming.
 Two ways to add / edit annotations:
 
 - **`Shift` + click** a gene node to open the annotation editor directly; or
-- click the floating-toolbar **✎ to enter annotation mode** (button highlights), then **click** any gene node to annotate. Click `✎` again to leave the mode.
+- click the floating-toolbar **pencil button to enter annotation mode** (it highlights), then **click** any gene node to annotate. Click the pencil button again to leave the mode.
 
 In the editor: type text, pick a color, then **Save** (or `⌘Enter`); the node is drawn with a **colored ring + text**. You can also **Remove** or **Cancel** (`Esc`). Saved annotations are managed centrally in the right panel's **Annotations** tab (see 7.5) and stored in the session file (see [Section 10](#10-session-save--load)).
 
@@ -473,7 +473,7 @@ Central management for the current document's annotations: each entry lists its 
 Only visible in compare view (4.7):
 
 - Lists the **nodes that differ between the two files** — on any compared dimension (event type, species mapping, or transfer donor/recipient) or present in only one file — as one clickable table whose event and species columns come in **A / B** pairs; clicking a row locates the node on the primary canvas.
-- The compare **status bar** (4.7) carries the headline numbers: agreement %, species-mapping agreement %, and the matched / only-in-A / only-in-B counts; the ◎ / ◉ button there hides or restores the diff highlighting.
+- The compare **status bar** (4.7) carries the headline numbers: agreement %, species-mapping agreement %, and the matched / only-in-A / only-in-B counts; the eye button there hides or restores the diff highlighting.
 - Read together with the status bar's "Nodes differing between files" chip.
 
 ---
@@ -577,8 +577,8 @@ Undoable actions: species mirroring, collapse/expand, gene-family color changes,
 | | Open session… | Restore a session |
 | | Close tab `⌘W` | Close the current tab |
 | | Load species tree (Newick)… | Provide a standalone species tree for leaf-only S= NHX gene trees |
-| | + Nested level / Nested: <filename> ✕ | Add / remove the host layer of the 3-level view |
-| | + Compare / Compare: <filename> ✕ | Add / remove the comparison |
+| | + Nested level / Nested: <filename> | Add / remove the host layer of the 3-level view |
+| | + Compare / Compare: <filename> | Add / remove the comparison |
 | **Export** | Export PNG / Export SVG / Export PDF / Export HTML | The menu's **Export image** section |
 | | Copy SVG / Copy PNG | Copy the current figure to the clipboard |
 | | recPhyloXML (lossless round-trip) | Native export: species tree, branch lengths, all events (incl. multiple arrivals), time slice, confidence |
@@ -586,7 +586,7 @@ Undoable actions: species mirroring, collapse/expand, gene-family color changes,
 | | PNG resolution (DPI) | Screen 2× (192 DPI) / 300 / 600 / 1200 / 2400 / 4800, plus a custom DPI field with an output pixel estimate |
 | | Background | Theme background / White background / Transparent background |
 | **View** | Language: 中文 / English | Switch UI language |
-| | Theme: Light theme ☀ / Dark theme 🌙 / System theme 🖥 | Three theme modes |
+| | Theme: Light theme / Dark theme / System theme | Three theme modes |
 | **Preferences** (menu-bar button) | Preferences | Open the preferences dialog — it sits to the right of View, it is not an item inside View |
 | **Help** | Shortcuts & help `?` | Open the shortcuts & interactions card |
 | | Tutorial | Replay the five-step onboarding tour |
@@ -600,7 +600,7 @@ The menu bar also shows a **warnings badge** (e.g. `3 warnings`) — it is a but
 
 The **Preferences** button in the menu bar opens the preferences dialog:
 
-- **Theme**: Light theme ☀ / Dark theme 🌙 / **System theme** 🖥 (follows the OS dark/light setting live). Default: system theme.
+- **Theme**: Light theme / Dark theme / **System theme** (follows the OS dark/light setting live). Default: system theme.
 - **Language**: 中文 / English. Default: **English**, unless the operating-system locale starts with `zh` (in which case Chinese); switching applies instantly; data (gene and species names) is never translated.
 - **PNG resolution (DPI)**: the six fixed choices Screen 2× (192 DPI) / 300 / 600 / 1200 / 2400 / 4800, linked with the Export menu; this dialog has no custom choice — a custom DPI is offered only in the Export menu's numeric field.
 - **Tutorial**: replay the five-step onboarding tour.
@@ -613,7 +613,7 @@ Themes affect the UI and canvas only; exports always render in the current theme
 
 ## 14. Help & Onboarding
 
-- **Shortcuts & help card** (`?` or **Help → Shortcuts & help**): all keyboard shortcuts, on-canvas gestures, and mouse/touch hints, with a one-click tour replay at the bottom. Close with `Esc`, the backdrop, or ✕.
+- **Shortcuts & help card** (`?` or **Help → Shortcuts & help**): all keyboard shortcuts, on-canvas gestures, and mouse/touch hints, with a one-click tour replay at the bottom. Close with `Esc`, the backdrop, or the close button.
 - **Onboarding tour**: **5 steps** (Controls — shape the drawing → Analysis — read the data → Canvas — nodes are interactive → Nested & compare views → Export) with a spotlight highlight; `←` / `→` to navigate, skippable. Play it any time from the **Help menu / Preferences / help card**.
 - **Empty state**: a blank tab explains how to open a recPhyloXML file, offers the three sample buttons under the **Load sample:** label, and shows a drag-and-drop hint.
 - **Parse-error panel**: shows "Could not parse this file" with supported formats, plus three recovery actions — **Back to previous / Choose another file / Load sample**.
@@ -665,7 +665,7 @@ The format is auto-detected; no manual selection needed:
 |--------|--------|
 | Scroll wheel / drag empty space | Zoom (centred on the cursor) / pan |
 | Click a gene node | Highlight lineage |
-| `Shift` + click a gene node | Add / edit annotation (or enter annotation mode with ✎, then click) |
+| `Shift` + click a gene node | Add / edit annotation (or enter annotation mode with the pencil button, then click) |
 | `Alt` / `⌥` or `⌘` + click an internal gene node | Collapse / expand subtree |
 | Click a species branch | Mirror subtree |
 | Click a name label | Rename in place (Enter commits / Esc cancels) |

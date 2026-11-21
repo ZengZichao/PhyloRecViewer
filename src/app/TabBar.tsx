@@ -176,7 +176,7 @@ export function TabBar() {
         );
       })}
       <button className="tab-new" data-tooltip={t.newTabTitle} aria-label={t.newTabTitle} onClick={newTab}>
-        +
+        <Icon name="plus" size={14} />
       </button>
       {/* Fills every pixel of the bar that no tab occupies so the whole empty
           area acts as a window drag region (see styles.css .tab-drag-fill). */}

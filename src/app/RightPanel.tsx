@@ -56,7 +56,33 @@ export function RightPanel({ width }: { width?: number }) {
   useEffect(() => {
     if (open && activeTab !== tab) setTab(activeTab);
   }, [open, activeTab, tab, setTab]);
+  // Cross-fade between tabs: the outgoing tab stays mounted for one transition
+  // while the incoming one fades/scales in, so switching content never blanks
+  // the panel for a frame. Both layers are keyed, so a second switch mid-fade
+  // starts a fresh pair rather than replaying a finished one.
+  const [outTab, setOutTab] = useState<(typeof tabs)[number]["id"] | null>(null);
+  const prevTab = useRef(activeTab);
+  useEffect(() => {
+    if (prevTab.current === activeTab) return;
+    const previous = prevTab.current;
+    prevTab.current = activeTab;
+    setOutTab(previous);
+    const timer = window.setTimeout(() => setOutTab(null), 240);
+    return () => window.clearTimeout(timer);
+  }, [activeTab]);
   if (!open) return null;
+
+  /** One tab's content, shared by the live and the fading-out layer. */
+  const renderTabBody = (id: (typeof tabs)[number]["id"]) => (
+    <>
+      {id === "search" && <SearchFilterTab />}
+      {id === "stats" && <StatsTab onToast={showToast} />}
+      {id === "network" && <NetworkTab />}
+      {id === "check" && <ChecksTab />}
+      {id === "annotations" && <AnnotationsTab />}
+      {id === "diff" && compare && <DiffTab />}
+    </>
+  );
 
   const onTabKey = (e: ReactKeyboardEvent<HTMLButtonElement>, i: number) => {
     let next = -1;
@@ -82,7 +108,7 @@ export function RightPanel({ width }: { width?: number }) {
           data-tooltip={t.collapse}
           aria-label={t.collapse}
         >
-          ›
+          <Icon name="chevron" size={14} />
         </button>
       </div>
       {recon && (
@@ -117,12 +143,14 @@ export function RightPanel({ width }: { width?: number }) {
           <div className="rp-empty">{t.analysisEmpty}</div>
         ) : (
           <>
-            {activeTab === "search" && <SearchFilterTab />}
-            {activeTab === "stats" && <StatsTab onToast={showToast} />}
-            {activeTab === "network" && <NetworkTab />}
-            {activeTab === "check" && <ChecksTab />}
-            {activeTab === "annotations" && <AnnotationsTab />}
-            {activeTab === "diff" && compare && <DiffTab />}
+            <div className="rp-tabview" key={activeTab}>
+              {renderTabBody(activeTab)}
+            </div>
+            {outTab && outTab !== activeTab && (
+              <div className="rp-tabview rp-tabview-exit" key={`out-${outTab}`} aria-hidden="true">
+                {renderTabBody(outTab)}
+              </div>
+            )}
           </>
         )}
       </div>
@@ -222,16 +250,29 @@ function SearchFilterTab() {
           }}
         />
       </div>
+      {/* Both options take effect on the click that sets them, so they are
+          switches rather than form checkboxes: nothing here is submitted. */}
       <label className="rp-check">
-        <input type="checkbox" className="toggle" name="rp-regex" aria-label={t.useRegex} checked={regex} onChange={(e) => setSearchRegex(e.target.checked)} />
+        <input
+          type="checkbox"
+          role="switch"
+          className="switch"
+          name="rp-regex"
+          aria-label={t.useRegex}
+          aria-checked={regex}
+          checked={regex}
+          onChange={(e) => setSearchRegex(e.target.checked)}
+        />
         <span>{t.useRegex}</span>
       </label>
       <label className="rp-check">
         <input
           type="checkbox"
-          className="toggle"
+          role="switch"
+          className="switch"
           name="rp-only-match"
           aria-label={t.searchOnlyMatch}
+          aria-checked={onlyMatches}
           checked={onlyMatches}
           disabled={matches === null}
           onChange={(e) => setOnlyMatches(e.target.checked)}
@@ -245,6 +286,92 @@ function SearchFilterTab() {
           <br />
           <code>{localizeDiagnostic(regexProblem, locale)}</code>
         </p>
+      )}
+
+      <h4 className="rp-h4">{t.filterEvents}</h4>
+      <div className="rp-chips" role="group" aria-label={t.filterEvents}>
+        {events.map((ev) => (
+          <button
+            key={ev.key}
+            type="button"
+            className={`rp-chip${eventFilter[ev.key] ? " active" : ""}`}
+            name={`rp-event-${ev.key}`}
+            aria-pressed={eventFilter[ev.key]}
+            aria-label={t.filterEvent.replace("{name}", ev.label)}
+            onClick={() => toggleEventFilter(ev.key)}
+          >
+            {ev.label}
+          </button>
+        ))}
+      </div>
+
+      {recon && recon.geneTrees.length > 1 && (
+        <>
+          <h4 className="rp-h4">{t.filterFamilies}</h4>
+          <div className="rp-fam-list">
+            {recon.geneTrees.map((gt) => {
+              const checked = familyFilter === null || familyFilter.has(gt.index);
+              return (
+                <label key={gt.index} className="rp-fam">
+                  <input
+                    type="checkbox"
+                    className="toggle"
+                    name={`rp-family-${gt.index}`}
+                    checked={checked}
+                    onChange={() => toggleFamilyFilter(gt.index)}
+                  />
+                  <span
+                    className="rp-swatch"
+                    style={{ background: geneColors[gt.index] ?? geneColor(themes[resolvedThemeId], gt.index) }}
+                  />
+                  <span className="rp-fam-name">{gt.name || `${t.geneTree} ${gt.index + 1}`}</span>
+                </label>
+              );
+            })}
+          </div>
+        </>
+      )}
+
+      {hasConfidence && (
+        <>
+          <h4 className="rp-h4">{t.filterConfidence}</h4>
+          <div className="rp-conf">
+            <label className="rp-conf-row">
+              <span>&ge; {confidenceMin.toFixed(2)}</span>
+              <span className="range-wrap">
+                <span className="range-track" aria-hidden="true">
+                  <span className="range-fill" style={{ width: `${confidenceMin * 100}%` }} />
+                </span>
+                <input
+                  type="range"
+                  name="rp-conf-min"
+                  min={0}
+                  max={1}
+                  step={0.05}
+                  value={confidenceMin}
+                  onChange={(e) => setConfidenceRange(Math.min(Number(e.target.value), confidenceMax), confidenceMax)}
+                />
+              </span>
+            </label>
+            <label className="rp-conf-row">
+              <span>&le; {confidenceMax.toFixed(2)}</span>
+              <span className="range-wrap">
+                <span className="range-track" aria-hidden="true">
+                  <span className="range-fill" style={{ width: `${confidenceMax * 100}%` }} />
+                </span>
+                <input
+                  type="range"
+                  name="rp-conf-max"
+                  min={0}
+                  max={1}
+                  step={0.05}
+                  value={confidenceMax}
+                  onChange={(e) => setConfidenceRange(confidenceMin, Math.max(Number(e.target.value), confidenceMin))}
+                />
+              </span>
+            </label>
+          </div>
+        </>
       )}
 
       {matches !== null && (
@@ -286,84 +413,6 @@ function SearchFilterTab() {
             {list.length > 200 && (
               <p className="rp-empty">{t.topOf.replace("{n}", "200").replace("{total}", String(list.length))}</p>
             )}
-          </div>
-        </>
-      )}
-
-      <h4 className="rp-h4">{t.filterEvents}</h4>
-      <div className="rp-chips">
-        {events.map((ev) => (
-          <label key={ev.key} className="rp-chip">
-            <input
-              type="checkbox"
-              className="toggle"
-              name={`rp-event-${ev.key}`}
-              checked={eventFilter[ev.key]}
-              aria-label={t.filterEvent.replace("{name}", ev.label)}
-              onChange={() => toggleEventFilter(ev.key)}
-            />
-            <span>{ev.label}</span>
-          </label>
-        ))}
-      </div>
-
-      {recon && recon.geneTrees.length > 1 && (
-        <>
-          <h4 className="rp-h4">{t.filterFamilies}</h4>
-          <div className="rp-fam-list">
-            {recon.geneTrees.map((gt) => {
-              const checked = familyFilter === null || familyFilter.has(gt.index);
-              return (
-                <label key={gt.index} className="rp-fam">
-                  <input
-                    type="checkbox"
-                    className="toggle"
-                    name={`rp-family-${gt.index}`}
-                    checked={checked}
-                    onChange={() => toggleFamilyFilter(gt.index)}
-                  />
-                  <span
-                    className="rp-swatch"
-                    style={{ background: geneColors[gt.index] ?? geneColor(themes[resolvedThemeId], gt.index) }}
-                  />
-                  <span className="rp-fam-name">{gt.name || `${t.geneTree} ${gt.index + 1}`}</span>
-                </label>
-              );
-            })}
-          </div>
-        </>
-      )}
-
-      {hasConfidence && (
-        <>
-          <h4 className="rp-h4">{t.filterConfidence}</h4>
-          <div className="rp-conf">
-            <label className="rp-conf-row">
-              <span>&ge; {confidenceMin.toFixed(2)}</span>
-              <input
-                type="range"
-                name="rp-conf-min"
-                min={0}
-                max={1}
-                step={0.05}
-                value={confidenceMin}
-                style={{ ["--slider-fill" as string]: `${confidenceMin * 100}%` }}
-                onChange={(e) => setConfidenceRange(Math.min(Number(e.target.value), confidenceMax), confidenceMax)}
-              />
-            </label>
-            <label className="rp-conf-row">
-              <span>&le; {confidenceMax.toFixed(2)}</span>
-              <input
-                type="range"
-                name="rp-conf-max"
-                min={0}
-                max={1}
-                step={0.05}
-                value={confidenceMax}
-                style={{ ["--slider-fill" as string]: `${confidenceMax * 100}%` }}
-                onChange={(e) => setConfidenceRange(confidenceMin, Math.max(Number(e.target.value), confidenceMin))}
-              />
-            </label>
           </div>
         </>
       )}
@@ -1040,7 +1089,7 @@ function AnnotationsTab() {
             aria-label={`${t.annoTitle}: ${nameOf.get(id) ?? id}`}
             onClick={() => setAnnotating({ id, name: nameOf.get(id) ?? id })}
           >
-            ✎
+            <Icon name="pencil" size={13} />
           </button>
           <button
             className="btn ghost anno-btn"
@@ -1092,12 +1141,14 @@ function DiffTab() {
   const CAP = 300;
   const shown = rows.slice(0, CAP);
 
-  const statusOf = (p: MatchedPair): string => {
+  const statusOf = (p: MatchedPair): ReactNode => {
     const parts: string[] = [];
     if (!p.agreeEvent) parts.push(t.colEvent);
     if (!p.agreeSpecies) parts.push(t.inspSpecies);
     if (!p.agreeTransfer) parts.push(t.transferLegend);
-    return parts.length > 0 ? parts.join("+") : "\u2713";
+    // A fully agreeing row shows the same stroked tick the rest of the app
+    // uses, not a font glyph from a different family.
+    return parts.length > 0 ? parts.join("+") : <Icon name="check" size={12} />;
   };
 
   const exportCsv = () => {
@@ -1300,7 +1351,10 @@ function ChecksTab() {
       <div className="rp-checks-head">
         <p className="rp-checks-intro">
           {issues.length === 0 && warningGroups.length === 0 ? (
-            <span className="rp-checks-pass">{"\u2713"} {t.checkAllGood}</span>
+            <span className="rp-checks-pass">
+              <Icon name="check" size={13} />
+              {t.checkAllGood}
+            </span>
           ) : (
             <span className="rp-checks-fail">
               {t.checksWithIssues.replace("{n}", formatCount(issues.length, locale)).replace("{m}", formatCount(checks.length, locale))}
@@ -1372,7 +1426,7 @@ function ChecksTab() {
           {passing.map((c) => (
             <div key={c.code} className="rp-check-pass-row">
               <span className="rp-check-tick" aria-hidden="true">
-                {"\u2713"}
+                <Icon name="check" size={12} />
               </span>
               <span>{c.name}</span>
             </div>

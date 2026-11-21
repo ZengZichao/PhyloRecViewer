@@ -64,6 +64,7 @@
   --success-border: var(--green-7);
   --success-solid: var(--green-9);
   --warning: var(--amber-11);
+  --warning-text: var(--amber-11);
   --warning-weak: var(--amber-3);
   --warning-border: var(--amber-7);
   --warning-solid: var(--amber-9);
@@ -78,16 +79,28 @@
   --radius: 8px;
   --radius-sm: 6px;
   --radius-xs: 4px;
-  /* Only floating layers earn a shadow; panels and rows stay flat. */
-  --shadow-pop: 0 6px 16px -4px rgba(0, 0, 0, 0.10), 0 2px 4px -2px rgba(0, 0, 0, 0.06);
-  --shadow-modal: 0 16px 40px -8px rgba(0, 0, 0, 0.18), 0 4px 8px -4px rgba(0, 0, 0, 0.08);
+  /* Pills (switch thumbs, slider tracks, dots) are radius-full; every other
+     corner is one of the three steps above. A 3px one-off is how a "system"
+     quietly stops being a system. */
+  --radius-full: 999px;
+  /* Layered, low-contrast shadows instead of hard borders: a surface should
+     settle into whatever is behind it, in either theme. Each level is two or
+     three soft layers, never one hard line. */
+  --shadow-panel: 0 0 0 0.5px rgba(20, 22, 25, 0.05), 0 1px 2px rgba(20, 22, 25, 0.04), 0 12px 32px -20px rgba(20, 22, 25, 0.22);
+  --shadow-pop: 0 0 0 0.5px rgba(20, 22, 25, 0.06), 0 4px 10px -2px rgba(20, 22, 25, 0.10), 0 14px 34px -14px rgba(20, 22, 25, 0.18);
+  --shadow-modal: 0 0 0 0.5px rgba(20, 22, 25, 0.07), 0 12px 28px -8px rgba(20, 22, 25, 0.18), 0 34px 68px -26px rgba(20, 22, 25, 0.26);
   --shadow-xs: none;
-  --shadow-sm: var(--shadow-pop);
-  --shadow: var(--shadow-pop);
+  --shadow-sm: var(--shadow-panel);
+  --shadow: var(--shadow-panel);
   --shadow-lg: var(--shadow-modal);
-  /* One transition spec for the whole app: a state change that needs
-     explaining gets 250ms of ease-out and nothing else. */
-  --motion: 250ms ease-out;
+  /* Motion: state changes are transitions, never one-shot keyframes, so a
+     second input can turn them around mid-flight. Entrances and exits share
+     the same ease-out curve: fast at the start, soft on arrival. */
+  --motion: 200ms;
+  --motion-fast: 120ms;
+  --motion-slow: 280ms;
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-standard: cubic-bezier(0.2, 0, 0.2, 1);
   /* 8pt grid spacing. */
   --space-1: 4px;
   --space-2: 8px;
@@ -175,6 +188,7 @@
   --success-border: var(--green-7);
   --success-solid: var(--green-9);
   --warning: var(--amber-11);
+  --warning-text: var(--amber-11);
   --warning-weak: var(--amber-3);
   --warning-border: var(--amber-7);
   --warning-solid: var(--amber-9);
@@ -182,11 +196,12 @@
   --locate-weak: var(--violet-3);
   --locate-border: var(--violet-7);
   --scrim: var(--black-a6);
-  --shadow-pop: 0 6px 16px -4px rgba(0, 0, 0, 0.45), 0 2px 4px -2px rgba(0, 0, 0, 0.35);
-  --shadow-modal: 0 16px 40px -8px rgba(0, 0, 0, 0.65), 0 4px 8px -4px rgba(0, 0, 0, 0.4);
+  --shadow-panel: 0 0 0 0.5px rgba(255, 255, 255, 0.06), 0 1px 2px rgba(0, 0, 0, 0.35), 0 12px 32px -20px rgba(0, 0, 0, 0.6);
+  --shadow-pop: 0 0 0 0.5px rgba(255, 255, 255, 0.07), 0 4px 12px rgba(0, 0, 0, 0.45), 0 16px 40px -16px rgba(0, 0, 0, 0.55);
+  --shadow-modal: 0 0 0 0.5px rgba(255, 255, 255, 0.08), 0 16px 40px rgba(0, 0, 0, 0.55), 0 44px 88px -36px rgba(0, 0, 0, 0.7);
   --shadow-xs: none;
-  --shadow-sm: var(--shadow-pop);
-  --shadow: var(--shadow-pop);
+  --shadow-sm: var(--shadow-panel);
+  --shadow: var(--shadow-panel);
   --shadow-lg: var(--shadow-modal);
   color-scheme: dark;
 }
@@ -212,7 +227,7 @@
 }
 *::-webkit-scrollbar-thumb {
   background: var(--border);
-  border-radius: 999px;
+  border-radius: var(--radius-full);
 }
 *::-webkit-scrollbar-thumb:hover {
   background: var(--muted);
@@ -234,12 +249,48 @@ body {
   font-size: var(--fs-body);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  /* Every number in this interface (counts, ratios, zoom, node ids) sits in a
+     changing numeric column: equal digit widths stop the text from dancing
+     left and right as values update. */
+  font-variant-numeric: tabular-nums;
 }
 
+/* A real page heading for the document, kept out of the visual layer. It is
+   the h1 assistive tech and the balance rule below are written for. */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Never leave a single word stranded on a heading's last line. */
+h1,
+h2,
+h3,
+h4 {
+  text-wrap: balance;
+}
+h1 {
+  text-wrap: balance;
+}
+
+/* The window is a neutral canvas with three surfaces on it: the menu/tab
+   strip, the work area and (when open) the two side panels. Every surface has
+   the same radius and the same layered shadow; none of them touches the window
+   edge, so the layout reads as one composed page instead of three bands
+   butted against the frame. */
 .app {
   display: flex;
   flex-direction: column;
   height: 100%;
+  gap: var(--space-2);
+  padding: var(--space-2);
   background: var(--bg);
 }
 :root[data-theme="dark"] .app {
@@ -261,8 +312,10 @@ body {
   display: flex;
   align-items: stretch;
   background: var(--panel);
-  border-bottom: 0.5px solid var(--border);
-  box-shadow: var(--shadow-xs);
+  border-radius: var(--radius);
+  /* A soft shadow replaces the old hairline border: the bar separates from the
+     work area by elevation, not by a drawn line. */
+  box-shadow: var(--shadow-panel);
   z-index: 5;
   flex-shrink: 0;
 }
@@ -310,16 +363,18 @@ body {
   display: inline-flex;
   align-items: center;
   gap: 4px;
+  transition: background-color var(--motion) var(--ease-out), color var(--motion) var(--ease-out);
 }
-/* Small ▾ dropdown indicator after each menu-bar item label. */
-.menu-bar-item::after {
-  content: "▾";
-  font-size: var(--fs-note);
+/* Disclosure caret: same stroked chevron as every other icon, rotated by a
+   transition when the menu opens. */
+.menu-caret {
+  display: inline-flex;
   color: var(--muted);
+  transition: transform var(--motion) var(--ease-out), color var(--motion) var(--ease-out);
 }
-.menu-bar-item:hover::after,
-.menu-bar-item.active::after {
-  opacity: 1;
+.menu-bar-item[aria-expanded="true"] .menu-caret {
+  transform: rotate(180deg);
+  color: var(--accent);
 }
 .menu-bar-item:hover {
   background: var(--accent-weak);
@@ -361,47 +416,48 @@ body {
   flex: 1;
 }
 
+/* Data-health readout: a functional status (it opens the Checks tab), so it
+   is a quiet text button with one icon, not a decorative badge with a frame. */
 .warn-badge {
-  background: var(--panel-2);
-  color: var(--text-2);
-  border: 0.5px solid var(--border);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: transparent;
+  color: var(--muted);
+  border: none;
   border-radius: var(--radius-xs);
-  padding: 2px var(--space-2);
+  padding: 4px var(--space-2);
   font-size: var(--fs-note);
-  font-weight: var(--fw-semibold);
-  cursor: help;
+  font-weight: var(--fw-medium);
+  cursor: pointer;
   -webkit-app-region: no-drag;
   app-region: no-drag;
+  transition: background-color var(--motion) var(--ease-out), color var(--motion) var(--ease-out);
 }
-:root[data-theme="dark"] .warn-badge {
-  background: var(--panel-2);
-  color: var(--text-2);
-  border-color: var(--border);
+.warn-badge:hover {
+  background: var(--accent-weak);
+  color: var(--text);
 }
 
-.export-legend-toggle {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  font-size: var(--fs-note);
-  color: var(--muted);
-  cursor: pointer;
-  white-space: nowrap;
-}
 
 /* ---------- buttons / inputs ---------- */
 .btn {
   appearance: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
   white-space: nowrap;
   border: 0.5px solid var(--border);
   background: var(--panel);
   color: var(--text-2);
   border-radius: var(--radius-sm);
-  padding: 8px 16px;
+  padding: 7px 14px;
   font-size: var(--fs-body);
   font-weight: var(--fw-medium);
   cursor: pointer;
   box-shadow: var(--shadow-xs);
+  transition: background-color var(--motion) var(--ease-out), border-color var(--motion) var(--ease-out), color var(--motion) var(--ease-out), box-shadow var(--motion) var(--ease-out);
 }
 .btn:hover {
   background: var(--hover);
@@ -457,10 +513,11 @@ body {
   width: 16px;
   height: 16px;
   border: 0.5px solid var(--control-border);
-  border-radius: 3px;
+  border-radius: var(--radius-xs);
   background: var(--panel);
   cursor: pointer;
   flex-shrink: 0;
+  transition: background-color var(--motion) var(--ease-out), border-color var(--motion) var(--ease-out);
 }
 .toggle:hover {
   border-color: var(--accent);
@@ -490,11 +547,11 @@ body {
   width: 40px;
   height: 24px;
   border: none;
-  border-radius: 999px;
+  border-radius: var(--radius-full);
   background: var(--control-border);
   cursor: pointer;
   flex-shrink: 0;
-  transition: background-color var(--motion);
+  transition: background-color var(--motion) var(--ease-out);
 }
 .switch:hover {
   background: var(--muted);
@@ -509,9 +566,9 @@ body {
   top: 2px;
   width: 20px;
   height: 20px;
-  border-radius: 50%;
+  border-radius: var(--radius-full);
   background: var(--panel);
-  transition: transform var(--motion);
+  transition: transform var(--motion) var(--ease-out);
 }
 .switch:checked::after {
   transform: translateX(16px);
@@ -522,30 +579,41 @@ body {
   flex: 1;
   display: flex;
   min-height: 0;
+  /* No flex gap: the resizer itself is the 8px gutter, so a panel divider and
+     a collapsed rail keep exactly the same rhythm. */
+  gap: 0;
 }
 
+/* The sidebar is a raised panel, not a full-height band: same radius and
+   elevant as the canvas and the analysis panel, inset from the window edge.
+   Left and right inner padding are equal (16px), which is the gutter every
+   row, heading and control aligns to. */
 .sidebar {
   width: var(--sidebar-w);
-  min-width: 360px;
+  min-width: 340px;
   flex-shrink: 0;
-  padding: var(--space-4);
+  padding: var(--space-4) var(--space-4) var(--space-6);
   overflow-y: auto;
   overflow-x: hidden;
+  scrollbar-gutter: stable both-edges;
   background: var(--panel);
-  border-right: 0.5px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-panel);
   display: flex;
   flex-direction: column;
-  gap: var(--space-4);
+  gap: 0;
 }
 
-/* Card / panel: unified 12px radius, subtle shadow, neutral gray border. */
 /* Sidebar sections are rules, not cards: a hairline between sections and one
-   16px gutter for the whole panel. Four bordered boxes stacked in a 380px
-   column spent more ink on their frames than on the controls inside them. */
+   16px gutter for the whole panel. Four bordered boxes stacked in a 340px
+   column spent more ink on their frames than on the controls inside them.
+   The rule runs edge to edge (negative margin cancels the sidebar gutter)
+   while the content stays aligned to that gutter, so group boundaries read
+   at a glance without breaking the single left-aligned column. */
 .panel {
   background: transparent;
   border-top: 0.5px solid var(--border-weak);
-  padding: 0 var(--space-4);
+  padding: var(--space-1) var(--space-4);
   margin: 0 calc(-1 * var(--space-4));
   box-shadow: none;
 }
@@ -555,7 +623,7 @@ body {
 .panel h3 {
   margin: 0;
   font-size: var(--fs-body);
-  font-weight: var(--fw-medium);
+  font-weight: var(--fw-semibold);
   color: var(--text);
 }
 
@@ -569,7 +637,10 @@ body {
   grid-template-columns: 1fr auto;
   align-items: center;
   gap: var(--space-2);
-  min-height: 32px;
+  /* 36px fits a 13px label plus 11px of breathing room above and below, and
+     gives the whole row (the <label> is the hit area) a comfortable target. */
+  min-height: 36px;
+  padding: 0 0;
   font-size: var(--fs-body);
 }
 .control-label {
@@ -658,16 +729,30 @@ body {
   outline: none;
   cursor: pointer;
 }
+/* The filled portion of the track is a real element behind the native input
+   (solid colour), never a gradient trick: gradients are banned in this
+   interface, and a block also keeps the fill crisp at any zoom level. */
+.slider-track {
+  position: absolute;
+  left: 0;
+  top: 6px;
+  width: 100px;
+  height: 6px;
+  border-radius: var(--radius-full);
+  background: var(--border);
+  overflow: hidden;
+  pointer-events: none;
+}
+.slider-fill {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--accent);
+}
 .slider-wrap input[type="range"]::-webkit-slider-runnable-track {
   height: 6px;
-  border-radius: 999px;
-  background: var(--border);
-  /* Accent active track via gradient fill: the portion left of the thumb is
-     the near-black accent, the rest stays gray — like Figma / Apple HIG
-     sliders. */
-  background-image: linear-gradient(var(--accent), var(--accent));
-  background-size: var(--slider-fill, 50%) 100%;
-  background-repeat: no-repeat;
+  border-radius: var(--radius-full);
+  background: transparent;
 }
 .slider-wrap input[type="range"]::-webkit-slider-thumb {
   -webkit-appearance: none;
@@ -676,7 +761,7 @@ body {
   height: 18px;
   /* Centre the 18px thumb on the 6px track: (6 - 18) / 2 = -6px. */
   margin-top: -6px;
-  border-radius: 50%;
+  border-radius: var(--radius-full);
   background: var(--panel);
   border: 0.5px solid var(--accent);
   cursor: grab;
@@ -687,20 +772,20 @@ body {
 .slider-wrap input[type="range"]::-moz-range-thumb {
   width: 18px;
   height: 18px;
-  border-radius: 50%;
+  border-radius: var(--radius-full);
   background: var(--panel);
   border: 0.5px solid var(--accent);
   cursor: grab;
 }
 .slider-wrap input[type="range"]::-moz-range-track {
   height: 6px;
-  border-radius: 999px;
-  background: var(--border);
+  border-radius: var(--radius-full);
+  background: transparent;
 }
 .slider-wrap input[type="range"]::-moz-range-progress {
   height: 6px;
-  border-radius: 999px;
-  background: var(--accent);
+  border-radius: var(--radius-full);
+  background: transparent;
 }
 .slider-value {
   position: absolute;
@@ -729,24 +814,53 @@ body {
   color: var(--accent);
   background: var(--accent-weak);
 }
-/* Numeric input that replaces the value display when editing. */
-.slider-input {
+/* Numeric editor + stepper that replaces the value display when editing.
+   The -/+ buttons commit exactly one step; the field takes a typed value for
+   a bigger jump. Same radius scale as every other control. */
+.slider-stepper {
   position: absolute;
   right: 0;
-  top: -1px;
-  width: 42px;
-  height: 20px;
-  border: 0.5px solid var(--accent);
-  border-radius: var(--radius-xs);
+  top: -2px;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px;
+  border-radius: var(--radius-sm);
   background: var(--panel);
+  box-shadow: 0 0 0 0.5px var(--accent), var(--shadow-pop);
+}
+.stepper-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-xs);
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  transition: background-color var(--motion-fast) var(--ease-out), color var(--motion-fast) var(--ease-out);
+}
+.stepper-btn:hover {
+  background: var(--hover);
+  color: var(--text);
+}
+.slider-input {
+  width: 40px;
+  height: 20px;
+  border: none;
+  border-radius: var(--radius-xs);
+  background: var(--panel-2);
   color: var(--text);
   font-size: var(--fs-note);
   font-variant-numeric: tabular-nums;
-  text-align: right;
-  padding: 0 4px;
+  text-align: center;
+  padding: 0 2px;
   outline: none;
-  box-shadow: 0 0 0 3px var(--accent-weak);
-  /* Hide spinner buttons for a cleaner look */
+  /* Hide the native spinner: the -/+ buttons are the stepper. */
   appearance: textfield;
   -moz-appearance: textfield;
 }
@@ -783,7 +897,8 @@ body {
   align-items: center;
   justify-content: space-between;
   gap: var(--space-2);
-  padding-bottom: var(--space-2);
+  min-height: 40px;
+  padding-bottom: var(--space-1);
 }
 .sidebar-title {
   font-size: var(--fs-panel);
@@ -802,22 +917,28 @@ body {
   white-space: nowrap;
   overflow: visible;
 }
+/* Quiet icon button: no frame at rest, a tinted square on hover. 32px target
+   for a 14px glyph keeps the panel header airy without shrinking the hit
+   area below a comfortable click. */
 .panel-collapse {
-  border: 0.5px solid var(--border);
-  background: var(--panel);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
   color: var(--muted);
   border-radius: var(--radius-sm);
-  width: 28px;
-  height: 28px;
+  width: 32px;
+  height: 32px;
   font-size: var(--fs-tab);
   font-weight: var(--fw-bold);
   line-height: 1;
   cursor: pointer;
+  transition: background-color var(--motion) var(--ease-out), color var(--motion) var(--ease-out);
 }
 .panel-collapse:hover {
-  border-color: var(--accent);
-  color: var(--accent);
-  background: var(--accent-weak);
+  color: var(--text);
+  background: var(--hover);
 }
 
 .tips {
@@ -887,7 +1008,7 @@ body {
   font-size: var(--fs-note);
   font-weight: var(--fw-medium);
   line-height: 1.4;
-  box-shadow: var(--shadow-lg);
+  box-shadow: var(--shadow-modal);
   pointer-events: none;
   z-index: 200;
 }
@@ -895,20 +1016,25 @@ body {
   transform: translate(-50%, 8px);
 }
 
-/* Collapsible panel header (accordion). */
+/* Collapsible panel header (accordion). The title is the first thing in the
+   row, at the same 16px left edge as every control label below it; the
+   disclosure chevron and the pin sit at the right edge, where they never
+   disturb that column. */
 .panel-head-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: var(--space-2);
-  min-height: 36px;
+  gap: var(--space-1);
+  min-height: 40px;
 }
 .panel-head {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: var(--space-2);
+  flex: 1 1 auto;
   width: 100%;
-  height: 36px;
+  height: 40px;
   margin: 0;
   padding: 0;
   border: none;
@@ -925,14 +1051,15 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 22px;
-  height: 22px;
-  border: 0.5px solid transparent;
-  border-radius: var(--radius-xs);
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: var(--radius-sm);
   background: transparent;
   color: var(--muted);
   cursor: pointer;
   opacity: 1;
+  transition: background-color var(--motion) var(--ease-out), color var(--motion) var(--ease-out), opacity var(--motion) var(--ease-out);
 }
 /* The pin is a power affordance, not part of the header: it stays out of the
    way until the pointer is on the section (or the section is pinned, or a
@@ -946,12 +1073,10 @@ body {
   opacity: 1;
 }
 .panel-pin:hover {
-  border-color: var(--border);
   background: var(--hover);
   color: var(--text);
 }
 .panel-pin.active {
-  border-color: var(--accent);
   background: var(--accent-weak);
   color: var(--accent);
 }
@@ -973,15 +1098,23 @@ body {
   flex-shrink: 0;
 }
 /* The chevron points right when closed and down when open: one icon, no
-   glyph swap, so the stroke weight never changes between the two states. */
+   glyph swap, so the stroke weight never changes between the two states. A
+   transition (rather than a keyframe) means clicking mid-rotation simply
+   turns the arrow around from where it is. */
+.panel-head .chev svg,
+.rp-collapse-head .chev svg {
+  transition: transform var(--motion) var(--ease-out);
+}
 .chev.open svg {
   transform: rotate(90deg);
 }
+/* Groups are looser than their contents: 4px between rows inside a body,
+   24px of vertical padding around each section rule. */
 .panel-body {
-  padding: var(--space-1) 0 var(--space-4);
+  padding: var(--space-2) 0 var(--space-4);
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
+  gap: var(--space-1);
 }
 
 /* Toolbar popup menus (export / settings). */
@@ -1000,23 +1133,26 @@ body {
   overflow-y: auto;
   padding: var(--space-1);
   background: var(--panel);
-  border: 0.5px solid var(--border);
   border-radius: var(--radius);
   box-shadow: var(--shadow-lg);
   z-index: 30;
   display: flex;
   flex-direction: column;
   gap: 2px;
+  transform-origin: top left;
 }
 .dropdown-menu.right {
   left: auto;
   right: 0;
 }
 /* Menu-bar dropdowns open right-aligned so they never overflow the window's
-   right edge (the menu bar sits on the right side of the top bar). */
+   right edge (the menu bar sits on the right side of the top bar). The scale
+   origin follows the anchored corner, so the entrance grows from the trigger
+   instead of sliding in from the left. */
 .menu-bar .dropdown-menu {
   left: auto;
   right: 0;
+  transform-origin: top right;
 }
 .menu-item {
   appearance: none;
@@ -1033,6 +1169,11 @@ body {
   display: flex;
   align-items: center;
   gap: var(--space-2);
+  transition: background-color var(--motion-fast) var(--ease-out), color var(--motion-fast) var(--ease-out);
+}
+.menu-item > svg {
+  color: var(--muted);
+  flex-shrink: 0;
 }
 .menu-item:hover {
   background: var(--accent-weak);
@@ -1059,12 +1200,12 @@ body {
 }
 /* Checkmark prefix for the active option in View menu. */
 .menu-check {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   width: 16px;
   flex-shrink: 0;
-  font-size: var(--fs-note);
   color: var(--accent);
-  text-align: center;
 }
 /* Right-aligned keyboard shortcut hint inside menu items. */
 .menu-shortcut {
@@ -1171,10 +1312,10 @@ body {
   color: var(--text-2);
 }
 .tab.active {
-  background: var(--accent-weak);
+  background: var(--accent-weak-2);
   color: var(--accent);
   font-weight: var(--fw-semibold);
-  border-color: var(--accent);
+  border-color: transparent;
 }
 .tab-title {
   flex: 1;
@@ -1184,12 +1325,15 @@ body {
   white-space: nowrap;
 }
 .tab-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   border: none;
   background: none;
   color: var(--muted);
   font-size: var(--fs-note);
   line-height: 1;
-  padding: 2px 3px;
+  padding: 4px;
   border-radius: var(--radius-xs);
   cursor: pointer;
   flex-shrink: 0;
@@ -1200,6 +1344,9 @@ body {
 }
 .tab-new {
   flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   width: 28px;
   height: 28px;
   border: 0.5px solid var(--border);
@@ -1210,6 +1357,7 @@ body {
   font-weight: 700;
   line-height: 1;
   cursor: pointer;
+  transition: background-color var(--motion) var(--ease-out), border-color var(--motion) var(--ease-out), color var(--motion) var(--ease-out);
 }
 .tab-new:hover {
   border-color: var(--accent);
@@ -1232,30 +1380,33 @@ body {
 /* ---------- collapse rails (sidebar / analysis panel) ---------- */
 .rail {
   flex-shrink: 0;
-  width: 32px;
+  width: 36px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 10px;
-  padding: 14px 0;
+  gap: var(--space-2);
+  padding: var(--space-3) 0;
   border: none;
+  border-radius: var(--radius);
   background: var(--panel);
+  box-shadow: var(--shadow-panel);
   color: var(--muted);
   cursor: pointer;
+  transition: color var(--motion) var(--ease-out), background-color var(--motion) var(--ease-out);
 }
 .rail.rail-left {
-  border-right: 0.5px solid var(--border);
+  margin-right: var(--space-2);
 }
 .rail.rail-right {
-  border-left: 0.5px solid var(--border);
+  margin-left: var(--space-2);
 }
 .rail:hover {
   color: var(--accent);
   background: var(--accent-weak);
 }
 .rail-chevron {
-  font-size: var(--fs-title);
-  font-weight: 700;
+  display: flex;
+  align-items: center;
 }
 .rail-text {
   writing-mode: vertical-rl;
@@ -1360,51 +1511,81 @@ body {
 }
 .rp-conf-row {
   display: grid;
-  grid-template-columns: 56px 1fr;
+  grid-template-columns: 56px minmax(0, 1fr);
   align-items: center;
   gap: 8px;
   font-size: var(--fs-note);
   color: var(--muted);
+  font-variant-numeric: tabular-nums;
 }
-.rp-conf-row input[type="range"] {
+/* Confidence range: one shared range shell so the analysis panel and the
+   sidebar sliders have identical track/thumb geometry and a solid fill. */
+.range-wrap {
+  position: relative;
+  display: block;
+  min-width: 0;
+  height: 16px;
+}
+.range-track {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 5px;
+  height: 6px;
+  border-radius: var(--radius-full);
+  background: var(--border);
+  overflow: hidden;
+  pointer-events: none;
+}
+.range-fill {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--accent);
+}
+.range-wrap input[type="range"] {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 16px;
+  margin: 0;
+  padding: 0;
   -webkit-appearance: none;
   appearance: none;
-  height: 6px;
-  border-radius: 999px;
-  background: var(--border);
-  background-image: linear-gradient(var(--accent), var(--accent));
-  background-size: var(--slider-fill, 50%) 100%;
-  background-repeat: no-repeat;
+  background: transparent;
   outline: none;
   cursor: pointer;
 }
-.rp-conf-row input[type="range"]::-webkit-slider-thumb {
+.range-wrap input[type="range"]::-webkit-slider-runnable-track {
+  height: 6px;
+  background: transparent;
+}
+.range-wrap input[type="range"]::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
   width: 16px;
   height: 16px;
-  border-radius: 50%;
+  margin-top: -5px;
+  border-radius: var(--radius-full);
   background: var(--panel);
   border: 0.5px solid var(--accent);
   cursor: grab;
 }
-.rp-conf-row input[type="range"]::-moz-range-thumb {
+.range-wrap input[type="range"]::-moz-range-thumb {
   width: 16px;
   height: 16px;
-  border-radius: 50%;
+  border-radius: var(--radius-full);
   background: var(--panel);
   border: 0.5px solid var(--accent);
   cursor: grab;
 }
-.rp-conf-row input[type="range"]::-moz-range-track {
+.range-wrap input[type="range"]::-moz-range-track {
   height: 6px;
-  border-radius: 999px;
-  background: var(--border);
+  background: transparent;
 }
-.rp-conf-row input[type="range"]::-moz-range-progress {
+.range-wrap input[type="range"]::-moz-range-progress {
   height: 6px;
-  border-radius: 999px;
-  background: var(--accent);
+  background: transparent;
 }
 
 /* export menu: PNG resolution buttons */
@@ -1511,6 +1692,12 @@ body {
   flex: 1;
   min-width: 0;
   overflow: hidden;
+  background: var(--panel);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-panel);
+  /* Container for the narrow-canvas rules: the legend/stats readouts react to
+     the drawing's own width, not the window's. */
+  container-type: inline-size;
 }
 .main::before {
   content: "";
@@ -1549,20 +1736,33 @@ body {
   display: block;
 }
 
+/* The resizer IS the gutter between two panels (8px). At rest it is blank;
+   on hover/focus a full-height accent pill appears inside it, so the divider
+   is only drawn while it is being used. */
 .sidebar-resizer {
+  position: relative;
   flex-shrink: 0;
-  width: 6px;
+  width: var(--space-2);
   cursor: col-resize;
   background: transparent;
-  border-right: 0.5px solid var(--border);
+  border: none;
 }
-.sidebar-resizer:hover,
-.sidebar-resizer.active {
+.sidebar-resizer::after {
+  content: "";
+  position: absolute;
+  top: var(--space-6);
+  bottom: var(--space-6);
+  left: 50%;
+  width: 2px;
+  margin-left: -1px;
+  border-radius: var(--radius-full);
+  background: transparent;
+  transition: background-color var(--motion) var(--ease-out);
+}
+.sidebar-resizer:hover::after,
+.sidebar-resizer.active::after,
+.sidebar-resizer:focus-visible::after {
   background: var(--accent);
-}
-.sidebar-resizer.right {
-  border-right: none;
-  border-left: 0.5px solid var(--border);
 }
 
 .tooltip {
@@ -1609,41 +1809,26 @@ body {
   right: var(--space-4);
   z-index: 4;
   background: var(--panel);
-  border: 0.5px solid var(--border);
   border-radius: var(--radius);
   padding: 3px;
-  box-shadow: var(--shadow-sm);
+  box-shadow: var(--shadow-pop);
   line-height: 0;
 }
 
 /* ---------- legend ---------- */
 /* Outline drawn on the node a search hit or QC "locate" jumped to (Scene's
-   locate layer). It pulses so the eye catches it after the pan settles. */
+   locate layer). A static, high-contrast ring: the old infinite pulse was both
+   a keyframe animation that restarted on every locate and a glow-like effect,
+   and a ring the eye can rest on marks the node just as clearly. */
 .locate-ring {
-  animation: rpv-locate 1.5s ease-in-out infinite;
-}
-@keyframes rpv-locate {
-  0%,
-  100% {
-    stroke-width: 3;
-    opacity: 1;
-  }
-  50% {
-    stroke-width: 5;
-    opacity: 0.55;
-  }
-}
-@media (prefers-reduced-motion: reduce) {
-  .locate-ring {
-    animation: none;
-  }
+  stroke-width: 3;
+  opacity: 1;
 }
 .legend {
   position: absolute;
   left: var(--space-4);
   bottom: var(--space-4);
   background: var(--panel);
-  border: 0.5px solid var(--border);
   border-radius: var(--radius);
   padding: var(--space-3) var(--space-4);
   box-shadow: var(--shadow-sm);
@@ -1752,10 +1937,15 @@ body {
 .legend.horizontal .legend-group.events .legend-item {
   min-width: 0;
 }
-.legend.horizontal .legend-group.events .legend-item span {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+/* In horizontal mode the key is laid out as columns of five; a narrow canvas
+   gave each column less width than "Transfer arrival" needs. Labels wrap onto
+   a second line instead of ellipsising: a key that hides words is not a key. */
+.legend.horizontal .legend-group.events .legend-item span,
+.legend.horizontal .legend-item span {
+  overflow: visible;
+  text-overflow: clip;
+  white-space: normal;
+  overflow-wrap: break-word;
 }
 .legend.horizontal .legend-title {
   flex: 0 0 100%;
@@ -1768,7 +1958,7 @@ body {
   display: inline-block;
   width: 14px;
   height: 3px;
-  border-radius: 999px;
+  border-radius: var(--radius-full);
 }
 .legend-color {
   width: 16px;
@@ -1789,10 +1979,11 @@ body {
   font-size: var(--fs-note);
   color: var(--muted);
   background: var(--panel);
-  border: 0.5px solid var(--border);
   border-radius: var(--radius);
   padding: var(--space-2) 0;
+  box-shadow: var(--shadow-pop);
   z-index: 4;
+  font-variant-numeric: tabular-nums;
 }
 /* Counts are separated by a hairline rather than a glyph: the categories are
    already named, so a spelled-out divider would only add a character to read. */
@@ -1815,7 +2006,9 @@ body {
   display: flex;
   flex-direction: column;
   background: var(--panel);
-  border-left: 0.5px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-panel);
+  overflow: hidden;
   min-height: 0;
 }
 .right-panel-header {
@@ -1880,6 +2073,8 @@ body {
   min-height: 0;
   overflow-y: auto;
   padding: var(--space-4);
+  /* Positioning context for the outgoing tab layer of the cross-fade. */
+  position: relative;
 }
 .rp-section {
   display: flex;
@@ -2017,7 +2212,35 @@ body {
 .rp-chips {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px 14px;
+  gap: var(--space-1) var(--space-2);
+}
+/* Filter chips: each tag is a pressed-state button; several tags stack to
+   narrow the result set. */
+button.rp-chip {
+  appearance: none;
+  border: 0.5px solid var(--control-border);
+  background: transparent;
+  color: var(--text-2);
+  border-radius: var(--radius-xs);
+  padding: 4px 10px;
+  font: inherit;
+  font-size: var(--fs-note);
+  font-weight: var(--fw-medium);
+  line-height: 1.4;
+  cursor: pointer;
+}
+button.rp-chip:hover {
+  border-color: var(--muted);
+  color: var(--text);
+}
+button.rp-chip.active {
+  border-color: var(--accent);
+  background: var(--accent-weak-2);
+  color: var(--accent);
+  font-weight: var(--fw-semibold);
+}
+button.rp-chip.active:hover {
+  border-color: var(--accent-hover);
 }
 .rp-fam-list {
   display: flex;
@@ -2216,13 +2439,10 @@ body {
 }
 .rp-issue-count {
   min-width: 20px;
-  text-align: center;
+  text-align: right;
   font-size: var(--fs-note);
   font-weight: var(--fw-semibold);
   font-variant-numeric: tabular-nums;
-  border: 0.5px solid currentColor;
-  border-radius: var(--radius-xs);
-  padding: 0 4px;
   flex-shrink: 0;
 }
 .rp-issue-ex {
@@ -2248,6 +2468,8 @@ body {
   border-bottom: none;
 }
 .rp-check-tick {
+  display: inline-flex;
+  align-items: center;
   color: var(--success);
   font-size: var(--fs-note);
   flex-shrink: 0;
@@ -2300,6 +2522,9 @@ body {
   font-weight: var(--fw-semibold);
 }
 .rp-checks-pass {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   color: var(--success);
   font-weight: 600;
 }
@@ -2368,29 +2593,15 @@ body {
   text-overflow: ellipsis;
   white-space: nowrap;
   background: var(--panel);
-  border: 0.5px solid var(--border);
   border-radius: var(--radius);
   padding: var(--space-1) var(--space-3);
   font-size: var(--fs-note);
   font-weight: var(--fw-semibold);
   color: var(--muted);
+  box-shadow: var(--shadow-pop);
   pointer-events: none;
 }
 
-.compare-badge {
-  position: absolute;
-  left: 50%;
-  bottom: var(--space-4);
-  transform: translateX(-50%);
-  z-index: 6;
-  background: var(--panel);
-  border: 0.5px solid var(--border);
-  border-radius: var(--radius);
-  padding: var(--space-2) var(--space-4);
-  font-size: var(--fs-note);
-  font-weight: var(--fw-semibold);
-  box-shadow: var(--shadow-sm);
-}
 
 .nested-error {
   position: absolute;
@@ -2401,8 +2612,8 @@ body {
   font-size: var(--fs-note);
   color: var(--text);
   background: var(--danger-weak);
-  border: 0.5px solid var(--danger-border);
   border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-pop);
   padding: var(--space-2) var(--space-3);
 }
 
@@ -2423,7 +2634,9 @@ body {
 }
 
 /* Transient status notice: a neutral surface with a small semantic dot, so the
-   message always meets text contrast regardless of toast kind. */
+   message always meets text contrast regardless of toast kind. Entering and
+   leaving are transitions (see the motion section), so a second toast slides
+   the same card to its new message instead of replaying an animation. */
 .toast {
   position: fixed;
   right: 20px;
@@ -2433,28 +2646,20 @@ body {
   font-size: var(--fs-body);
   color: var(--text);
   background: var(--panel);
-  border: 0.5px solid var(--border);
   border-radius: var(--radius);
   padding: 10px 14px;
-  box-shadow: var(--shadow-pop);
-  animation: toast-in var(--motion);
+  box-shadow: var(--shadow-lg);
 }
 .toast::before {
   content: "";
   width: 6px;
   height: 6px;
-  border-radius: 50%;
+  border-radius: var(--radius-full);
   background: var(--accent);
   flex-shrink: 0;
 }
-.toast.success {
-  border-color: var(--success-border);
-}
 .toast.success::before {
   background: var(--success-solid);
-}
-.toast.error {
-  border-color: var(--danger-border);
 }
 .toast.error::before {
   background: var(--danger-solid);
@@ -2463,21 +2668,7 @@ body {
   background: var(--accent);
 }
 
-@keyframes toast-in {
-  from {
-    opacity: 0;
-    transform: translateY(4px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-@media (prefers-reduced-motion: reduce) {
-  .toast {
-    animation: none;
-  }
-}
+
 
 /* ---------- inline label editor ---------- */
 /* A small input that appears at the clicked label's position on the
@@ -2503,6 +2694,11 @@ body {
 .label-rename-dialog {
   width: 380px;
   max-width: calc(100vw - 32px);
+  gap: var(--space-3);
+}
+.label-rename-title {
+  margin: 0;
+  font-size: var(--fs-title);
 }
 .label-rename-field {
   display: flex;
@@ -2567,9 +2763,9 @@ body {
   width: 340px;
   max-width: calc(100vw - 32px);
   background: var(--panel);
-  border: 0.5px solid var(--border);
+  border: none;
   border-radius: var(--radius);
-  box-shadow: var(--shadow);
+  box-shadow: var(--shadow-modal);
   padding: 16px;
   display: flex;
   flex-direction: column;
@@ -2692,17 +2888,6 @@ body {
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 /* The three-step workflow strip, spaced evenly on one line under the buttons. */
-.empty-steps {
-  display: flex;
-  gap: var(--space-4);
-  justify-content: center;
-  margin-top: var(--space-4);
-  font-size: var(--fs-note);
-  color: var(--muted);
-}
-.empty-steps span {
-  white-space: nowrap;
-}
 
 /* loading overlay (async file read / parse) */
 .loading-overlay {
@@ -2722,9 +2907,8 @@ body {
   height: 16px;
   border: 2px solid var(--border);
   border-top-color: var(--accent);
-  /* border-radius:50% is the sole intentional exception to the zero-radius
-     policy: a spinning element must be circular to animate correctly. */
-  border-radius: 50%;
+  /* A spinner is the one place a full circle is geometry, not a choice. */
+  border-radius: var(--radius-full);
   animation: rpv-spin 0.7s linear infinite;
 }
 @keyframes rpv-spin {
@@ -2750,35 +2934,47 @@ body {
   background: var(--scrim);
 }
 .help-card {
-  width: min(520px, 100%);
+  width: min(540px, 100%);
   max-height: calc(100vh - 48px);
   overflow-y: auto;
   border-radius: var(--radius);
   background: var(--panel);
-  border: 0.5px solid var(--border);
-  box-shadow: var(--shadow-lg);
-  padding: 18px 20px;
+  border: none;
+  box-shadow: var(--shadow-modal);
+  padding: var(--space-6);
+}
+.dialog-title {
+  margin: 0;
+  font-size: var(--fs-title);
+  font-weight: var(--fw-semibold);
+  letter-spacing: -0.2px;
+  text-wrap: balance;
 }
 .help-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 8px;
+  margin-bottom: var(--space-2);
 }
 .help-card h4 {
-  margin: 16px 0 8px;
-  font-size: var(--fs-note);
-  color: var(--muted);
+  margin: var(--space-6) 0 var(--space-2);
+  font-size: var(--fs-body);
+  font-weight: var(--fw-semibold);
+  color: var(--text);
+}
+.help-card h4:first-of-type {
+  margin-top: var(--space-2);
 }
 .help-list {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: var(--space-1);
 }
 .help-row {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--space-3);
+  min-height: 26px;
   font-size: var(--fs-body);
 }
 .help-keys {
@@ -2803,6 +2999,7 @@ kbd {
   background: var(--panel-2);
   border: 0.5px solid var(--border);
   border-bottom-width: 0.5px;
+  border-radius: var(--radius-xs);
   padding: 1px 6px;
   min-width: 18px;
   text-align: center;
@@ -2887,10 +3084,9 @@ kbd {
      last buttons used to clip under the pane divider. */
   max-width: calc(100% - var(--space-4) - 2px);
   background: var(--panel);
-  border: 0.5px solid var(--border);
   border-radius: var(--radius);
   padding: var(--space-1);
-  box-shadow: var(--shadow-sm);
+  box-shadow: var(--shadow-pop);
 }
 /* 28px targets keep all eight controls on one row inside a compare pane.
    The icon's optical centre is the button's centre: the SVG has no baseline,
@@ -2943,9 +3139,8 @@ kbd {
   right: 16px;
   z-index: 30;
   background: var(--panel);
-  border: 0.5px solid var(--border);
   border-radius: var(--radius-sm);
-  box-shadow: var(--shadow-sm);
+  box-shadow: var(--shadow-pop);
   color: var(--muted);
   font-size: var(--fs-note);
   padding: 4px 10px;
@@ -2959,9 +3154,8 @@ kbd {
   transform: translateX(-50%);
   z-index: 30;
   background: var(--panel);
-  border: 0.5px solid var(--border);
   border-radius: var(--radius-sm);
-  box-shadow: var(--shadow-sm);
+  box-shadow: var(--shadow-pop);
   color: var(--text-2);
   font-size: var(--fs-note);
   font-weight: var(--fw-medium);
@@ -2988,18 +3182,27 @@ kbd {
   background: var(--scrim);
 }
 .multi-open-card {
+  position: relative;
   background: var(--panel);
-  border: 0.5px solid var(--border);
+  border: none;
   border-radius: var(--radius);
-  box-shadow: var(--shadow-lg);
+  box-shadow: var(--shadow-modal);
   padding: var(--space-6);
   max-width: 420px;
   text-align: center;
 }
+/* The restore prompt's dismiss icon belongs in its corner; without this rule
+   it sat in the flow under the title, reading as a stray glyph. */
+.restore-close {
+  position: absolute;
+  top: var(--space-3);
+  right: var(--space-3);
+}
 .multi-open-card h3 {
   margin: 0 0 var(--space-4);
-  font-size: var(--fs-panel);
+  font-size: var(--fs-title);
   font-weight: var(--fw-semibold);
+  letter-spacing: -0.2px;
 }
 .multi-open-actions {
   display: flex;
@@ -3029,9 +3232,8 @@ kbd {
   align-items: center;
   gap: var(--space-2);
   background: var(--panel);
-  border: 0.5px solid var(--border);
   border-radius: var(--radius-sm);
-  box-shadow: var(--shadow-sm);
+  box-shadow: var(--shadow-pop);
   padding: 4px 10px;
   font-size: var(--fs-note);
   color: var(--text-2);
@@ -3039,11 +3241,14 @@ kbd {
 .diff-swatch {
   width: 12px;
   height: 12px;
-  border-radius: 50%;
+  border-radius: var(--radius-full);
   background: var(--danger);
   border: 0.5px solid var(--danger-border);
 }
 .diff-hide {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   border: none;
   background: transparent;
   cursor: pointer;
@@ -3057,6 +3262,7 @@ kbd {
 .diff-jump {
   padding: 2px 8px;
   font-size: var(--fs-note);
+  gap: 4px;
 }
 
 /* --- nested view explanatory subtitle --- */
@@ -3081,16 +3287,16 @@ kbd {
   display: flex;
   align-items: flex-start;
   gap: var(--space-2);
-  border: 0.5px solid var(--border);
+  border: none;
   border-radius: var(--radius-sm);
   padding: var(--space-2);
   margin-bottom: var(--space-2);
-  background: var(--panel);
+  background: var(--panel-2);
 }
 .anno-swatch {
   width: 14px;
   height: 14px;
-  border-radius: 50%;
+  border-radius: var(--radius-full);
   flex-shrink: 0;
   margin-top: 2px;
 }
@@ -3141,9 +3347,9 @@ kbd {
   justify-content: space-between;
   align-items: center;
   gap: var(--space-2);
-  border: 0.5px solid var(--border);
+  border: none;
   border-radius: var(--radius-xs);
-  background: var(--panel);
+  background: var(--panel-2);
   padding: 4px 8px;
   cursor: pointer;
   font: inherit;
@@ -3178,42 +3384,75 @@ kbd {
 .tab-dirty {
   width: 7px;
   height: 7px;
-  border-radius: 50%;
+  border-radius: var(--radius-full);
   background: var(--accent);
   flex-shrink: 0;
 }
 
-/* --- settings dialog --- */
-/* One setting per row: label left, control right, hairline between rows. The
-   control column is right-aligned so the eye scans one edge instead of
-   bouncing between ragged button groups. */
+/* --- settings page (Preferences) --- */
+/* Not a card inside a card: the page itself is the surface (a borderless
+   panel lifted by one soft shadow), and its own whitespace separates the
+   groups. One setting per row: name on the left, control on the right, both
+   in a single two-column grid so each group scans as two clean edges. */
 .settings-card {
-  width: 520px;
+  width: 560px;
   max-width: calc(100vw - 32px);
-  max-height: 80vh;
+  max-height: 82vh;
   overflow-y: auto;
   padding: 0;
+  background: var(--panel);
+  border: none;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-modal);
 }
-.settings-card .help-head {
-  padding: var(--space-3) var(--space-4) var(--space-3) 20px;
-  margin-bottom: 0;
-  border-bottom: 0.5px solid var(--border);
+.settings-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: var(--space-6) var(--space-6) var(--space-4);
 }
 .settings-title {
-  font-size: var(--fs-body);
+  margin: 0;
+  font-size: var(--fs-title);
   font-weight: var(--fw-semibold);
+  letter-spacing: -0.2px;
+  text-wrap: balance;
+}
+/* Groups: 24px between groups, 4px between the rows inside one. The gap
+   differential is what makes the sections read at a glance. */
+.settings-groups {
+  display: flex;
+  flex-direction: column;
+  /* 32px between groups against 2px between the rows inside one: an 8:1
+     ratio is what makes the headings read as separators rather than labels. */
+  gap: var(--space-8);
+  padding: 0 var(--space-6) var(--space-6);
+}
+.settings-group {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.settings-group-title {
+  margin: 0 0 var(--space-2);
+  font-size: var(--fs-note);
+  font-weight: var(--fw-semibold);
+  color: var(--muted);
 }
 .settings-field {
   display: grid;
-  grid-template-columns: 112px minmax(0, 1fr);
+  grid-template-columns: minmax(140px, 1fr) auto;
   align-items: center;
   gap: var(--space-4);
-  padding: 9px 20px;
-  border-bottom: 0.5px solid var(--border-weak);
+  min-height: 36px;
+  padding: 2px 0;
+  border: none;
 }
 .settings-label {
-  font-size: var(--fs-note);
-  color: var(--muted);
+  font-size: var(--fs-body);
+  color: var(--text-2);
+  min-width: 0;
 }
 .settings-actions {
   display: flex;
@@ -3227,16 +3466,25 @@ kbd {
   color: var(--muted);
   text-align: right;
   line-height: 1.4;
+  font-variant-numeric: tabular-nums;
 }
 .settings-card .btn {
   min-width: 0;
   white-space: nowrap;
-  padding: 4px 10px;
+  padding: 5px 12px;
 }
-.settings-foot {
+/* Destructive actions: alone under a rule at the bottom, never beside the
+   settings the user came to change. */
+.settings-group-danger {
+  margin-top: 0;
+  padding: var(--space-6);
+  border-top: 0.5px solid var(--border-weak);
   display: flex;
-  justify-content: flex-end;
-  padding: var(--space-3) 20px var(--space-4);
+  flex-direction: column;
+  gap: 2px;
+}
+.settings-group-danger .settings-group-title {
+  margin: 0;
 }
 .settings-reset {
   color: var(--danger);
@@ -3262,10 +3510,11 @@ kbd {
   color: var(--text-2);
   font-size: var(--fs-note);
   font-weight: var(--fw-medium);
-  padding: 4px 10px;
+  padding: 5px 12px;
   line-height: 1.4;
   cursor: pointer;
   white-space: nowrap;
+  transition: background-color var(--motion) var(--ease-out), color var(--motion) var(--ease-out);
 }
 .segmented button + button {
   border-left: 0.5px solid var(--control-border);
@@ -3332,15 +3581,16 @@ kbd {
   width: 420px;
   max-width: calc(100vw - 32px);
   background: var(--panel);
-  border: 0.5px solid var(--border);
+  border: none;
   border-radius: var(--radius);
-  box-shadow: var(--shadow-lg);
+  box-shadow: var(--shadow-modal);
   padding: var(--space-6);
 }
 .onboard-card h3 {
   margin: 0 0 var(--space-2);
-  font-size: var(--fs-panel);
+  font-size: var(--fs-title);
   font-weight: var(--fw-semibold);
+  letter-spacing: -0.2px;
 }
 .onboard-card p {
   margin: 0 0 var(--space-4);
@@ -3361,7 +3611,7 @@ kbd {
 .onboard-dots span {
   width: 8px;
   height: 8px;
-  border-radius: 50%;
+  border-radius: var(--radius-full);
   background: var(--border);
 }
 .onboard-dots span.on {
@@ -3465,14 +3715,50 @@ kbd {
 .split.split-row { flex-direction: row; }
 .split.split-row .split-pane { min-width: 160px; }
 
-/* Nested-split orientation toggle: top-right of the split container, above
-   the panes' minimaps (which start at top:64) and clear of the toolbars. */
-.split-orient-btn {
-  position: absolute;
-  top: 12px;
-  right: 12px;
-  z-index: 6;
-  padding: 6px 10px;
+/* Split-arrangement segmented control: two directly selectable states (stacked
+   / side by side). Used inline in the compare status bar and absolutely in the
+   nested split, where it sits top-right above the panes' minimaps. */
+.split-orient {
+  display: inline-flex;
+  align-items: stretch;
+  border: 0.5px solid var(--control-border);
+  border-radius: var(--radius-sm);
+  background: var(--panel);
+  overflow: hidden;
+  flex-shrink: 0;
+}
+.split-orient button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 26px;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  transition: background-color var(--motion) var(--ease-out), color var(--motion) var(--ease-out);
+}
+.split-orient button + button {
+  border-left: 0.5px solid var(--control-border);
+}
+.split-orient button:hover {
+  color: var(--text);
+  background: var(--hover);
+}
+.split-orient button.active {
+  background: var(--accent-weak);
+  color: var(--accent);
+}
+/* Centred at the top of the split, not docked top-right: in the side-by-side
+   arrangement a right-docked control sat on top of the second pane's editing
+   toolbar, hiding its panel button. The centre of the divider is the one band
+   no pane's chrome claims. */
+/* In the app bar the control is a normal flex item, centred with the menus. */
+.top-split-orient {
+  align-self: center;
+  margin-right: var(--space-2);
+  box-shadow: var(--shadow-xs);
 }
 
 /* Node inspector card. */
@@ -3484,20 +3770,38 @@ kbd {
   max-height: 46vh;
   overflow: auto;
   background: var(--panel);
-  border: 0.5px solid var(--border);
+  border: none;
+  border-radius: var(--radius);
   box-shadow: var(--shadow-pop);
-  padding: 8px 10px;
+  padding: var(--space-3);
   font-size: var(--fs-note);
   z-index: 8;
 }
-.node-inspector .ni-head { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; }
+.node-inspector .ni-head { display: flex; align-items: center; gap: 6px; margin-bottom: 2px; }
 .node-inspector .ni-head strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.node-inspector .ni-event { color: var(--accent); font-weight: 600; }
-.node-inspector .ni-pane { color: var(--muted); font-size: var(--fs-note); }
-.node-inspector .ni-spacer { flex: 1; }
-.node-inspector button {
-  border: none; background: transparent; cursor: pointer; padding: 2px 4px;
+/* Meta on its own line: the pane name is a sentence, not a short tag, so it
+   wrapped the title row onto two ragged lines when it shared that row. */
+.node-inspector .ni-meta {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 6px;
+  font-size: var(--fs-note);
 }
+.node-inspector .ni-event { color: var(--accent); font-weight: 600; }
+.node-inspector .ni-pane { color: var(--muted); white-space: nowrap; }
+.node-inspector .ni-spacer { flex: 1; }
+/* Only the header's pin/close are square icon buttons; the action row at the
+   bottom keeps the shared .btn geometry (a blanket rule squeezed it into
+   overlapping 24px squares). */
+.node-inspector .ni-head button {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 24px; height: 24px;
+  border: none; background: transparent; cursor: pointer; padding: 0;
+  border-radius: var(--radius-xs); color: var(--muted);
+  transition: background-color var(--motion) var(--ease-out), color var(--motion) var(--ease-out);
+}
+.node-inspector .ni-head button:hover { background: var(--hover); color: var(--text); }
 .node-inspector .ni-rows { margin: 0; }
 .node-inspector .ni-row { display: flex; gap: 8px; padding: 1px 0; }
 .node-inspector .ni-row dt { width: 84px; flex: none; color: var(--muted); }
@@ -3512,7 +3816,7 @@ kbd {
   flex-direction: column;
   gap: 4px;
   background: var(--panel);
-  border: 0.5px solid var(--border);
+  border-radius: var(--radius-sm);
   padding: 6px;
   box-shadow: var(--shadow-pop);
 }
@@ -3526,16 +3830,30 @@ kbd {
   font-size: var(--fs-note);
   padding: 2px 8px;
   background: var(--panel);
-  border: 0.5px solid var(--border);
+  border-radius: var(--radius-xs);
+  box-shadow: var(--shadow-pop);
   color: var(--muted);
   z-index: 5;
   pointer-events: none;
 }
 
-/* Presentation mode: the drawing owns the window. The menu bar is hidden so
-   the tree fills the screen; the exit control stays reachable. */
+/* Presentation mode: the drawing owns the window. The menu bar, the shell
+   padding, both rails and the panel rounding are dropped so the tree runs
+   edge to edge; the exit control stays reachable. */
+.app.presenting {
+  padding: 0;
+  gap: 0;
+}
+.app.presenting .top-bar,
+.app.presenting .rail,
+.app.presenting .sidebar-resizer {
+  display: none;
+}
+.app.presenting .main {
+  border-radius: 0;
+  box-shadow: none;
+}
 .app.presenting .body { inset: 0; }
-.app.presenting .top-bar { display: none; }
 .exit-presentation {
   position: fixed;
   /* Bottom-centre, clear of the menu bar: at top-right it sat on top of the
@@ -3553,9 +3871,9 @@ kbd {
   position: fixed;
   z-index: 60;
   background: var(--panel);
-  border: 0.5px solid var(--border);
+  border: none;
   border-radius: var(--radius);
-  box-shadow: var(--shadow-lg);
+  box-shadow: var(--shadow-modal);
   display: flex;
   flex-direction: column;
   gap: 2px;
@@ -3602,8 +3920,6 @@ kbd {
 .multi-open-files li { padding: 2px 0; display: flex; gap: 8px; align-items: center; }
 .multi-open-badge {
   font-size: var(--fs-note);
-  border: 0.5px solid var(--border);
-  padding: 0 6px;
   color: var(--muted);
 }
 
@@ -3650,4 +3966,393 @@ button.warn-badge { cursor: pointer; font: inherit; }
   .app {
     display: block !important;
   }
+}
+
+/* ==========================================================================
+   Motion system and the review-round surface pass
+   --------------------------------------------------------------------------
+   Rules this section encodes:
+   - State changes are transitions, never one-shot keyframes, so any animation
+     can be interrupted mid-flight and turns around from where it is.
+   - Exits slide a short distance, fade, and blur; nothing flies off screen.
+   - Entrances use an ease-out curve (fast start, soft landing), not linear.
+   - Content blocks that appear together are staggered in small steps.
+   ========================================================================== */
+
+/* --- 1. Shared interactive state transitions ----------------------------- */
+/* One transition description for every interactive surface: colour, border,
+   shadow, opacity and transform change on the same curve. Centralising it
+   keeps the whole app feeling like one product at the same tempo. */
+.btn,
+.menu-item,
+.menu-bar-item,
+.menu-scale-btn,
+.menu-scale .menu-item,
+.tab,
+.tab-close,
+.tab-new,
+.tab-context button,
+.panel-collapse,
+.panel-pin,
+.panel-head,
+.segmented button,
+.orient-btn,
+.float-toolbar button,
+.rail,
+.legend-dir,
+.rp-result-row,
+.rp-donut-item,
+.rp-collapse-head,
+.rp-chip,
+.anno-btn,
+.rp-issue-locate,
+.diff-hide,
+.toast-close,
+.slider-value,
+.kbd,
+.switch,
+.toggle {
+  transition-property: background-color, color, border-color, box-shadow, opacity, transform, filter;
+  transition-duration: var(--motion);
+  transition-timing-function: var(--ease-out);
+}
+
+/* --- 2. Presence-managed entrances and exits ----------------------------- */
+/* Scrims only fade; a scaling backdrop draws attention to itself. */
+.help-overlay,
+.multi-open,
+.anno-overlay,
+.onboard-overlay {
+  transition: opacity var(--motion) var(--ease-out);
+}
+.help-overlay[data-state="enter"],
+.help-overlay[data-state="enter"],
+.multi-open[data-state="enter"],
+.anno-overlay[data-state="enter"],
+.onboard-overlay[data-state="enter"] {
+  opacity: 0;
+}
+/* A closing scrim stops intercepting clicks immediately: the exit is visual
+   only, the user's next action should never be swallowed by it. */
+.help-overlay[data-state="exit"],
+.multi-open[data-state="exit"],
+.anno-overlay[data-state="exit"],
+.onboard-overlay[data-state="exit"] {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Floating surfaces ease in from a few pixels below and leave upward; the blur
+   on both ends keeps the change of state soft rather than a hard swap. */
+.dropdown-menu,
+.help-card,
+.multi-open-card,
+.anno-editor,
+.onboard-card,
+.node-inspector,
+.legend,
+.minimap,
+.toast,
+.tab-context,
+.tip-pop {
+  transition:
+    opacity var(--motion) var(--ease-out),
+    transform var(--motion) var(--ease-out),
+    filter var(--motion) var(--ease-out);
+}
+.help-card[data-state="enter"],
+.multi-open-card[data-state="enter"],
+.anno-editor[data-state="enter"],
+.onboard-card[data-state="enter"],
+.node-inspector[data-state="enter"],
+.legend[data-state="enter"],
+.minimap[data-state="enter"] {
+  opacity: 0;
+  transform: translateY(8px) scale(0.985);
+  filter: blur(3px);
+}
+.help-card[data-state="exit"],
+.multi-open-card[data-state="exit"],
+.anno-editor[data-state="exit"],
+.onboard-card[data-state="exit"],
+.node-inspector[data-state="exit"],
+.legend[data-state="exit"],
+.minimap[data-state="exit"] {
+  opacity: 0;
+  transform: translateY(-8px) scale(0.985);
+  filter: blur(3px);
+  pointer-events: none;
+}
+
+/* Menus drop away from their trigger; the exit continues downward a little
+   before the fade lands, so it never looks like the panel was yanked. */
+.dropdown-menu[data-state="enter"] {
+  opacity: 0;
+  transform: translateY(-4px) scale(0.985);
+  filter: blur(2px);
+}
+.dropdown-menu[data-state="exit"] {
+  opacity: 0;
+  transform: translateY(6px) scale(0.985);
+  filter: blur(3px);
+  pointer-events: none;
+}
+
+/* Toast: slides up in, sinks and fades out. */
+.toast[data-state="enter"] {
+  opacity: 0;
+  transform: translateY(10px);
+  filter: blur(2px);
+}
+.toast[data-state="exit"] {
+  opacity: 0;
+  transform: translateY(12px);
+  filter: blur(3px);
+  pointer-events: none;
+}
+
+/* Tab context menu. */
+.tab-context[data-state="enter"] {
+  opacity: 0;
+  transform: translateY(-3px) scale(0.985);
+  filter: blur(2px);
+}
+.tab-context[data-state="exit"] {
+  opacity: 0;
+  transform: translateY(4px) scale(0.99);
+  filter: blur(3px);
+  pointer-events: none;
+}
+
+/* Tooltip: positioned through custom properties so the exit offset can be
+   added on top of the anchor transform rather than replacing it. */
+.tip-pop {
+  --tip-y: calc(-100% - 8px);
+  --tip-shift: 0px;
+  transform: translate(-50%, calc(var(--tip-y) + var(--tip-shift)));
+  transition:
+    opacity var(--motion-fast) var(--ease-out),
+    transform var(--motion-fast) var(--ease-out),
+    filter var(--motion-fast) var(--ease-out);
+}
+.tip-pop[data-edge="bottom"] {
+  --tip-y: 8px;
+  transform: translate(-50%, calc(var(--tip-y) + var(--tip-shift)));
+}
+.tip-pop[data-state="exit"] {
+  --tip-shift: 4px;
+  opacity: 0;
+  filter: blur(2px);
+}
+
+/* --- 3. Cross-fading icon toggles --------------------------------------- */
+.icon-swap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.icon-swap-layer {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transform: scale(0.78);
+  filter: blur(2px);
+  transition:
+    opacity var(--motion-fast) var(--ease-out),
+    transform var(--motion-fast) var(--ease-out),
+    filter var(--motion-fast) var(--ease-out);
+}
+.icon-swap-layer.on {
+  opacity: 1;
+  transform: none;
+  filter: none;
+}
+/* Both layers overlap in the same box; the resting state keeps the layout
+   height of one icon. */
+.icon-swap {
+  width: 14px;
+  height: 14px;
+}
+
+/* --- 4. Soft content switch --------------------------------------------- */
+/* A tab change cross-fades two keyed layers: the incoming tab rises from 0.5%
+   below while the outgoing one scales up slightly and blurs away. Nothing is
+   hard-replaced, and a second tab click mid-fade starts a fresh pair. */
+@starting-style {
+  .rp-tabview {
+    opacity: 0;
+    transform: translateY(4px) scale(0.995);
+    filter: blur(2px);
+  }
+  .rp-tabview-exit {
+    opacity: 1;
+    transform: none;
+    filter: none;
+  }
+}
+.rp-tabview {
+  position: relative;
+  z-index: 1;
+  transition:
+    opacity var(--motion) var(--ease-out),
+    transform var(--motion) var(--ease-out),
+    filter var(--motion) var(--ease-out);
+}
+.rp-tabview-exit {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  padding: var(--space-4);
+  overflow: hidden;
+  pointer-events: none;
+  opacity: 0;
+  transform: scale(1.004);
+  filter: blur(2px);
+}
+
+/* --- 5. Staggered entrance ---------------------------------------------- */
+/* Content is loaded in parts rather than as one block: children come in one
+   after another on a 2.5-frame step. Delays are short enough that the last
+   item arrives before the user's eye does. */
+@starting-style {
+  .stagger-children > * {
+    opacity: 0;
+    transform: translateY(6px);
+    filter: blur(2px);
+  }
+}
+.stagger-children > * {
+  transition:
+    opacity var(--motion-slow) var(--ease-out),
+    transform var(--motion-slow) var(--ease-out),
+    filter var(--motion-slow) var(--ease-out);
+}
+.stagger-children > *:nth-child(2) { transition-delay: 30ms; }
+.stagger-children > *:nth-child(3) { transition-delay: 60ms; }
+.stagger-children > *:nth-child(4) { transition-delay: 90ms; }
+.stagger-children > *:nth-child(5) { transition-delay: 120ms; }
+.stagger-children > *:nth-child(6) { transition-delay: 150ms; }
+.stagger-children > *:nth-child(7) { transition-delay: 180ms; }
+.stagger-children > *:nth-child(8) { transition-delay: 210ms; }
+.stagger-children > *:nth-child(n + 9) { transition-delay: 240ms; }
+
+/* Work areas fade in when they mount (a document, a re-opened panel). Only
+   opacity: a transform here would become the containing block for the
+   absolutely positioned canvas chrome for the length of the transition. */
+@starting-style {
+  .main,
+  .sidebar,
+  .right-panel,
+  .rail {
+    opacity: 0;
+  }
+}
+.main,
+.sidebar,
+.right-panel,
+.rail {
+  transition: opacity var(--motion-slow) var(--ease-out);
+}
+
+/* --- 6. Narrow-canvas overlay policy ------------------------------------ */
+/* The legend and the stats chip both dock to the bottom of the drawing. In a
+   narrow canvas (both side panels open on a 1280 window, a compare pane) they
+   used to overlap by ~70px. Below 660px of canvas width the stats readout steps
+   aside while the legend is shown: the same three counts stay in the Statistics
+   tab, and the legend keeps its full key. */
+@container (max-width: 620px) {
+  .main-has-legend .stats {
+    display: none;
+  }
+}
+/* The horizontal key spans up to 580px, so it can meet the stats chip even on
+   a wide canvas; the readout steps aside rather than sitting on the key. */
+.main:has(.legend.horizontal) .stats {
+  display: none;
+}
+
+/* --- 7. Reduced motion --------------------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+  .dropdown-menu,
+  .help-card,
+  .help-overlay,
+  .multi-open,
+  .multi-open-card,
+  .anno-overlay,
+  .anno-editor,
+  .onboard-overlay,
+  .onboard-card,
+  .node-inspector,
+  .legend,
+  .minimap,
+  .toast,
+  .tab-context,
+  .rp-tabview,
+  .stagger-children > *,
+  .main,
+  .sidebar,
+  .right-panel,
+  .rail {
+    transition: none !important;
+    transform: none !important;
+    filter: none !important;
+  }
+  /* Cross-fading icons become an instant swap (the opacity state still
+     applies); the tooltip keeps its anchored transform. */
+  .icon-swap-layer {
+    transition: none !important;
+    transform: none !important;
+    filter: none !important;
+  }
+  .tip-pop {
+    transition: none !important;
+    filter: none !important;
+  }
+}
+
+
+/* The node inspector docks bottom-left, the same corner as the legend. The
+   transient card wins while it is open: the key steps out of its way (and
+   transitions back when the card closes) instead of two overlays stacking. */
+.main:has(.node-inspector) .legend {
+  opacity: 0;
+  transform: translateY(6px);
+  filter: blur(3px);
+  pointer-events: none;
+}
+
+/* --- 8. Mount-only popovers ---------------------------------------------- */
+/* These surfaces are created and destroyed by a conditional render rather than
+   a presence hook, so they get a soft entrance only; a hard cut on close is
+   acceptable because the pointer is already moving away from them. */
+@starting-style {
+  .panel-body,
+  .rp-collapse-preview,
+  .tab-context,
+  .label-edit-pop,
+  .nested-error,
+  .rendering-badge {
+    opacity: 0;
+    filter: blur(2px);
+  }
+}
+.panel-body,
+.rp-collapse-preview,
+.tab-context,
+.label-edit-pop,
+.nested-error,
+.rendering-badge {
+  transition: opacity var(--motion) var(--ease-out), filter var(--motion) var(--ease-out);
+}
+
+/* Collapsible groups: the body fades in under a header whose chevron is
+   already rotating, so open/close reads as one gesture. */
+.panel-body .control-row,
+.panel-body .btn {
+  transition: background-color var(--motion) var(--ease-out), color var(--motion) var(--ease-out), border-color var(--motion) var(--ease-out);
 }

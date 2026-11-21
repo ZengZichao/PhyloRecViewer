@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useT } from "../i18n";
 import { useStore } from "../state/store";
-import { useFocusTrap } from "./hooks";
+import { useFocusTrap, usePresence } from "./hooks";
 
 /**
  * Modal editor for a per-node user annotation. Opened via Shift-click on a gene
@@ -17,6 +17,11 @@ export function AnnotationEditor() {
   const [text, setText] = useState("");
   const [color, setColor] = useState("#1c2024");
   const dialogRef = useRef<HTMLDivElement>(null);
+  // Keep the editor's last target while the card fades out: the store has
+  // already cleared `annotating`, so a null check alone would blank it.
+  const lastAnnotating = useRef(annotating);
+  if (annotating) lastAnnotating.current = annotating;
+  const presence = usePresence(!!annotating);
   useFocusTrap(!!annotating, dialogRef);
   // Draft per node id: closing without saving (backdrop click, Esc) used to
   // THROW AWAY the typed text; the draft survives until the node is re-opened
@@ -31,9 +36,10 @@ export function AnnotationEditor() {
     setColor(cur?.color ?? themeDefault);
   }, [annotating, resolvedThemeId]);
 
-  if (!annotating) return null;
-  const existing = useStore.getState().annotations[annotating.id];
-  const id = annotating.id;
+  if (!presence.mounted || !lastAnnotating.current) return null;
+  const target = lastAnnotating.current;
+  const existing = useStore.getState().annotations[target.id];
+  const id = target.id;
 
   const closeWithoutSaving = () => {
     if (text.trim() && text.trim() !== (existing?.text ?? "")) {
@@ -51,10 +57,17 @@ export function AnnotationEditor() {
   };
 
   return (
-    <div className="anno-overlay" onClick={closeWithoutSaving} role="dialog" aria-modal="true" aria-label={t.annoTitle}>
-      <div className="anno-editor" ref={dialogRef} onClick={(e) => e.stopPropagation()}>
+    <div
+      className="anno-overlay"
+      data-state={presence.phase}
+      onClick={closeWithoutSaving}
+      role="dialog"
+      aria-modal="true"
+      aria-label={t.annoTitle}
+    >
+      <div className="anno-editor" data-state={presence.phase} ref={dialogRef} onClick={(e) => e.stopPropagation()}>
         <div className="anno-head">
-          {t.annoTitle}: <strong>{annotating.name}</strong>
+          {t.annoTitle}: <strong>{target.name}</strong>
         </div>
         <textarea
           className="anno-text"
@@ -83,7 +96,7 @@ export function AnnotationEditor() {
           <button className="btn ghost" onClick={closeWithoutSaving}>
             {t.annoCancel}
           </button>
-          <button className="btn" onClick={save}>
+          <button className="btn primary" onClick={save}>
             {t.save}
           </button>
         </div>

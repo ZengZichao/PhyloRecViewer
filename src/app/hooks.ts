@@ -270,3 +270,95 @@ export function useStats() {
   const recon = useStore((s) => s.recon);
   return useMemo(() => (recon ? computeStats(recon) : null), [recon]);
 }
+
+// ---------------------------------------------------------------------------
+// usePresence — keep a surface mounted long enough to play its exit transition.
+//
+// The review brief asks for exits that slide a short distance, fade and blur
+// instead of disappearing on the frame the state flips. CSS alone cannot do
+// that when the component returns null on close, so the surface stays mounted
+// for one exit duration and carries `data-state="exit"` while it fades.
+// A second open interrupts the exit: the same element turns back around
+// instead of restarting, which is exactly what a transition (not a keyframe)
+// buys us.
+// ---------------------------------------------------------------------------
+
+type PresencePhase = "enter" | "shown" | "exit";
+
+/** Exit must also resolve instantly under test so keyboard/modal specs can
+ *  assert the surface is gone in the same tick it was closed. */
+function instantMotion(): boolean {
+  if (typeof window === "undefined") return true;
+  if (import.meta.env?.MODE === "test") return true;
+  return window.matchMedia?.("(prefers-reduced-motion: reduce)").matches === true;
+}
+
+/**
+ * @param visible whether the surface should be on screen
+ * @param exitMs  how long the exit transition runs (keep in sync with CSS)
+ */
+export function usePresence(
+  visible: boolean,
+  exitMs = 200,
+): { mounted: boolean; phase: PresencePhase } {
+  const [mounted, setMountedState] = useState(visible);
+  const [phase, setPhase] = useState<PresencePhase>(visible ? "enter" : "exit");
+  const instant = useRef(instantMotion());
+  const timer = useRef<number | null>(null);
+  const mountedRef = useRef(visible);
+  const setMounted = (next: boolean) => {
+    mountedRef.current = next;
+    setMountedState(next);
+  };
+
+  useEffect(() => {
+    if (timer.current !== null) {
+      window.clearTimeout(timer.current);
+      timer.current = null;
+    }
+    if (visible) {
+      if (instant.current) {
+        setMounted(true);
+        setPhase("shown");
+        return;
+      }
+      // Re-opening during an exit: the element is already on screen at its
+      // exit position, so transition straight back to the resting state
+      // instead of restarting from an entrance offset. This is the
+      // "interruptible" half of the motion brief.
+      if (mountedRef.current) {
+        setPhase("shown");
+        return;
+      }
+      setMounted(true);
+      // Mount hidden for one frame, then transition in: the browser needs a
+      // rendered start state for an entrance transition to have a beginning.
+      setPhase("enter");
+      const id = window.requestAnimationFrame(() =>
+        window.requestAnimationFrame(() => setPhase("shown")),
+      );
+      return () => window.cancelAnimationFrame(id);
+    }
+    if (!mounted) return;
+    setPhase("exit");
+    if (instant.current) {
+      setMounted(false);
+      return;
+    }
+    timer.current = window.setTimeout(() => {
+      timer.current = null;
+      setMounted(false);
+    }, exitMs);
+    return () => {
+      if (timer.current !== null) {
+        window.clearTimeout(timer.current);
+        timer.current = null;
+      }
+    };
+    // `mounted` is intentionally read but not a dependency: including it would
+    // re-run the exit when the element unmounts and clear the timer early.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visible, exitMs]);
+
+  return { mounted, phase };
+}

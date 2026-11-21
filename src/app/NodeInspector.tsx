@@ -1,9 +1,10 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { formatConfidence, useT, type Dict } from "../i18n";
 import { useStore } from "../state/store";
 import { APP_NAME, APP_VERSION } from "../version";
 import type { GeneNode } from "../model/types";
 import { Icon } from "./Icon";
+import { usePresence } from "./hooks";
 
 /**
  * A dockable node inspector: click a gene glyph or a transfer arc and this
@@ -77,16 +78,22 @@ export function NodeInspector() {
     return null;
   }, [inspector, recon, nested, compare, t]);
 
-  if (!inspector || !info) return null;
-  const g: GeneNode = info.gene;
+  // The card keeps its last node while it fades out; `inspector` is already
+  // null by the time the exit transition runs.
+  const lastInfo = useRef(info);
+  if (info) lastInfo.current = info;
+  const presence = usePresence(!!info);
+  if (!presence.mounted || !lastInfo.current) return null;
+  const shown = lastInfo.current;
+  const g: GeneNode = shown.gene;
   const note = annotations[g.id];
 
   const rows: [string, string][] = [];
   rows.push([t.inspSpecies, g.speciesId || g.endEvent.speciesLocation || g.endEvent.destinationSpecies || t.inspNone]);
-  rows.push([t.inspFamily, info.family]);
-  if (info.transfer) {
-    rows.push([t.inspDonor, info.transfer.donor]);
-    rows.push([t.inspRecipient, info.transfer.recipient]);
+  rows.push([t.inspFamily, shown.family]);
+  if (shown.transfer) {
+    rows.push([t.inspDonor, shown.transfer.donor]);
+    rows.push([t.inspRecipient, shown.transfer.recipient]);
   }
   if (g.endEvent.timeSlice != null) rows.push([t.inspTimeSlice, String(g.endEvent.timeSlice)]);
   if (g.endEvent.confidence != null) rows.push([t.inspConfidence, formatConfidence(g.endEvent.confidence)]);
@@ -116,11 +123,14 @@ export function NodeInspector() {
   };
 
   return (
-    <div className="node-inspector" role="complementary" aria-label={t.inspectorTitle}>
+    <div
+      className="node-inspector"
+      data-state={presence.phase}
+      role="complementary"
+      aria-label={t.inspectorTitle}
+    >
       <div className="ni-head">
         <strong>{g.name || g.endEvent.geneName || t.inspNone}</strong>
-        <span className="ni-event">{t.event[g.endEvent.type]}</span>
-        <span className="ni-pane">{info.pane}</span>
         <span className="ni-spacer" />
         <button
           className={pinned ? "active" : ""}
@@ -134,6 +144,10 @@ export function NodeInspector() {
         <button aria-label={t.close} onClick={() => setInspector(null)}>
           <Icon name="close" size={12} />
         </button>
+      </div>
+      <div className="ni-meta">
+        <span className="ni-event">{t.event[g.endEvent.type]}</span>
+        <span className="ni-pane">{shown.pane}</span>
       </div>
       <dl className="ni-rows">
         {rows.map(([k, v]) => (

@@ -19,7 +19,7 @@ import { makeProjector, type Orientation } from "../render/geometry";
 import { detailLevelForZoom, type RenderOptions } from "../render/options";
 import { type Theme } from "../render/theme";
 import { useStore, type PaneId } from "../state/store";
-import { useGlobalShortcuts, isTextInput } from "./hooks";
+import { useGlobalShortcuts, isTextInput, usePresence } from "./hooks";
 import { Icon } from "./Icon";
 import { nextStamp, sameView, shouldPublish } from "./view-sync";
 
@@ -103,6 +103,9 @@ export function Canvas({
   const lastSize = useRef({ w: result.width, h: result.height });
   const t = useT();
   const minimap = useStore((s) => s.minimap);
+  // The navigator fades/slides out instead of vanishing the frame the toggle
+  // flips; a re-toggle mid-exit turns the transition back around.
+  const minimapPresence = usePresence(minimap, 180);
   const annotations = useStore((s) => s.annotations);
   const labelOverrides = useStore((s) => s.labelOverrides);
   const setLabelOverride = useStore((s) => s.setLabelOverride);
@@ -661,7 +664,7 @@ export function Canvas({
         </div>
       )}
 
-      {minimap && (
+      {minimapPresence.mounted && (
         <MiniMap
           result={result}
           orientation={options.orientation}
@@ -669,6 +672,7 @@ export function Canvas({
           view={view}
           container={containerRef.current}
           onNav={navTo}
+          state={minimapPresence.phase}
         />
       )}
 
@@ -765,6 +769,7 @@ function MiniMap({
   view,
   container,
   onNav,
+  state,
 }: {
   result: LayoutResult;
   orientation: Orientation;
@@ -772,6 +777,7 @@ function MiniMap({
   view: View;
   container: HTMLDivElement | null;
   onNav: (cxProj: number, cyProj: number) => void;
+  state: "enter" | "shown" | "exit";
 }) {
   const t = useT();
   const svgRef = useRef<SVGSVGElement>(null);
@@ -903,7 +909,7 @@ function MiniMap({
   };
 
   return (
-    <div className="minimap" title={t.minimap} aria-label={t.minimap}>
+    <div className="minimap" data-state={state} title={t.minimap} aria-label={t.minimap}>
       <svg
         ref={svgRef}
         width={mapW}

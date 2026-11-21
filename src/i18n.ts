@@ -263,6 +263,12 @@ export interface Dict {
   /** The one-line per-species summary stats show while a section is folded. */
   /** The preferences dialog. */
   prefsTitle: string;
+  /** Group headings inside the preferences dialog (one row per setting). */
+  prefsGroupAppearance: string;
+  prefsGroupExport: string;
+  prefsGroupWorkspace: string;
+  prefsGroupHelp: string;
+  prefsGroupReset: string;
   defaultView: string;
   saveDefaultView: string;
   clearDefaultView: string;
@@ -474,6 +480,8 @@ noEvents: string;
   // P0 wording fixes
   warningSuffix: string;
   valueSuffix: string;
+  valueIncrease: string;
+  valueDecrease: string;
   patternPlaceholder: string;
   samplesHeading: string;
   removeSpeciesTree: string;
@@ -723,6 +731,11 @@ const en: Dict = {
   resetAll: "Reset all",
   resetAllTitle: "Reset every layout and style option to its default",
   prefsTitle: "Preferences",
+  prefsGroupAppearance: "Appearance",
+  prefsGroupExport: "Export",
+  prefsGroupWorkspace: "Workspace",
+  prefsGroupHelp: "Help",
+  prefsGroupReset: "Reset",
   defaultView: "Default layout & display options",
   saveDefaultView: "Save as default layout",
   clearDefaultView: "Clear default layout",
@@ -917,6 +930,8 @@ noEvents: "No events",
   mergeNoConflict: "All files share the base species tree",
   warningSuffix: " + parser warnings",
   valueSuffix: "value",
+  valueIncrease: "Increase",
+  valueDecrease: "Decrease",
   patternPlaceholder: "pattern…",
   samplesHeading: "Samples",
   removeSpeciesTree: "Remove species tree",
@@ -1176,6 +1191,11 @@ const zh: Dict = {
   resetAll: "全部重置",
   resetAllTitle: "将所有布局与样式选项重置为默认",
   prefsTitle: "设置",
+  prefsGroupAppearance: "外观",
+  prefsGroupExport: "导出",
+  prefsGroupWorkspace: "工作区",
+  prefsGroupHelp: "帮助",
+  prefsGroupReset: "重置",
   defaultView: "默认布局与显示选项",
   saveDefaultView: "保存为默认布局",
   clearDefaultView: "清除默认布局",
@@ -1370,6 +1390,8 @@ noEvents: "无事件",
   mergeNoConflict: "所有文件的物种树与基准一致",
   warningSuffix: " + 解析警告",
   valueSuffix: "数值",
+  valueIncrease: "增大",
+  valueDecrease: "减小",
   patternPlaceholder: "正则表达式…",
   samplesHeading: "示例",
   removeSpeciesTree: "移除物种树",

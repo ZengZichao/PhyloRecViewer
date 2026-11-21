@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
 import { useT } from "../i18n";
 import { useStore } from "../state/store";
-import { useFocusTrap } from "./hooks";
+import { useFocusTrap, usePresence } from "./hooks";
 import { Icon } from "./Icon";
 
 /**
@@ -14,6 +14,7 @@ export function HelpOverlay() {
   const open = useStore((s) => s.helpOpen);
   const setOpen = useStore((s) => s.setHelpOpen);
   const dialogRef = useRef<HTMLDivElement>(null);
+  const presence = usePresence(open);
   useFocusTrap(open, dialogRef);
 
   useEffect(() => {
@@ -28,7 +29,7 @@ export function HelpOverlay() {
     return () => window.removeEventListener("keydown", onKey, true);
   }, [open, setOpen]);
 
-  if (!open) return null;
+  if (!presence.mounted) return null;
 
   // The complete shortcut map, matching the actual handlers. The old list
   // omitted Ctrl+F (search), Ctrl+Y (redo), Ctrl+W (close tab), P
@@ -78,14 +79,15 @@ export function HelpOverlay() {
   return (
     <div
       className="help-overlay"
+      data-state={presence.phase}
       onClick={() => setOpen(false)}
       role="dialog"
       aria-modal="true"
       aria-label={t.helpTitle}
     >
-      <div className="help-card" ref={dialogRef} onClick={(e) => e.stopPropagation()}>
+      <div className="help-card" data-state={presence.phase} ref={dialogRef} onClick={(e) => e.stopPropagation()}>
         <div className="help-head">
-          <span className="sidebar-title">{t.helpTitle}</span>
+          <h2 className="dialog-title">{t.helpTitle}</h2>
           <button className="panel-collapse" onClick={() => setOpen(false)} data-tooltip={t.close} aria-label={t.close}>
             <Icon name="close" />
           </button>

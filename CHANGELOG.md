@@ -9,6 +9,100 @@ archived version carries its own immutable **version DOI**: v0.1.0 is
 
 ## [Unreleased]
 
+### UI design review round (2026-11-21)
+
+A visual-consistency pass over every surface: light and dark themes, English
+and Chinese, narrow and wide windows, the empty hub, the working view, nested
+and compare splits, menus, the tour, the help card and Preferences.
+`docs/STYLE-GUIDE-UI.md` now records the visual system (colour, spacing,
+radii, shadows, icons, motion, layout) beside the copy rules, and a
+design-system test pins the invariants that can be checked mechanically.
+
+**Added — one motion language (transitions, not keyframes)**
+
+- **Entrances, exits and interruptions** (`src/app/hooks.ts`, `src/styles.css`):
+  a single `usePresence` hook keeps menus, dialogs, the tour card, the toast,
+  the tooltip, the node inspector, the minimap and the annotation editor
+  mounted for one exit transition. They enter from a few pixels away with an
+  ease-out curve, and leave by sliding a short distance while fading and
+  blurring — never by cutting out or flying off screen. Re-opening a surface
+  mid-exit turns the transition around in place, and every state change is a
+  CSS transition, so a second click can interrupt the first.
+- **Cross-fading icon toggles** (`src/app/Icon.tsx`): `IconSwap` overlaps the
+  outgoing and incoming glyph and cross-fades them with a small scale/blur, so
+  the diff-visibility and legend-direction toggles change meaning without
+  hard-swapping one shape for another.
+- **Soft content switch and staggered entrance**: a changed analysis tab fades
+  and scales in from 99.5%; the empty hub, the sidebar sections and the
+  Preferences groups enter their parts on a short stagger instead of as one
+  block.
+- The locate ring's infinite keyframe pulse and the toast's one-shot entrance
+  keyframe are gone; the ring is a static, high-contrast outline and the toast
+  uses the same interruptible transition as every other surface.
+
+**Changed — a single visual system**
+
+- **App shell** (`src/styles.css`): the window is a neutral canvas holding
+  four floating surfaces — the menu/tab strip, the work area and the two side
+  panels — each with one radius, one layered shadow and an 8px gutter. The
+  sidebar is no longer a full-height band pressed against the window edge; it
+  is inset, rounded like the canvas and the analysis panel, and its two inner
+  gutters are equal even while it scrolls.
+- **Sidebar rhythm** (`src/app/Sidebar.tsx`, `src/styles.css`): section titles
+  and every control label share one 16px left edge; the disclosure chevron
+  moved to the right edge and stopped indenting the title column. Rows are
+  36px high (40px headers) with 4px between rows inside a group and a
+  hairline-plus-padding boundary between groups, so group spacing is visibly
+  looser than row spacing. Pin buttons, collapse buttons and the slider hit
+  areas grew to 28–32px, and a hover/focus tint replaces their resting frames.
+- **Preferences is a grouped page, not a framed list**
+  (`src/app/Settings.tsx`): the outer card frame is gone (borderless surface,
+  one soft shadow), the title uses the dialog type step, and the rows are
+  grouped under Appearance / Export / Workspace / Help headings with 24px
+  between groups and 4px inside one. The two destructive actions (clear
+  autosave data, reset preferences) sit alone under a rule at the bottom.
+  Rows keep the one-setting-per-row rule: name left, control right.
+- **Icon set** (`src/app/Icon.tsx`, `src/app/MenuBar.tsx`,
+  `src/app/App.tsx`, `src/app/RightPanel.tsx`, `src/app/Legend.tsx`,
+  `src/app/TabBar.tsx`, `src/app/Sidebar.tsx`): every glyph in the chrome is
+  now drawn on one 24-unit stroked grid. The theme-menu emoji (☀/🌙/🖥), the
+  ✓/✕/⇔/⇕/◎/◉/▸/▾/‹/›/✎/⋯/⋮ text symbols, the font-drawn checkmark and the
+  CSS-drawn caret are gone; the data-health warning became a quiet icon+count
+  button instead of a bordered badge, and the issue-count chip became plain
+  tabular text.
+- **Detail rules**: `font-variant-numeric: tabular-nums` is inherited by the
+  whole document, a real (screen-reader-only) `h1` plus
+  `text-wrap: balance` on all headings stops stranded heading lines, hardcoded
+  3px/50%/999px radii joined the token scale, and floating surfaces use
+  layered shadows instead of borders in both themes.
+
+**Fixed**
+
+- **Legend and stats chip overlapped on a 648px canvas** (`src/styles.css`,
+  `src/app/App.tsx`): both dock to the bottom of the drawing, so on a 1280
+  window with both panels open the stats chip sat on the legend's corner. The
+  work area is now a container: below 620px of canvas width the stats readout
+  yields while the legend is shown (the counts stay in the Statistics tab).
+- **The nested/compare arrangement control hid a pane button**
+  (`src/app/App.tsx`, `src/styles.css`): the floating split control was docked
+  over the panes — top-right, where it covered the second pane's
+  analysis-panel button in the side-by-side arrangement, and still clipping a
+  toolbar when centred on the divider. It is now a normal control in the app
+  bar (only present while a nested or compare view is open), shared by both
+  split views, and its two segments map to the arrangements they name (the old
+  toggle mapped "stacked" to the wrong state).
+- **Filter chips lost their pressed state** (`src/app/RightPanel.tsx`,
+  `src/styles.css`): event-type filters are real filter tags now (buttons with
+  `aria-pressed`) instead of checkbox rows, and the pressed tag is filled in
+  both themes.
+- **Slider fills used a gradient** (`src/app/Sidebar.tsx`,
+  `src/app/RightPanel.tsx`, `src/styles.css`): the accent part of every range
+  track is a solid element behind the native input, sharing one `range-wrap`
+  geometry between the sidebar and the confidence filter.
+- **Node inspector header wrapped** (`src/app/NodeInspector.tsx`): the pane
+  name moved to its own meta line and the header buttons got 24px targets
+  instead of a wrapped, truncated first row.
+
 ### Maintenance round (2026-11-18)
 
 **Fixed**
