@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useMemo, useRef } from "react";
 import { formatConfidence, useT, type Dict } from "../i18n";
 import { useStore } from "../state/store";
 import { APP_NAME, APP_VERSION } from "../version";
@@ -37,7 +37,6 @@ export function NodeInspector() {
   const annotations = useStore((s) => s.annotations);
   const setAnnotating = useStore((s) => s.setAnnotating);
   const locateGene = useStore((s) => s.locateGene);
-  const [pinned, setPinned] = useState(false);
 
   const info = useMemo(() => {
     if (!inspector) return null;
@@ -132,15 +131,6 @@ export function NodeInspector() {
       <div className="ni-head">
         <strong>{g.name || g.endEvent.geneName || t.inspNone}</strong>
         <span className="ni-spacer" />
-        <button
-          className={pinned ? "active" : ""}
-          aria-pressed={pinned}
-          aria-label={pinned ? t.unpinHighlight : t.pinHighlight}
-          title={pinned ? t.unpinHighlight : t.pinHighlight}
-          onClick={() => setPinned((v) => !v)}
-        >
-          <Icon name="pin" size={13} />
-        </button>
         <button aria-label={t.close} onClick={() => setInspector(null)}>
           <Icon name="close" size={12} />
         </button>

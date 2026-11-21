@@ -89,7 +89,7 @@ describe("detectFormat routing", () => {
     // names and says so, rather than being refused (or misreported as XML).
     const recon = parseReconciliation("SpeciesA;", "SpeciesA.nwk");
     expect(recon.species.nodes.length).toBeGreaterThan(0);
-    expect(recon.warnings.some((w) => /topology-only/i.test(w))).toBe(true);
+    expect(recon.warnings.some((w) => /without a species tree/i.test(w))).toBe(true);
   });
 
   it("keeps recPhyloXML detection for XML content", () => {

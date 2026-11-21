@@ -2,6 +2,7 @@ import { Fragment, memo, useId, type KeyboardEvent as ReactKeyboardEvent, type M
 import type {
   EventType,
   GeneNode,
+  NodeSupport,
   SpeciesNode,
   SpeciesTree,
   TransferEdge,
@@ -845,10 +846,16 @@ function renderGeneGlyphs(
             h.interactive ? `\n${dict.expandHint}` : ""
           }`
         : tooltipText(g, dict);
-      // Confidence shown next to the node: the terminal event's value first,
-      // then a clade-level support - the same accessor the filter uses, so a
-      // value that can be filtered on is also visible.
+      // Confidence/support shown next to the node: a bare number cannot tell
+      // the 0-1 event confidence from a 0-100 bootstrap, so each value carries
+      // the conventional prefix (conf=, B=, PP=, aLRT=, S=).
       const conf = g.endEvent.confidence ?? g.support?.value;
+      const confText =
+        g.endEvent.confidence != null
+          ? `conf=${formatConfidence(g.endEvent.confidence)}`
+          : g.support
+            ? `${supportPrefix(g.support.type)}=${g.support.value}`
+            : null;
       const isDiff = diffSet?.has(g.id) ?? false;
       return (
         <g
@@ -928,14 +935,14 @@ function renderGeneGlyphs(
               opacity={0.9}
             />
           )}
-          {options.showSupport && conf != null && (
+          {options.showSupport && conf != null && confText != null && (
             <text
               x={c.x + s}
               y={c.y - s * 0.6}
               fontSize={9}
               fill={theme.muted}
             >
-              {conf}
+              {confText}
             </text>
           )}
         </g>
@@ -976,6 +983,14 @@ function collapsedGlyph(
       strokeLinejoin="round"
     />
   );
+}
+
+/** Canvas prefix that tells an event-confidence value from a support value. */
+function supportPrefix(type: NodeSupport["type"] | undefined): string {
+  if (type === "bootstrap") return "B";
+  if (type === "posterior") return "PP";
+  if (type === "alrt") return "aLRT";
+  return "S";
 }
 
 function geneGlyph(

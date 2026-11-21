@@ -156,7 +156,7 @@ describe("export and load failure toasts are localized", () => {
       expect(htmlBtn).toBeDefined();
 
       await act(async () => {
-        await withFailingDesktopSave("Failed to rasterize SVG", async () => {
+        await withFailingDesktopSave("Could not convert the drawing to a bitmap for PNG export.", async () => {
           (htmlBtn as HTMLButtonElement).click();
           await new Promise((r) => setTimeout(r, 50));
         });
@@ -164,8 +164,8 @@ describe("export and load failure toasts are localized", () => {
 
       // Whole-string assertion: the prefix AND the translated diagnostic, so a
       // re-introduced raw message fails here even if it keeps the prefix.
-      expect(toastText(host)).toBe(`${translations.zh.exportFailed}: SVG 栅格化失败。`);
-      expect(toastText(host)).not.toContain("Failed to rasterize SVG");
+      expect(toastText(host)).toBe(`${translations.zh.exportFailed}: 无法把图形转换为 PNG 位图。`);
+      expect(toastText(host)).not.toContain("Could not convert the drawing to a bitmap for PNG export.");
     } finally {
       await unmount(root, host);
       useStore.setState({ locale: prev });
@@ -189,14 +189,14 @@ describe("export and load failure toasts are localized", () => {
         expect(csvBtn).toBeDefined();
 
         await act(async () => {
-          await withFailingDesktopSave("Canvas 2D context unavailable", async () => {
+          await withFailingDesktopSave("The browser could not create the image canvas needed for PNG export.", async () => {
             (csvBtn as HTMLButtonElement).click();
             await new Promise((r) => setTimeout(r, 50));
           });
         });
 
-        expect(toastText(host)).toBe(`${translations.zh.exportFailed}: 无法获取 Canvas 2D 上下文。`);
-        expect(toastText(host)).not.toContain("Canvas 2D context unavailable");
+        expect(toastText(host)).toBe(`${translations.zh.exportFailed}: 浏览器无法创建 PNG 导出所需的图像画布。`);
+        expect(toastText(host)).not.toContain("The browser could not create the image canvas needed for PNG export.");
       } finally {
         await unmount(root, host);
         useStore.setState({ locale: prev });

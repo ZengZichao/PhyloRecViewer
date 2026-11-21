@@ -520,7 +520,7 @@ async function loadImage(uri: string): Promise<HTMLImageElement> {
   return await new Promise((resolve, reject) => {
     if (img.complete && img.naturalWidth > 0) return resolve(img);
     img.onload = () => resolve(img);
-    img.onerror = () => reject(new Error("Failed to rasterize SVG"));
+    img.onerror = () => reject(new Error("Could not convert the drawing to a bitmap for PNG export."));
   });
 }
 
@@ -549,7 +549,7 @@ async function rasterize(
   canvas.width = Math.max(1, Math.ceil(width * s));
   canvas.height = Math.max(1, Math.ceil(height * s));
   const ctx = canvas.getContext("2d");
-  if (!ctx) throw new Error("Canvas 2D context unavailable");
+  if (!ctx) throw new Error("The browser could not create the image canvas needed for PNG export.");
   ctx.fillStyle = bg;
   ctx.fillRect(0, 0, canvas.width, canvas.height);
   ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
@@ -605,7 +605,7 @@ export async function renderPngBlob(
   const { svg, width, height } = buildDocSvg(doc);
   const { canvas, scale } = await rasterize(svg, width, height, doc.background ?? doc.theme.background, dpiToScale(dpi));
   const blob = await new Promise<Blob | null>((res) => canvas.toBlob(res, "image/png"));
-  if (!blob) throw new Error("Failed to encode PNG");
+  if (!blob) throw new Error("Could not encode the PNG file.");
   // Stamp the real density into the file (canvas-limit clamping may have
   // reduced the requested DPI; the effective value is what lands in pHYs).
   const effectiveDpi = Math.round(scale * 96);

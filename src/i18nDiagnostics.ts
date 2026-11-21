@@ -20,8 +20,8 @@ const EVENT_ZH: Record<EventType, string> = {
   speciation: "物种形成",
   duplication: "基因重复",
   loss: "基因丢失",
-  branchingOut: "转移供体",
-  bifurcationOut: "二叉输出",
+  branchingOut: "出枝转移",
+  bifurcationOut: "树外分叉",
   transferBack: "转移到达",
   leaf: "现存基因",
 };
@@ -44,19 +44,19 @@ export const RULES: Rule[] = [
   },
   {
     re: /^No <recPhylo> root element was found\.[\s\S]*$/,
-    zh: "未找到 <recPhylo> 根元素，此文件不像 recPhyloXML；如果它是 Newick/NHX 树，请以 .nwk/.nhx 扩展名保存，或添加 [&&NHX:S=…] 批注。",
+    zh: "未找到 <recPhylo> 根元素，此文件不像 recPhyloXML；如果它是 Newick/NHX 树，请以 .nwk/.nhx 扩展名保存，或添加 [&&NHX:S=…] 标签。",
   },
   {
     re: /^The species tree declares rooted="false"[\s\S]*$/,
-    zh: '物种树声明 rooted="false"，但调和结果总是有根的：PhyloRecViewer 无法绘制无根树。请重新为物种树定根（recPhyloXML 架构要求 rooted="true"）。',
+    zh: '物种树标注 rooted="false"，但调和结果总是有根的：PhyloRecViewer 无法绘制无根树。请重新为物种树定根（recPhyloXML 模式（schema）要求 rooted="true"）。',
   },
   {
     re: /^The gene tree "(.+?)" declares rooted="false"[\s\S]*$/,
-    zh: '基因树 "$1" 声明 rooted="false"，但调和结果总是有根的：PhyloRecViewer 无法绘制无根树。请重新为该基因树定根（recPhyloXML 架构要求 rooted="true"）。',
+    zh: '基因树 "$1" 标注 rooted="false"，但调和结果总是有根的：PhyloRecViewer 无法绘制无根树。请重新为该基因树定根（recPhyloXML 模式（schema）要求 rooted="true"）。',
   },
   {
     re: /^Species tree \(<spTree>\) has no <clade> elements\.[\s\S]*$/,
-    zh: "物种树（<spTree>）不含任何 <clade> 元素。recPhyloXML 要求 <spTree><phylogeny rooted=\"true\"><clade>…；若缺少 <phylogeny> 包装，clade 必须直接位于 <spTree> 之下。",
+    zh: "物种树（<spTree>）不含任何 <clade> 元素。recPhyloXML 要求 <spTree><phylogeny rooted=\"true\"><clade>…；若缺少 <phylogeny> 外层元素，<clade> 必须直接位于 <spTree> 之下。",
   },
   {
     re: /^Species tree contains duplicate species names; references resolve to the first occurrence\.$/,
@@ -68,15 +68,15 @@ export const RULES: Rule[] = [
   },
   {
     re: /^Species tree is nested too deep \(possible malformed input\)\.$/,
-    zh: "物种树嵌套过深（可能是畸形输入）。",
+    zh: "物种树嵌套过深（可能是格式错误的输入）。",
   },
   {
     re: /^Gene tree is nested too deep \(possible malformed input\)\.$/,
-    zh: "基因树嵌套过深（可能是畸形输入）。",
+    zh: "基因树嵌套过深（可能是格式错误的输入）。",
   },
   {
     re: /^The document declares the XML namespace "(.+?)" instead of the recPhyloXML namespace "http:\/\/www\.recg\.org"; parsing proceeded, but this may not be a recPhyloXML file\.$/,
-    zh: '文档声明的 XML 命名空间为 "$1"，而非 recPhyloXML 的 "http://www.recg.org"；已继续解析，但这可能不是 recPhyloXML 文件。',
+    zh: '文档的 XML 命名空间为 "$1"，而非 recPhyloXML 的 "http://www.recg.org"；已继续解析，但这可能不是 recPhyloXML 文件。',
   },
   {
     re: /^Species tree \(<spTree>\) contains (\d+) <phylogeny> elements; only the first is used\.$/,
@@ -88,23 +88,23 @@ export const RULES: Rule[] = [
   },
   {
     re: /^Gene tree phylogeny contains (\d+) root <clade> elements; only the first is used\.$/,
-    zh: "基因树 phylogeny 含 $1 个根 <clade> 元素；仅使用第一个。",
+    zh: "基因树（<phylogeny>）含 $1 个根 <clade> 元素；仅使用第一个。",
   },
   {
     re: /^The species tree <phylogeny> omits the schema-required rooted="true" attribute; assuming a rooted tree\.$/,
-    zh: '物种树 <phylogeny> 缺少架构要求的 rooted="true" 属性；按有根树处理。',
+    zh: '物种树 <phylogeny> 缺少模式（schema）要求的 rooted="true" 属性；按有根树处理。',
   },
   {
     re: /^(\d+) gene tree <phylogeny> (?:element omits|elements omit) the schema-required rooted="true" attribute; assuming rooted trees\.$/,
-    zh: '$1 个基因树 <phylogeny> 元素缺少架构要求的 rooted="true" 属性；按有根树处理。',
+    zh: '$1 个基因树 <phylogeny> 元素缺少模式（schema）要求的 rooted="true" 属性；按有根树处理。',
   },
   {
     re: /^Species "(.+?)" declares a negative branch length \((.+?)\); it is clamped to 0 for drawing\.$/,
-    zh: '物种 "$1" 声明了负枝长（$2）；绘图时按 0 处理。',
+    zh: '物种 "$1" 标注了负的枝长（$2）；绘图时按 0 处理。',
   },
   {
-    re: /^Species "(.+?)" carries support (.+?), which looks like a 0–100 percentage rather than a 0–1 probability\.$/,
-    zh: '物种 "$1" 携带支持度 $2，看起来是 0–100 百分比而非 0–1 概率。',
+    re: /^Species "(.+?)" carries support (.+?) without a declared type; bootstrap support is normally 0–100, posterior and aLRT supports 0–1\.$/,
+    zh: '物种 "$1" 带有支持度 $2 但未标注类型；bootstrap 支持度通常为 0–100，后验概率与 aLRT 支持度通常为 0–1。',
   },
   {
     re: /^Gene node "(.+?)" carries (\d+) <transferBack> arrivals; the node's species and the NHX export use the first \((.*)\)\.$/,
@@ -113,7 +113,7 @@ export const RULES: Rule[] = [
   {
     re: /^Gene node "(.+?)" carries multiple terminal events \((.+?)\); keeping "(.+?)"\.$/,
     zh: (_all, label, tagged, kept) =>
-      `基因节点 "${label}" 含多个终止事件（${eventListZh(tagged)}）；保留 "${eventZh(kept)}"。`,
+      `基因节点 "${label}" 含多个末端事件（${eventListZh(tagged)}）；保留 "${eventZh(kept)}"。`,
   },
   {
     re: /^Gene node "(.+?)" has an unrecognized <eventsRec> child "(.+?)" \(recPhyloXML event names are case-sensitive; did you mean "(.+?)"\?\); it was not read as an event, so this node's event list may be incomplete\.$/,
@@ -129,23 +129,23 @@ export const RULES: Rule[] = [
   },
   {
     re: /^Gene node "(.+?)" has no terminal event; treated as a leaf\.$/,
-    zh: '基因节点 "$1" 无终止事件；按现存基因处理。',
+    zh: '基因节点 "$1" 无末端事件；按现存基因处理。',
   },
   {
     re: /^Gene node "(.+?)" declares conflicting arrival species: <transferBack destinationSpecies="(.+?)"\/> vs the terminal event's speciesLocation="(.+?)"; the node and its transfer edge are placed in "(.+?)"\.$/,
-    zh: '基因节点 "$1" 声明了冲突的转移到达物种：<transferBack destinationSpecies="$2"/> 与终止事件的 speciesLocation="$3" 不一致；节点及其转移边置于 "$4"。',
+    zh: '基因节点 "$1" 标注了冲突的转移到达物种：<transferBack destinationSpecies="$2"/> 与末端事件的 speciesLocation="$3" 不一致；节点及其转移边置于 "$4"。',
   },
   {
     re: /^Gene node "(.+?)" references unknown species "(.+?)"\.$/,
     zh: '基因节点 "$1" 引用了未知物种 "$2"。',
   },
   {
-    re: /^Gene node "(.+?)" carries support (.+?), which looks like a 0–100 percentage rather than a 0–1 probability\.$/,
-    zh: '基因节点 "$1" 携带支持度 $2，看起来是 0–100 百分比而非 0–1 概率。',
+    re: /^Gene node "(.+?)" carries support (.+?) without a declared type; bootstrap support is normally 0–100, posterior and aLRT supports 0–1\.$/,
+    zh: '基因节点 "$1" 带有支持度 $2 但未标注类型；bootstrap 支持度通常为 0–100，后验概率与 aLRT 支持度通常为 0–1。',
   },
   {
     re: /^Gene node "(.+?)" declares a negative branch length \((.+?)\); it is clamped to 0 for drawing\.$/,
-    zh: '基因节点 "$1" 声明了负枝长（$2）；绘图时按 0 处理。',
+    zh: '基因节点 "$1" 标注了负的枝长（$2）；绘图时按 0 处理。',
   },
   {
     re: /^Clade "(.+?)" carries a <(.+?)> element this reader does not interpret; its content was not imported\.$/,
@@ -164,16 +164,16 @@ export const RULES: Rule[] = [
   {
     re: /^Gene node "(.+?)" carries conflicting event tags \((.+?)\); keeping "(.+?)" \(the precedence shared with recPhyloXML\)\.$/,
     zh: (_all, label, tagged, kept) =>
-      `基因节点 "${label}" 携带冲突的事件标签（${eventListZh(tagged)}）；保留 "${eventZh(kept)}"（与 recPhyloXML 相同的优先级）。`,
+      `基因节点 "${label}" 带有冲突的事件标签（${eventListZh(tagged)}）；保留 "${eventZh(kept)}"（与 recPhyloXML 相同的优先级）。`,
   },
   {
     re: /^Gene node "(.+?)" is a terminal Newick leaf but carries an internal-event tag; it is kept as a (\S+) \(an upstream tool may have pruned it\)\.$/,
     zh: (_all, label, type) =>
-      `基因节点 "${label}" 是 Newick 末端叶，却携带内部事件标签；仍按${eventZh(type)}处理（上游工具可能已剪枝）。`,
+      `基因节点 "${label}" 是 Newick 树的末端节点（叶），却带有内部事件标签；仍按${eventZh(type)}处理（上游工具可能已剪枝）。`,
   },
   {
     re: /^Gene node "(.+?)" has an NHX comment fragment with no key \("(.+?)"\);[\s\S]*$/,
-    zh: '基因节点 "$1" 的 NHX 注释含无键片段（"$2"）；未解码，因此它所批注的内容在本调和结果中缺失。',
+    zh: '基因节点 "$1" 的 NHX 注释含无键片段（"$2"）；未解码，因此它所注释的内容在本调和结果中缺失。',
   },
   {
     re: /^Gene node "(.+?)" is an internal node with a single child;[\s\S]*$/,
@@ -181,7 +181,7 @@ export const RULES: Rule[] = [
   },
   {
     re: /^Gene node "(.+?)" declares both BL=(.+?) and a Newick branch length \(:(.+?)\);[\s\S]*$/,
-    zh: '基因节点 "$1" 同时声明 BL=$2 与 Newick 枝长（:$3）；两者不一致，保留 BL=$2。',
+    zh: '基因节点 "$1" 同时给出 BL=$2 与 Newick 枝长（:$3）；两者不一致，保留 BL=$2。',
   },
   {
     re: /^An internal node label \("(.+?)"\) was interpreted as a statistical support value, not a gene name;[\s\S]*$/,
@@ -193,23 +193,23 @@ export const RULES: Rule[] = [
   },
   {
     re: /^This Newick\/NHX tree is marked unrooted \(\[&U\]\)\.[\s\S]*$/,
-    zh: "该 Newick/NHX 树标记为无根（[&U]）。调和需要带根的基因树：请重新定根（外群或中点）后重新导出，或在树确有根时移除 [&U] 标记。",
+    zh: "该 Newick/NHX 树标记为无根（[&U]）。调和需要有根的基因树：请重新定根（外群或中点）后重新导出，或在树确有根时移除 [&U] 标记。",
   },
   {
-    re: /^This NHX file uses (\d+) tag keys? this reader does not interpret and has dropped: ([\s\S]+?)\. Species, duplication, loss, donor and arrival state comes only from S=\/SP=, D=, L=, BO=, BC= and TB=\.$/,
-    zh: "此 NHX 文件有 $1 个 PhyloRecViewer 不解析并已丢弃的标签键：$2。物种、基因重复、基因丢失、转移供体与转移到达的状态只取自 S=/SP=、D=、L=、BO=、BC= 与 TB=。",
+    re: /^This NHX file uses (\d+) tag keys? this reader does not interpret and has dropped: ([\s\S]+?)\. Species, duplication, loss, transfer-donor and transfer-arrival state come only from S=\/SP=, D=, L=, BO=, BC= and TB=\.$/,
+    zh: "此 NHX 文件有 $1 个 PhyloRecViewer 不解析并已丢弃的标签键：$2。物种、基因重复、基因丢失、出枝转移与转移到达的状态只取自 S=/SP=、D=、L=、BO=、BC= 与 TB=。",
   },
   {
     re: /^This NHX file carries no L=, BO=, BC= or TB= markers,[\s\S]*$/,
-    zh: "此 NHX 文件不含 L=、BO=、BC= 或 TB= 标记，因此无法表示丢失或水平转移：未标记的末端节点按现存基因处理，未标记的内部节点按物种形成处理。若调和结果含丢失或转移，请改用 recPhyloXML 导出，或补上这些标记。",
+    zh: "此 NHX 文件不含 L=、BO=、BC= 或 TB= 标记，因此无法表示基因丢失或水平基因转移：未标记的末端节点按现存基因处理，未标记的内部节点按物种形成处理。若调和结果含丢失或转移，请改用 recPhyloXML 导出，或补上这些标记。",
   },
   {
     re: /^This NHX file carries no event markers at all \(no D=, L=, BO=, BC= or TB=\)[\s\S]*$/,
-    zh: "此 NHX 文件不含任何事件标记（无 D=、L=、BO=、BC= 或 TB=）；所有内部节点按物种形成、所有末端节点按现存基因读取。来自重复/丢失工具的调和 NHX 至少需要 D=，丢失与转移还需要 L=/BO=/BC=/TB=。",
+    zh: "此 NHX 文件不含任何事件标记（无 D=、L=、BO=、BC= 或 TB=）；所有内部节点按物种形成、所有末端节点按现存基因读取。来自基因重复/基因丢失工具的调和 NHX 至少需要 D=，丢失与转移还需要 L=/BO=/BC=/TB=。",
   },
   {
     re: /^NHX internal nodes lack species \(S=\) annotations,[\s\S]*$/,
-    zh: "NHX 内部节点缺少物种（S=）批注，无法从该文件重建物种树。请为每个内部节点添加 S=<物种> 标签，先载入物种树（文件 → 载入物种树（Newick）…）再打开基因树，或将调和结果导出为 recPhyloXML。",
+    zh: "NHX 内部节点缺少物种（S=）标签，无法从该文件重建物种树。请为每个内部节点添加 S=<物种> 标签，先载入物种树（文件 → 载入物种树（Newick）…）再打开基因树，或将调和结果导出为 recPhyloXML。",
   },
   {
     re: /^Species tree taken from the separately provided file;[\s\S]*$/,
@@ -217,15 +217,19 @@ export const RULES: Rule[] = [
   },
   {
     re: /^Species "(.+?)" is annotated under conflicting parents \("(.+?)" and "(.+?)"\); kept "(.+?)"[\s\S]*$/,
-    zh: '物种 "$1" 被批注在冲突的父节点下（"$2" 与 "$3"）；保留 "$4"。NHX 格式并不总能区分垂直祖先与未标记的水平转移，因此重建的物种树可能与真实树不同。',
+    zh: '物种 "$1" 被注释在冲突的父节点下（"$2" 与 "$3"）；保留 "$4"。NHX 格式并不总能区分垂直遗传的祖先关系与未标记的水平基因转移，因此重建的物种树可能与真实树不同。',
   },
   {
     re: /^No species \(S=\) annotations found in the NHX file\.$/,
-    zh: "NHX 文件中未找到物种（S=）批注。",
+    zh: "NHX 文件中未找到物种（S=）标签。",
+  },
+  {
+    re: /^This file has no NHX species \(S=\) annotations, so it was opened without a species tree: each node's label was used as a species name, and no duplication, loss or transfer events are available\. Export the reconciliation as recPhyloXML \(or add \[&&NHX:S=…\] tags\) to see events\.$/,
+    zh: "此文件没有 NHX 物种（S=）标签，因此在不带物种树的情况下打开：每个节点的标签被当作物种名使用，且没有可用的基因重复、基因丢失或转移事件。请将调和结果导出为 recPhyloXML（或添加 [&&NHX:S=…] 标签）以查看事件。",
   },
   {
     re: /^Species "(.+?)" cannot be attached to the species tree \(disconnected annotations\);[\s\S]*$/,
-    zh: '物种 "$1" 无法挂接到物种树（批注不连通）；置于其中的基因节点将被报告为未知物种。',
+    zh: '物种 "$1" 无法挂接到物种树（注释不连通）；置于其中的基因节点将被报告为未知物种。',
   },
   {
     re: /^Gene node references unknown species "(.+?)"\.$/,
@@ -233,7 +237,7 @@ export const RULES: Rule[] = [
   },
   {
     re: /^Species tree reconstructed from NHX species \(S=\) annotations;[\s\S]*$/,
-    zh: "物种树由 NHX 物种（S=）批注重建；TB= 所载的水平转移已排除在祖先关系之外。若文件还含有不带 TB= 标记的 HGT，请在每个转移到达处补 TB= 批注（或改用 recPhyloXML）后重新导出，因为此处无法把未标记的转移与物种形成区分开。",
+    zh: "物种树由 NHX 物种（S=）标签重建；TB= 所载的水平基因转移已排除在祖先关系之外。若文件还含有不带 TB= 标记的 HGT，请在每个转移到达处补 TB= 标签（或改用 recPhyloXML）后重新导出，因为此处无法把未标记的转移与物种形成区分开。",
   },
   {
     re: /^The species tree is nested too deep\.$/,
@@ -243,11 +247,11 @@ export const RULES: Rule[] = [
   // ---- Newick ----
   {
     re: /^Newick nesting is too deep \(possible malformed input\)\.$/,
-    zh: "Newick 嵌套过深（可能是畸形输入）。",
+    zh: "Newick 嵌套过深（可能是格式错误的输入）。",
   },
   {
     re: /^Newick has too many nodes \(possible malformed input\)\.$/,
-    zh: "Newick 节点过多（可能是畸形输入）。",
+    zh: "Newick 节点过多（可能是格式错误的输入）。",
   },
   // "Unbalanced parentheses in Newick" and "Malformed Newick (parser made no
   // progress)" have no rule here on purpose: `localizeNewick` below already
@@ -255,7 +259,7 @@ export const RULES: Rule[] = [
   // tail pass is what a duplicated `^`-anchored rule could never reach.
   {
     re: /^Too many trees in one file \(> (\d+)\); aborting rather than silently dropping the rest\.$/,
-    zh: "单文件树过多（> $1）；已中止，以免静默丢弃其余树。",
+    zh: "一个文件中的树过多（> $1）；已中止，以免静默丢弃其余树。",
   },
 
   // ---- species tree file ----
@@ -279,11 +283,11 @@ export const RULES: Rule[] = [
   },
   {
     re: /^(.+?): its species tree has (\d+) branch(?: that differs|es that differ) from the first file's species tree;[\s\S]*$/,
-    zh: "$1：其物种树有 $2 个分支与首个文件的物种树不同；合并视图仅绘制在首个文件的物种树上。",
+    zh: "$1：其物种树有 $2 个枝与首个文件的物种树不同；合并视图仅绘制在首个文件的物种树上。",
   },
   {
     re: /^(.+?): its species tree is missing (\d+) branch(?: present|es present) in the first file's species tree \(e\.g\. ([\s\S]*?)\); the merged view is drawn on the first file's species tree only\.$/,
-    zh: "$1：其物种树缺少首个文件物种树中的 $2 个分支（如 $3）；合并视图仅绘制在首个文件的物种树上。",
+    zh: "$1：其物种树缺少首个文件物种树中的 $2 个枝（如 $3）；合并视图仅绘制在首个文件的物种树上。",
   },
   {
     re: /^This file does not appear to be UTF-8 text \(it contains NUL bytes,[\s\S]*$/,
@@ -307,25 +311,21 @@ export const RULES: Rule[] = [
   },
 
   // ---- exporters ----
-  { re: /^Failed to rasterize SVG$/, zh: "SVG 栅格化失败。" },
-  { re: /^Canvas 2D context unavailable$/, zh: "无法获取 Canvas 2D 上下文。" },
-  { re: /^Failed to encode PNG$/, zh: "PNG 编码失败。" },
+  { re: /^Could not convert the drawing to a bitmap for PNG export\.$/, zh: "无法把图形转换为 PNG 位图。" },
+  { re: /^The browser could not create the image canvas needed for PNG export\.$/, zh: "浏览器无法创建 PNG 导出所需的图像画布。" },
+  { re: /^Could not encode the PNG file\.$/, zh: "无法编码 PNG 文件。" },
 
   // ---- NHX export disclosure ----
   {
-    re: /^(\d+) (?:node carries|nodes carry) multiple transfer arrivals; only the first can be written to NHX$/,
-    zh: "$1 个节点携带多个转移到达；NHX 只能写入第一个。",
+    re: /^(\d+) time slice (?:value on a transfer arrival is|values on transfer arrivals are) not written to NHX$/,
+    zh: "$1 个转移到达上的时间片不会写入 NHX。",
   },
   {
-    re: /^(\d+) time slice (?:value is|values are) not representable in NHX$/,
-    zh: "$1 个时间片值无法在 NHX 中表示。",
+    re: /^(\d+) event confidence (?:value on a transfer arrival is|values on transfer arrivals are) not written to NHX$/,
+    zh: "$1 个转移到达上的事件置信度不会写入 NHX。",
   },
   {
-    re: /^(\d+) event confidence (?:value is|values are) not representable in NHX$/,
-    zh: "$1 个事件置信度无法在 NHX 中表示。",
-  },
-  {
-    re: /^(\d+) species tree (?:taxon is|taxa are) not sampled by any gene tree and would disappear from the NHX species reconstruction$/,
+    re: /^(\d+) species-tree (?:taxon is|taxa are) not sampled by any gene tree and would disappear from the NHX species reconstruction$/,
     zh: "物种树中有 $1 个分类单元未被任何基因树采样，将在 NHX 物种重建中消失。",
   },
   {
@@ -415,7 +415,7 @@ export const RULES: Rule[] = [
 export const NEWICK_HEADS: [RegExp, string][] = [
   [/^Unterminated node comment \(missing "\]"\)/, "节点注释未闭合（缺少 \"]\"）"],
   [/^Unbalanced parentheses in Newick/, "Newick 括号不配对"],
-  [/^Malformed Newick \(parser made no progress\)/, "Newick 格式错误（解析器未取得进展）"],
+  [/^Malformed Newick \(parser made no progress\)/, "Newick 格式错误（解析器无法继续解析）"],
 ];
 
 /** Newick errors carry an "(at offset N, near \"…\")" tail; translate it too. */
@@ -468,7 +468,7 @@ export function localizeDiagnostic(raw: string, locale: Locale): string {
  *  Each pattern below is the wording `analysis/validate.ts` pushes for one
  *  issue code; a cell it never builds gets no translation. */
 export function localizeExample(raw: string, locale: Locale): string {
-  if (locale !== "zh") return raw;
+  if (locale !== "zh") return raw.replace(/ @depth /g, " (at depth ");
   return raw
     .replace(/ @depth /g, "，深度 ")
     .replace(/: time slice /g, "：时间片 ")

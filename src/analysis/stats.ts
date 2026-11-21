@@ -221,7 +221,7 @@ export function computeStats(recon: Reconciliation): ReconStats {
   for (const r of rawNodes) if (r.kind === "loss") nodes.push({ num: ++n, ...r });
   for (const r of rawNodes) if (r.kind === "internal") nodes.push({ num: ++n, ...r });
 
-  // Transfer donor -> recipient matrix (by species name).
+  // Transfer departure -> recipient matrix (by species name).
   const pairMap = new Map<string, number>();
   for (const t of computeTransfers(recon)) {
     const from = t.from.speciesId || "\u2014";

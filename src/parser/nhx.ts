@@ -243,7 +243,7 @@ function classify(nd: NewickNode, warnings: string[]): Classified {
     support = { value: Number(nd.name.trim()), type: "unknown" };
     nd.name = "";
     warnings.push(
-      `An internal node label ("${support.value}") was interpreted as a statistical support value, not a gene name; if it really is a name, add S=/D= tags or export from recPhyloXML.`,
+      `An internal node label ("${support.value}") was interpreted as a statistical support value, not a gene name; if it really is a name, add S=/D= tags or export the tree as recPhyloXML.`,
     );
   }
 
@@ -327,7 +327,7 @@ export function parseNhxReconciliation(
     // Named-but-uninterpreted keys are otherwise dropped without a trace, which
     // is the one silent-loss case this reader is supposed to avoid.
     warnings.push(
-      `This NHX file uses ${ignoredKeys.size} ${ignoredKeys.size === 1 ? "tag key" : "tag keys"} this reader does not interpret and has dropped: ${[...ignoredKeys].sort().join(", ")}. Species, duplication, loss, donor and arrival state comes only from S=/SP=, D=, L=, BO=, BC= and TB=.`,
+      `This NHX file uses ${ignoredKeys.size} ${ignoredKeys.size === 1 ? "tag key" : "tag keys"} this reader does not interpret and has dropped: ${[...ignoredKeys].sort().join(", ")}. Species, duplication, loss, transfer-donor and transfer-arrival state come only from S=/SP=, D=, L=, BO=, BC= and TB=.`,
     );
   }
   if (!sawLossOrTransfer) {
@@ -412,7 +412,7 @@ export function parseNhxReconciliation(
     species = parseSpeciesTree(text);
     builtNames = new Set(species.nodes.map((n) => n.name));
     warnings.push(
-      "No NHX species (S=) annotations were found, so this file was loaded in topology-only mode: its own clade names were used as the species tree and no duplication, loss or transfer events are available. Export the reconciliation as recPhyloXML (or add [&&NHX:S=…] tags) to see events.",
+      "This file has no NHX species (S=) annotations, so it was opened without a species tree: each node's label was used as a species name, and no duplication, loss or transfer events are available. Export the reconciliation as recPhyloXML (or add [&&NHX:S=…] tags) to see events.",
     );
   } else {
     const parentOf = new Map<string, string>();

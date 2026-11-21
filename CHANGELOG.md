@@ -9,6 +9,73 @@ archived version carries its own immutable **version DOI**: v0.1.0 is
 
 ## [Unreleased]
 
+### Copy and terminology pass (2026-11-21)
+
+A scientific-language pass over every interface string, in both languages,
+checked against the recPhyloXML schema and paper rather than against habit.
+
+**Changed — event vocabulary**
+
+- `bifurcationOut` is now **"Bifurcation out / 树外分叉"** (the event happens in
+  an unsampled lineage and is not a transfer donor); the glossary's old
+  "二叉输出" is retired.
+- `branchingOut` is now **"Branching out / 出枝转移"**; the legend arc is
+  **"Transfer arc / 转移弧"**, the summary's transfer count is labelled as
+  arrivals, and the per-species column is **"Transfer arrivals / 转移到达"**
+  instead of the conflicting "Incoming transfers / 转入事件".
+- `transferBack` stays **"Transfer arrival / 转移到达"** everywhere (legend,
+  statistics, checks) so one concept has one name.
+- The collapsed-clade marker is **"折叠演化支"**, and "highlight lineage" now
+  says what the interaction does: highlight the ancestors and descendants.
+
+**Changed — statistics, checks and panels**
+
+- Summary: **"Extant gene / 现存基因"** replaces "Tip node" for the leaf-event
+  count; **"Non-loss gene nodes"** replaces "Non-loss lineages" (the number is a
+  node count, not a copy number); the transfer matrix is a
+  **"Transfer-count matrix"**; the copy heatmap is a **"Gene-lane occupancy
+  heatmap"**.
+- Data checks use neutral rule names ("Species references", "Terminal events",
+  "Transfer arrival parent", …) so a failed card no longer reads as a true
+  statement, info-level findings are no longer called "异常", and the
+  confidence check covers **event confidence only** — a 0–100 bootstrap support
+  is no longer reported as suspicious.
+- Panels are named unambiguously: **"Transfer network"**, **"Data checks"**,
+  **"Differences"**, **"Node details"**; the analysis tab row wraps only when the
+  sixth (compare) tab is present.
+- Layout controls name their axis and unit: **"Species level spacing"**,
+  **"Gene lane spacing"**, **"Species slot spacing"**, **"Align species tips"**,
+  **"Transfer arc curvature"**, **"Gene branch thickness"**, **"Halo behind
+  gene edges"**, **"Event markers"**; the branch-length toggle explains that it
+  treats branch lengths as a time proxy.
+- Compare metrics state their denominators: **"{p}% node agreement"** and
+  **"{p}% species-mapping agreement"**, with units on the paired/only-in counts
+  and a **"Differs in"** status column.
+- DPI copy distinguishes output density from pixel size; the annotation-clear
+  prompt names both **Ctrl+Z** and **⌘Z**; the node details card's inactive
+  "pin highlight" button was removed rather than left as a no-op.
+
+**Fixed — statements and behaviour**
+
+- A branching-out departure now accepts a transfer arrival **anywhere in the
+  departing subtree**. recPhyloXML's own ALE sample routes the return through a
+  `bifurcationOut` before transferring back; the previous direct-child rule
+  flagged that valid file.
+- The NHX export disclosure no longer claims that multiple arrivals are
+  truncated or that transfer-arrival time slices/confidences are unwritable:
+  the writer emits `TB=`, `TB2=`, … and terminal `TS=`/`CN=`. The dialog now
+  lists only real losses.
+- The recPhyloXML export is described as **"full export, re-readable"** instead
+  of "lossless round-trip": clade support elements are parsed but not re-emitted.
+- The merge dialog reports **species-name** differences (what it can actually
+  detect), not "species-tree agreement"; the close prompt says "unsaved
+  changes" because layout and label edits also make a document dirty.
+- Search matches the localized event name ("基因重复" finds duplication nodes),
+  and the export/support failure messages render as sentences rather than
+  implementation strings.
+- `GLOSSARY-UI.md`, both user manuals and the exporter comments follow the new
+  vocabulary.
+
 ### UI design review round (2026-11-21)
 
 A visual-consistency pass over every surface: light and dark themes, English

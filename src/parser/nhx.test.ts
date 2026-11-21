@@ -360,7 +360,7 @@ describe("plain Newick (no S= annotations)", () => {
   it("loads in topology-only mode instead of refusing the format", () => {
     const recon = parseNhxReconciliation("((A:0.1,B:0.2)R:0.3,(C:0.4,D:0.5)S:0.6)root;");
     expect(recon.species.byName.has("R")).toBe(true);
-    expect(recon.warnings.some((w) => /topology-only/i.test(w))).toBe(true);
+    expect(recon.warnings.some((w) => /without a species tree/i.test(w))).toBe(true);
     const gt = recon.geneTrees[0];
     expect(gt.nodes.find((n) => n.name === "A")?.speciesId).toBe("A");
   });

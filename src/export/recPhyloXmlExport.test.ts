@@ -111,12 +111,11 @@ describe("recPhyloXML export", () => {
     const losses = nhxExportLosses(recon).join("\n");
     expect(losses).toBe(
       [
-        // The sample carries one multi-arrival node and one named tree, so this
-        // is also the battery's only proof that a count of 1 declines to a
-        // singular and a count above 1 to a plural.
-        "1 node carries multiple transfer arrivals; only the first can be written to NHX",
-        "4 time slice values are not representable in NHX",
-        "2 event confidence values are not representable in NHX",
+        // The sample names one gene tree and carries one unsampled species...
+        // the arrival-side values are the only ones NHX cannot carry; the
+        // singular/plural pair is asserted separately below.
+        "2 time slice values on transfer arrivals are not written to NHX",
+        "1 event confidence value on a transfer arrival is not written to NHX",
         "2 species branch lengths are not carried by the NHX species tree",
         "1 gene tree name is not written to NHX",
       ].join("\n"),
@@ -138,7 +137,7 @@ describe("recPhyloXML export", () => {
     </recPhylo>`);
     // Only NeverSampled is unsampled here, so the line must read as a singular.
     expect(nhxExportLosses(recon).join("\n")).toMatch(
-      /^1 species tree taxon is not sampled by any gene tree/m,
+      /^1 species-tree taxon is not sampled by any gene tree/m,
     );
   });
 
@@ -153,7 +152,7 @@ describe("recPhyloXML export", () => {
       </clade></phylogeny></recGeneTree>
     </recPhylo>`);
     // Both R (root) and NeverSampled carry no gene node here.
-    expect(nhxExportLosses(recon).join("\n")).toMatch(/2 species tree taxa/);
+    expect(nhxExportLosses(recon).join("\n")).toMatch(/2 species-tree taxa/);
   });
 });
 

@@ -146,7 +146,13 @@ function nodeTexts(
   g: GeneNode,
   annotations?: Record<string, { text: string; color: string }>,
 ): string[] {
-  const texts = [g.name, g.endEvent.geneName ?? "", g.speciesId ?? "", g.endEvent.type];
+  const texts = [
+    g.name,
+    g.endEvent.geneName ?? "",
+    g.speciesId ?? "",
+    g.endEvent.type,
+    currentDict().event[g.endEvent.type],
+  ];
   for (const e of g.events) {
     if (e.destinationSpecies) texts.push(e.destinationSpecies);
     if (e.type === "transferBack" && e.speciesLocation) texts.push(e.speciesLocation);

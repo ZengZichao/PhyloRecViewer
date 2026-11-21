@@ -538,7 +538,7 @@ describe("friendlyParseError", () => {
   });
   it("non-recPhylo content keeps the technical detail and lists formats", () => {
     const msg = friendlyParseError(thrown(() => parseRecPhyloXML("<notrecphylo/>")));
-    expect(msg).toMatch(/Supported: recPhyloXML/);
+    expect(msg).toMatch(/Supported formats: recPhyloXML/);
     expect(msg).toMatch(/NHX/);
   });
 });

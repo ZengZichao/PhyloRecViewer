@@ -517,13 +517,13 @@ export function Sidebar({ width }: { width?: number }) {
             })}
           </span>
         </div>
-        <Row label={t.levelHeight}>
+        <Row label={t.levelHeight} title={t.levelHeightTitle}>
           <Slider value={layoutOptions.levelHeight} min={40} max={220} onChange={(v) => setLayout({ levelHeight: v })} />
         </Row>
-        <Row label={t.geneSpacing}>
+        <Row label={t.geneSpacing} title={t.geneSpacingTitle}>
           <Slider value={layoutOptions.geneGap} min={8} max={42} onChange={(v) => setLayout({ geneGap: v })} />
         </Row>
-        <Row label={t.speciesSpacing}>
+        <Row label={t.speciesSpacing} title={t.speciesSpacingTitle}>
           <Slider value={layoutOptions.speciesGap} min={8} max={70} onChange={(v) => setLayout({ speciesGap: v })} />
         </Row>
         <Row label={t.speciesWidth}>

@@ -218,7 +218,7 @@ function SearchFilterTab() {
     { key: "speciation", label: t.event.speciation },
     { key: "duplication", label: t.event.duplication },
     { key: "loss", label: t.event.loss },
-    { key: "transfer", label: t.transferLegend },
+    { key: "transfer", label: t.transferFilter },
     { key: "leaf", label: t.event.leaf },
   ];
 
@@ -297,7 +297,7 @@ function SearchFilterTab() {
             className={`rp-chip${eventFilter[ev.key] ? " active" : ""}`}
             name={`rp-event-${ev.key}`}
             aria-pressed={eventFilter[ev.key]}
-            aria-label={t.filterEvent.replace("{name}", ev.label)}
+            aria-label={t.filterEvent}
             onClick={() => toggleEventFilter(ev.key)}
           >
             {ev.label}
@@ -652,7 +652,7 @@ function StatsTab({ onToast }: { onToast: (msg: string, kind?: "success" | "erro
         <Stat label={t.event.speciation} value={stats.total.speciation} />
         <Stat label={t.event.duplication} value={stats.total.duplication} />
         <Stat label={t.event.loss} value={stats.total.loss} />
-        <Stat label={t.transferLegend} value={stats.total.transfer} />
+        <Stat label={t.event.transferBack} value={stats.total.transfer} />
       </div>
 
       <h4 className="rp-h4">{t.eventDistribution}</h4>
@@ -767,7 +767,7 @@ function StatsTab({ onToast }: { onToast: (msg: string, kind?: "success" | "erro
             <th scope="col">{t.event.branchingOut}</th>
             <th scope="col">{t.event.bifurcationOut}</th>
             <th scope="col">{t.event.leaf}</th>
-            <th scope="col" title={t.transferLegend}>{t.arrivalsCol}</th>
+            <th scope="col">{t.arrivalsCol}</th>
           </tr>
         </thead>
         <tbody>
@@ -1145,7 +1145,7 @@ function DiffTab() {
     const parts: string[] = [];
     if (!p.agreeEvent) parts.push(t.colEvent);
     if (!p.agreeSpecies) parts.push(t.inspSpecies);
-    if (!p.agreeTransfer) parts.push(t.transferLegend);
+    if (!p.agreeTransfer) parts.push(t.transferFilter);
     // A fully agreeing row shows the same stroked tick the rest of the app
     // uses, not a font glyph from a different family.
     return parts.length > 0 ? parts.join("+") : <Icon name="check" size={12} />;
@@ -1179,7 +1179,7 @@ function DiffTab() {
   return (
     <div className="rp-section">
       <div className="rp-diff-summary">
-        <span>{pct === null ? t.notApplicable : `${pct}% ${t.agree}`}</span>
+        <span>{pct === null ? t.notApplicable : t.agreePct.replace("{p}", String(pct))}</span>
         {spct !== null && <span>{t.speciesAgreeShort.replace("{p}", String(spct))}</span>}
         <span>{t.diffMatched.replace("{n}", String(diff.compared))}</span>
         <span>{t.diffOnlyA.replace("{n}", String(diff.onlyA))}</span>

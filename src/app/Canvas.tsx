@@ -636,7 +636,7 @@ export function Canvas({
           <div className="tooltip-hint">
             <span><kbd>{t.hintClickHighlight}</kbd> {t.hintHighlightAction}</span>
             <span><kbd>{t.hintShiftAnnotate}</kbd> {t.annoTitle}</span>
-            {tip.canCollapse && <span><kbd>{t.hintAltCollapse}</kbd> {t.collapsedClade}</span>}
+            {tip.canCollapse && <span><kbd>{t.hintAltCollapse}</kbd> {t.collapseExpandAction}</span>}
           </div>
         </div>,
         document.body,

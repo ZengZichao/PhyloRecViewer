@@ -4,12 +4,12 @@
  * downstream tools (ALE, GeneRax, Ranger-DTL, Notung, ecceTERA, ...) instead of
  * only through the lossy NHX dialect.
  *
- * Everything the parser reads is written back: the species tree (with branch
- * lengths), every gene tree (with its name), all events on every node - in the
- * schema's order, transfer arrivals first - including MULTIPLE transferBack
- * arrivals per node, plus timeSlice, confidence, geneName and branch lengths.
- * Round-tripping a parsed document through this writer reproduces the same
- * model (pinned by recPhyloXmlExport.test.ts).
+ * The scientific content the viewer models is written back: the species tree
+ * (with branch lengths), every gene tree (with its name), all events on every
+ * node - in the schema's order, transfer arrivals first - including MULTIPLE
+ * transferBack arrivals per node, plus timeSlice, confidence, geneName and
+ * branch lengths. Clade-level support elements are parsed but not re-emitted,
+ * so the export is full-fidelity for events, not a byte-for-byte round trip.
  *
  * User display renames and annotations are deliberately NOT written into the
  * science names: they are view state, and writing them back would corrupt the
@@ -107,20 +107,19 @@ export function reconToRecPhyloXml(recon: Reconciliation): string {
 
 /**
  * What an NHX export of this reconciliation would LOSE, for the export-time
- * disclosure dialog: multiple arrivals per node, time slice, event confidence,
- * the species tree (and species never sampled by any gene tree), species branch
- * lengths and the gene-tree names.
+ * disclosure dialog: time slice and event confidence on transfer arrivals
+ * (terminal-event values are written), the species tree (and species never
+ * sampled by any gene tree), species branch lengths and the gene-tree names.
+ * Multiple arrivals per node are NOT lost: the writer emits TB=, TB2=, TB3=…
  */
 export function nhxExportLosses(recon: Reconciliation): string[] {
   const losses: string[] = [];
-  let multiArrivalNodes = 0;
   let timeSlices = 0;
   let confidences = 0;
   for (const tree of recon.geneTrees) {
     for (const g of tree.nodes) {
-      const arrivals = g.events.filter((e) => e.type === "transferBack").length;
-      if (arrivals > 1) multiArrivalNodes++;
       for (const e of g.events) {
+        if (e.type !== "transferBack") continue;
         if (e.timeSlice != null) timeSlices++;
         if (e.confidence != null) confidences++;
       }
@@ -136,14 +135,12 @@ export function nhxExportLosses(recon: Reconciliation): string[] {
   ).length;
   const treeNames = recon.geneTrees.filter((t) => t.name).length;
 
-  if (multiArrivalNodes > 0)
-    losses.push(`${multiArrivalNodes} ${multiArrivalNodes === 1 ? "node carries" : "nodes carry"} multiple transfer arrivals; only the first can be written to NHX`);
   if (timeSlices > 0)
-    losses.push(`${timeSlices} ${timeSlices === 1 ? "time slice value is" : "time slice values are"} not representable in NHX`);
+    losses.push(`${timeSlices} ${timeSlices === 1 ? "time slice value on a transfer arrival is" : "time slice values on transfer arrivals are"} not written to NHX`);
   if (confidences > 0)
-    losses.push(`${confidences} ${confidences === 1 ? "event confidence value is" : "event confidence values are"} not representable in NHX`);
+    losses.push(`${confidences} ${confidences === 1 ? "event confidence value on a transfer arrival is" : "event confidence values on transfer arrivals are"} not written to NHX`);
   if (unsampledSpecies.length > 0)
-    losses.push(`${unsampledSpecies.length} ${unsampledSpecies.length === 1 ? "species tree taxon is" : "species tree taxa are"} not sampled by any gene tree and would disappear from the NHX species reconstruction`);
+    losses.push(`${unsampledSpecies.length} ${unsampledSpecies.length === 1 ? "species-tree taxon is" : "species-tree taxa are"} not sampled by any gene tree and would disappear from the NHX species reconstruction`);
   if (spBranchLengths > 0)
     losses.push(`${spBranchLengths} ${spBranchLengths === 1 ? "species branch length is" : "species branch lengths are"} not carried by the NHX species tree`);
   if (treeNames > 0)

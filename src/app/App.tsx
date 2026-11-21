@@ -789,7 +789,7 @@ export function App() {
                     return (
                       <>
                         <span className="compare-pct">
-                          {pct === null ? t.notApplicable : `${pct}% ${t.agree}`}
+                          {pct === null ? t.notApplicable : t.agreePct.replace("{p}", String(pct))}
                         </span>
                         {spct !== null && (
                           <span className="compare-sub">{t.speciesAgreeShort.replace("{p}", String(spct))}</span>

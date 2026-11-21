@@ -98,9 +98,6 @@ export function checkConsistency(recon: Reconciliation): ConsistencyIssue[] {
     if (s.branchLength != null && (!Number.isFinite(s.branchLength) || s.branchLength < 0)) {
       push(issues, "negativeBranchLength", "warning", `${s.name || EMPTY}: ${s.branchLength}`);
     }
-    if (s.support != null && s.support.value > 1 && s.support.value <= 100 && s.support.type !== "bootstrap") {
-      push(issues, "confidenceScaleSuspect", "info", `${s.name || EMPTY}: ${s.support.value}`);
-    }
   }
 
   const hasTransferBack = (g: GeneNode): boolean =>
@@ -120,9 +117,6 @@ export function checkConsistency(recon: Reconciliation): ConsistencyIssue[] {
         if (ev.timeSlice != null && (!Number.isFinite(ev.timeSlice) || ev.timeSlice < 0)) {
           push(issues, "negativeBranchLength", "warning", `${label}: time slice ${ev.timeSlice}`, g.id);
         }
-      }
-      if (g.support != null && g.support.value > 1 && g.support.value <= 100 && g.support.type !== "bootstrap") {
-        push(issues, "confidenceScaleSuspect", "info", `${label}: ${g.support.value}`, g.id);
       }
 
       // Unknown species references. Reported once per distinct name per node:
@@ -145,11 +139,18 @@ export function checkConsistency(recon: Reconciliation): ConsistencyIssue[] {
       const isDonor = (n: GeneNode): boolean =>
         n.endEvent.type === "branchingOut" || n.endEvent.type === "bifurcationOut";
 
-      // A transfer donor (branching or bifurcation out) needs a transferred child.
-      if (g.endEvent.type === "branchingOut" && !g.children.some(hasTransferBack)) {
+      // recPhyloXML allows the returning lineage to branch (bifurcationOut)
+      // before it transfers back, so an arrival can sit anywhere in the
+      // departing subtree - not necessarily on a direct child.
+      const subtreeHasTransferBack = (n: GeneNode): boolean =>
+        n.children.some((c) => hasTransferBack(c) || subtreeHasTransferBack(c));
+
+      // A transfer departure (branching or bifurcation out) needs at least one
+      // returning arrival somewhere below it.
+      if (g.endEvent.type === "branchingOut" && !subtreeHasTransferBack(g)) {
         push(issues, "donorNoTransferBack", "warning", label, g.id);
       }
-      if (g.endEvent.type === "bifurcationOut" && !g.children.some(hasTransferBack)) {
+      if (g.endEvent.type === "bifurcationOut" && !subtreeHasTransferBack(g)) {
         push(issues, "bifurcationNoTransferBack", "warning", label, g.id);
       }
 

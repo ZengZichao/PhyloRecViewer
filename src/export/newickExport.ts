@@ -6,7 +6,7 @@
  * Dialect (read back by parser/nhx.ts). This is a superset of classic NHX; a
  * reader that only understands S/D will still open the tree but will treat
  * transfers and losses as ordinary tips, so this dialect is NOT a universal
- * exchange format. recPhyloXML is the app's lossless export - the export menu
+ * exchange format. recPhyloXML is the app's full-fidelity export - the export menu
  * offers it first, and the NHX item discloses what a given document would lose.
  *   S=<species>          species
  *   D=Y|N                duplication

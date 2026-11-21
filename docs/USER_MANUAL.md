@@ -45,10 +45,10 @@
 7. [Right Analysis Panel](#7-right-analysis-panel)
    - 7.1 Search
    - 7.2 Statistics
-   - 7.3 Network
-   - 7.4 Checks
+   - 7.3 Transfer network
+   - 7.4 Data checks
    - 7.5 Annotations
-   - 7.6 Diff (compare mode)
+   - 7.6 Differences (compare mode)
 8. [Legend](#8-legend)
 9. [Exporting](#9-exporting)
 10. [Session Save & Load](#10-session-save--load)
@@ -76,10 +76,10 @@ PhyloRecViewer is an **interactive gene–species reconciliation viewer** for ev
 - Comparison view for two reconciliations — panes are split stacked by default with a side-by-side toggle; disagreeing nodes are highlighted automatically (event type, species mapping and transfer donor/recipient are compared)
 - Rich, real-time layout & style parameters (4 orientations, compact layout, branch lengths, …)
 - Node search (regex supported), event-type filtering, gene-family filtering, confidence-range filtering
-- Statistics (with CSV export), transfer-network diagram, sixteen structural data checks (every check is listed in [Section 7.4](#74-checks))
+- Statistics (with CSV export), transfer-network diagram, sixteen structural data checks (every check is listed in [Section 7.4](#74-data-checks))
 - Batch label renaming and per-node annotations (with a dedicated annotations mode)
 - Undo / redo (100 steps), session save/load, multiple document tabs
-- One-click export to PNG (Screen 2× / 300 / 600 / 1200 / 2400 / 4800 DPI or custom) / SVG / PDF / interactive HTML / NHX; the headless CLI additionally exports a lossless recPhyloXML round-trip (see [Section 9.2](#92-data))
+- One-click export to PNG (2× screen size / 300 / 600 / 1200 / 2400 / 4800 DPI or custom) / SVG / PDF / interactive HTML / NHX; the headless CLI additionally exports a full recPhyloXML export (see [Section 9.2](#92-data))
 - Bilingual UI (中文 / English) with light / dark / system themes
 - Three bundled samples: Showcase reconciliation, nested gene/symbiont/host view, comparison demo (see [Section 4.5](#45-loading-bundled-samples))
 
@@ -88,9 +88,9 @@ PhyloRecViewer is an **interactive gene–species reconciliation viewer** for ev
 1. **Launch**: the app opens on an empty-state hub — **Open file**, **Load sample** (one of the three bundled samples), drag files into the window, or click **Shortcuts & help** to get oriented first.
 2. **Open your data**: **File → Open file** (or `⌘O` / `Ctrl+O`) and pick a supported file — `.recphyloxml` / `.recphylo` / `.xml` holding **recPhyloXML content**, or `.nhx` / `.nwk` / `.newick` gene trees (see [Section 4.1](#41-opening-files)) — or simply drag files into the window.
 3. **Navigate**: scroll to zoom, drag empty space to pan, press `F` to fit to window.
-4. **Interact**: click a gene node to highlight its lineage and open the Inspector; `Shift`-click to annotate; `Alt`/`⌥`- or `⌘`-click an internal gene node to collapse / expand it; click a species branch to mirror it.
+4. **Interact**: click a gene node to highlight its lineage and open the Node details card; `Shift`-click to annotate; `Alt`/`⌥`- or `⌘`-click an internal gene node to collapse / expand it; click a species branch to mirror it.
 5. **Analyse**: click the **◧** button (top-left of the canvas) to open the right analysis panel — search & filter, statistics, transfer network, data checks (see [Section 7](#7-right-analysis-panel)).
-6. **Export**: the **Export** menu offers publication-grade PNG / SVG / PDF / HTML, plus the **NHX (extended dialect)…** data export (NHX is Newick carrying `[&&NHX]` event annotations; there is no separate Newick item in the menu); the headless CLI (`npm run cli`) additionally writes a lossless recPhyloXML round-trip (see [Section 9.2](#92-data)).
+6. **Export**: the **Export** menu offers publication-grade PNG / SVG / PDF / HTML, plus the **NHX (extended dialect)…** data export (NHX is Newick carrying `[&&NHX]` event annotations; there is no separate Newick item in the menu); the headless CLI (`npm run cli`) additionally writes a full recPhyloXML export (see [Section 9.2](#92-data)).
 
 > The shortcuts card under **Help** (press `?`) is always available.
 
@@ -159,18 +159,18 @@ Top to bottom, left to right:
 │ Controls           │ │ Top-left: floating toolbar (zoom / fit / undo /  │ │ Analysis          │
 │  Layout actions    │ │          annotate / analysis toggle)             │ │  Search           │
 │  Layout parameters │ │ Center: species tubes + gene skeleton + transfer │ │  Statistics       │
-│  Style             │ │         arcs + labels + annotations              │ │  Network          │
-│  Labels            │ │ Bottom-left: legend · top-right: minimap         │ │  Checks           │
+│  Style             │ │         arcs + labels + annotations              │ │  Transfer network │
+│  Labels            │ │ Bottom-left: legend · top-right: minimap         │ │  Data checks      │
 │                    │ │                                                  │ │  Annotations      │
 │                    │ │                                                  │ │  (Diff)           │
 └────────────────────┘ └──────────────────────────────────────────────────┘ └───────────────────┘
 ```
 
-- **Menu bar**: four dropdown menus — File, Export, View, Help — plus a **Preferences** button to the right of View (see [Section 12](#12-menu-bar-reference)). When parsing produces warnings, a warnings badge appears; click it to open the Checks panel with the full list.
+- **Menu bar**: four dropdown menus — File, Export, View, Help — plus a **Preferences** button to the right of View (see [Section 12](#12-menu-bar-reference)). When parsing produces warnings, a warnings badge appears; click it to open the Data checks panel with the full list.
 - **Tab bar**: multiple document tabs — new, switch, close (see 4.8).
 - **Left panel (Controls)**: four collapsible sections — Layout actions, Layout parameters, Style, Labels — separated by hairlines rather than boxed cards (see [Section 6](#6-left-controls-panel)).
 - **Main canvas**: the visualization area. Floating toolbar top-left (zoom, fit, undo/redo, annotation mode, analysis toggle); legend bottom-left; minimap top-right (see [Section 5](#5-canvas-navigation--interaction)).
-- **Right panel (Analysis)**: five fixed tabs (Search, Statistics, Network, Checks, Annotations); a sixth **Diff** tab appears in compare mode (see [Section 7](#7-right-analysis-panel)).
+- **Right panel (Analysis)**: five fixed tabs (Search, Statistics, Transfer network, Data checks, Annotations); a sixth **Differences** tab appears in compare mode (see [Section 7](#7-right-analysis-panel)).
 
 > Both side panels are resizable by dragging their dividers; the chevron buttons at the top of each panel collapse and re-expand them. Nothing is shown until a document is loaded: the empty screen is a single centred start panel with Open file, Shortcuts & help and the sample files, and both side panels appear with the first document. The narrow-window policy runs at launch and again whenever the window shrinks: below 1180 px the analysis panel collapses, below 920 px the left panel follows (both can be reopened manually, and they stay open until the window crosses the threshold again).
 
@@ -216,7 +216,7 @@ The desktop build registers file associations for `.recphyloxml` / `.recphylo` (
 | Sample | Description |
 |--------|-------------|
 | **Showcase** | General sample: speciation / duplication / loss / transfer |
-| **Comparison** | Two inferences of the same family (auto-enters compare view) |
+| **Comparison** | Two inferences of the same gene family (auto-enters compare view) |
 | **Nested** | Gene / symbiont / host, three levels (auto-enters nested view) |
 
 The empty-state hub shows the same set of buttons. Loading a sample marks the tab as a sample; opening a real file clears the marker. The parse-error panel also offers a **Load sample** shortcut.
@@ -234,14 +234,14 @@ Once loaded the menu item becomes **"Nested: <filename>"** with a close icon (a 
 
 ### 4.7 Compare view
 
-**File → + Compare** loads an alternative reconciliation of the same family (e.g. from another tool or parameter set), entering compare view:
+**File → + Compare** loads an alternative reconciliation of the same gene family (e.g. from another tool or parameter set), entering compare view:
 
 - Two canvases, titled by file name (A / B). Panes start in the **Split stacked** arrangement; the two-segment arrangement control in the app bar (left of the menus) switches to **Side by side**, and the choice is remembered.
-- Gene nodes that **disagree** between the two are highlighted automatically. Comparison covers **three dimensions** — terminal event type, species mapping, and transfer donor/recipient — so a result that only moves a gene to another species no longer scores 100% agreement. The status bar gains a "Nodes differing between files" chip.
-- The **status bar** under the panes shows the breakdown: the agreement percentage (nodes agreeing on **all** dimensions, divided by the union of comparable nodes), the species-mapping agreement among matched nodes, and the counts of matched / only-in-A / only-in-B nodes — e.g. `71% in agreement · 80% species match · 7 matched · 1 only in A · 0 only in B`.
+- Gene nodes that **disagree** between the two are highlighted automatically. Comparison covers **three dimensions** — terminal event type, species mapping, and transfer donor/recipient — so a result that only moves a gene to another species no longer scores 100% agreement. The status bar gains a "Nodes differing between documents" chip.
+- The **status bar** under the panes shows the breakdown: the agreement percentage (nodes agreeing on **all** dimensions, divided by the union of comparable nodes), the species-mapping agreement among matched nodes, and the counts of matched / only-in-A / only-in-B nodes — e.g. `71% node agreement · 80% species-mapping agreement · 7 nodes compared · 0 only in the primary document · 0 only in the comparison document`.
 - The **Link views** checkbox keeps the two panes' zoom/pan in sync; when unchecked each pane can be navigated independently.
-- The compare pane keeps its **own** mirror, collapse and family-color state, independent of the primary document — and the session file stores it too (see [Section 10](#10-session-save--load)).
-- The eye button in the status bar hides or restores the diff highlighting; the right panel gains a **Diff** tab (see 7.6).
+- The compare pane keeps its **own** mirror, collapse and gene-family color state, independent of the primary document — and the session file stores it too (see [Section 10](#10-session-save--load)).
+- The eye button in the status bar hides or restores the diff highlighting; the right panel gains a **Differences** tab (see 7.6).
 
 Once loaded the menu item becomes **"Compare: <filename>"** with a close icon (a name longer than 20 characters is elided to the first 18 plus `…`); click it to remove the comparison.
 
@@ -303,14 +303,14 @@ Toggle **Layout parameters → Minimap** in the left panel to show the overview 
 | Action | Effect |
 |--------|--------|
 | **Hover** | Tooltip: gene name / event type @ species |
-| **Click** | Highlight the node's **lineage** (ancestor → descendant path) **and open the Inspector** (see below); other nodes dim. Click empty space to clear |
+| **Click** | Highlight the node's **lineage** (ancestor → descendant path) **and open the Node details card** (see below); other nodes dim. Click empty space to clear |
 | **`Shift` + click** | Open the **annotation editor** (see 5.8) |
 | **`Alt` / `⌥` or `⌘` + click internal node** | Collapse / expand that subtree (see 5.7) |
 | **Click empty space** | Clear the lineage highlight, returning to the search/filter dim state |
 
 Highlight priority: manual click lineage > search/filter dimming.
 
-**Inspector**: a plain click (on a gene node or on a transfer arc) opens a dockable card with the scientific detail of that node — species, family, transfer donor/recipient, time slice, event confidence or clade support, branch length, parent/children counts and the user annotation — plus **Locate**, **Annotate** and **Copy details** actions. Node tooltips and transfer-arc tooltips (donor → recipient, time slice, confidence) stay available for a quick read without clicking.
+**Node details**: a plain click (on a gene node or on a transfer arc) opens a dockable card with the scientific detail of that node — species, gene family, transfer donor/recipient, time slice, event confidence or clade support, branch length, parent/children counts and the user annotation — plus **Locate**, **Annotate** and **Copy details** actions. Node tooltips and transfer-arc tooltips (donor → recipient, time slice, confidence) stay available for a quick read without clicking.
 
 ### 5.6 Species-branch interaction (mirroring)
 
@@ -359,35 +359,35 @@ The left panel is titled **Controls** and contains four collapsible sections (op
 | **Show legend** | on/off | Show the legend on the canvas and include it in exported images |
 | **Minimap** | on/off | Show / hide the top-right minimap |
 | **Orientation** | Root top / bottom / left / right | Four-way radio buttons |
-| **Level height** | 40–220 | Distance between adjacent species layers |
-| **Gene spacing** | 8–42 | Horizontal gap between adjacent gene trees |
-| **Species spacing** | 8–70 | Gap between adjacent species leaf nodes |
+| **Species level spacing** | 40–220 | Distance between adjacent species levels |
+| **Gene lane spacing** | 8–42 | Horizontal gap between gene lanes inside a species band |
+| **Species slot spacing** | 8–70 | Gap between adjacent species leaf slots |
 | **Species branch thickness** | 12–80 | Thickness of the species tubes |
-| **Gene tree thickness** | 1–5 (step 0.2) | Thickness of the gene skeleton lines |
-| **Align tips** | on/off | Snap extant species tips to a common baseline (ultrametric look). Warning: with **Branch lengths** on, this flattens the tips' length-derived positions — switch it off to read true time proportions |
+| **Gene branch thickness** | 1–5 (step 0.2) | Thickness of the gene skeleton lines |
+| **Align species tips** | on/off | Snap extant species tips to a common baseline (ultrametric look). Warning: with **Branch lengths** on, this flattens the tips' length-derived positions — switch it off to read true time proportions |
 | **Branch lengths** | on/off | Lay out the **species tree** by branch length (vs. uniform depth); gene trees are unaffected. Missing lengths contribute 0 and negative lengths are clamped to 0 for drawing (both are reported by the data checks) |
 | **Compact layout** | on/off | Pack sibling subtrees closer (contour packing) instead of fixed-width leaf slots |
-| **Center duplications** | on/off | Place duplication nodes at the **midpoint** of their species branch (otherwise nearer the ancestor) |
+| **Center gene-duplication nodes** | on/off | Place duplication nodes at the **midpoint** of their species branch (otherwise nearer the ancestor) |
 
 ### 6.3 Style
 
 | Parameter | Range | Description |
 |-----------|-------|-------------|
 | **Curved branches** | on/off | Rounded curves vs. elbow bends for species branches |
-| **Symbol size** | 4–16 | Event glyph size |
-| **Transfer curve** | 0–0.5 (step 0.02) | Bow (curvature) of transfer arcs |
-| **Halo under genes** | on/off | Light outline behind gene lines for contrast against species tubes |
-| **Event glyphs** | on/off | Show event glyphs (duplication square, loss cross, …) |
-| **Support values** | on/off | Show event confidence **and** clade / node support values beside nodes (the terminal event's confidence first, otherwise the clade support; species clade names carry bootstrap / posterior values too). Values also appear in node tooltips and the Inspector |
-| **Tube gradient** | on/off | Fill species tubes with a gradient |
-| **Heatmap of overlapping copies** | on/off | Color species tubes by the number of gene lanes laid out inside them (the layout engine's concurrent lanes). This is a layout quantity, not a gene copy number: the per-species gene count excluding losses is listed separately in the statistics panel as **Non-loss lineages** |
+| **Event symbol size** | 4–16 | Event glyph size |
+| **Transfer arc curvature** | 0–0.5 (step 0.02) | Bow (curvature) of transfer arcs |
+| **Halo behind gene edges** | on/off | Light outline behind gene lines for contrast against species tubes |
+| **Event markers** | on/off | Show event markers (duplication square, loss cross, …) |
+| **Confidence and support values** | on/off | Show event confidence **and** clade / node support values beside nodes (the terminal event's confidence first, otherwise the clade support; species clade names carry bootstrap / posterior values too). Values also appear in node tooltips and the Node details card |
+| **Species branch gradient** | on/off | Fill species tubes with a gradient |
+| **Gene-lane occupancy heatmap** | on/off | Color species tubes by the number of gene lanes laid out inside them (the layout engine's concurrent lanes). This is a layout quantity, not a gene copy number: the per-species gene count excluding losses is listed separately in the statistics panel as **Non-loss gene nodes** |
 
 ### 6.4 Labels & batch rename
 
 Three label classes, each independently toggled and styled:
 
 - **Species names**
-- **Gene tip names**
+- **Extant gene names**
 - **Internal gene node names**
 
 Per-class style controls: **Angle** (−90°–90°, step 5°), **Size** (6–28), **Bold**, **Italic**, **Offset** (−40–140), **Align** (Auto / Left / Center / Right).
@@ -406,7 +406,7 @@ At the bottom of the section:
 
 Click the floating-toolbar **◧** button to open/close the panel (after closing it with `Esc`, `⌘F` jumps straight to the search tab). The panel has five fixed tabs plus a sixth in compare mode:
 
-**Search / Statistics / Network / Checks / Annotations / (Diff)**
+**Search / Statistics / Transfer network / Data checks / Annotations / (Differences)**
 
 > Keyboard: move between tabs with `←` / `→`, `Home` / `End`.
 
@@ -414,7 +414,7 @@ Click the floating-toolbar **◧** button to open/close the panel (after closing
 
 - **Search box**: type a gene or species name; tick **Regex** for regular-expression search.
 - `Enter` jumps to the next match, `Shift + Enter` to the previous; **Next / Previous** buttons do the same and **centre** the main canvas on each match. The count shows e.g. `12 matches`; "No matches" when none.
-- **By event type**: tick Speciation / Duplication / Loss / Transfer / Extant gene to show only those event types.
+- **By event type**: tick Speciation / Duplication / Loss / Transfers / Extant gene to show only those event types.
 - **By gene family**: with multiple gene trees, each family has a color swatch; tick to toggle visibility.
 - **Confidence range**: two sliders bound Confidence (0–1) to filter low-confidence nodes.
 - **Show only matches**: when on, only matching nodes render (by default non-matching nodes dim to opacity 0.12).
@@ -422,15 +422,15 @@ Click the floating-toolbar **◧** button to open/close the panel (after closing
 
 ### 7.2 Statistics
 
-- **Summary**: eight counts in one two-column grid — Nodes, Tip node, Internal node, Gene trees, and one per event type (Speciation, Duplication, Loss, Transfer). Transfer arrivals are overlay events: they stay out of the composition chart but are still counted here. **Export CSV** sits on the heading line of this block (see the end of this section).
+- **Summary**: eight counts in one two-column grid — Nodes, Extant gene, Internal node, Gene trees, and one per event type (Speciation, Duplication, Loss, Transfer). Transfer arrivals are overlay events: they stay out of the composition chart but are still counted here. **Export CSV** sits on the heading line of this block (see the end of this section).
 - **Event distribution**: proportional view of speciation / duplication / loss / transfer donor / bifurcation donor / extant gene.
 - **By gene family** (multiple families): per-family event-count table.
 - **Transfer matrix**: donor → recipient transfer counts (top 25 rows; Donor / Recipient / Count columns).
-- **By species (top 25)**: per-species table of **Non-loss lineages** (gene lineages carried, excluding losses), speciation, duplication, loss, transfer donor, bifurcation donor and extant-gene counts (top 25 species). Transfers into each species are counted in their own **Incoming transfers** column, reported separately from these donor-side events — in the CSV export that column keeps the machine-readable name `transfer_arrivals` (see below).
-- **Nodes**: full node detail table (#, Name, Type, Event, Species, plus Gene tree when several gene trees are loaded). Nodes are classified **Tip node / Loss / Internal node** — losses are no longer folded into "Internal node" — and are listed extant genes first, then losses, then internal events. The table is capped at 500 rows; when truncated it shows a "Top X of Y · Table truncated (first 500 rows)" note.
+- **By species (top 25)**: per-species table of **Non-loss gene nodes** (gene nodes assigned to the species, excluding losses), speciation, duplication, loss, branching-out, bifurcation-out and extant-gene counts (top 25 species). Transfers into each species are counted in their own **Transfer arrivals** column, reported separately from these donor-side events — in the CSV export that column keeps the machine-readable name `transfer_arrivals` (see below).
+- **Nodes**: full node detail table (#, Name, Type, Event, Species, plus Gene tree when several gene trees are loaded). Nodes are classified **Extant gene / Gene loss / Internal node** — losses are no longer folded into "Internal node" — and are listed extant genes first, then losses, then internal events. The table is capped at 500 rows; when truncated it shows a "Top X of Y · Table truncated (first 500 rows)" note.
 - **Export CSV**: writes the statistics to `<filename>-stats.csv` with **stable English column names** and a **UTF-8 BOM** (so Windows Excel opens species names correctly), plus a provenance header (source file, app version, timestamp). Sections: `families`, `transfer_matrix`, `species` — including a `transfer_arrivals` column and an extra row whose species column is the literal `NA` whenever nodes without a species assignment exist (the on-screen table labels that same row `(no species)`) — and `nodes`, which adds `donors`, `recipients`, `time_slice`, `confidence` and `branch_length` columns. The CSV is never truncated.
 
-### 7.3 Network
+### 7.3 Transfer network
 
 A **circular graph** of donor → recipient transfers:
 
@@ -439,40 +439,40 @@ A **circular graph** of donor → recipient transfers:
 - Self-transfers (donor = recipient) render as small rings.
 - Shows "No transfers" when there are none.
 
-### 7.4 Checks
+### 7.4 Data checks
 
-Sixteen structural checks run on the loaded data. The panel opens with the verdict and **Export quality report**, then lists only the checks that failed — each with its count, the problem and a one-click jump to the first flagged node — and closes with a compact **Passing** list, so a single anomaly never drowns in fifteen passes. The table below is the complete catalogue:
+Sixteen structural checks run on the loaded data. The panel opens with the verdict and **Export data-check report**, then lists only the checks that failed — each with its count, the problem and a one-click jump to the first flagged node — and closes with a compact **Passing** list, so a single anomaly never drowns in fifteen passes. The table below is the complete catalogue:
 
 | Check (name) | Problem found |
 |--------------|---------------|
-| Species references resolve | A gene references a species absent from the species tree |
-| Species names are unique | The species tree contains duplicate species names |
-| Every gene has a species | A gene node has no species assigned |
-| Extant genes on leaf species | An extant gene sits on an internal (non-leaf) species |
-| Transfer donors are paired | A transfer donor lacks a transfer-arrival child |
-| Transfer arrivals have a donor | A transfer arrival has no parent lineage at all |
-| Transfer arrivals sit under a donor | A transfer arrival's parent is not a transfer or bifurcation donor |
-| Bifurcation donors are paired | A bifurcation donor lacks a transfer-arrival child |
-| Loss / extant events are leaves | A `loss`/`leaf` (terminal) node has children |
-| Speciation / duplication are binary | A speciation/duplication node is not 2-way |
-| Transfers move forward in time | A transfer arrives into an ancestor species (time-travelling) — flagged as an error; when time slices are present on both sides they are compared directly |
-| Same-species transfer | A transfer arrives in the species it left — possible gene flow within one lineage; reported separately because it is a model question, not a time-direction error |
-| Transfer time not assessable | No time slice on the donor or the arrival and the species are unrelated, so the time direction cannot be judged (topology depth is not time) — the check reports "Transfer time not assessable" instead of silently passing |
-| Confidence may use a 0–100 scale | A confidence / support value is above 1 and at most 100 — probably a percentage, while the confidence filter expects 0–1 |
-| Negative / invalid branch length | A branch length is negative or not finite; it is clamped to 0 for drawing |
-| Vertical edge between unrelated clades | A non-transfer gene edge jumps between unrelated species — impossible without a transfer; check the species recorded on each event |
+| Species references | A gene node references a species absent from the species tree |
+| Species name uniqueness | The species tree contains duplicate species names |
+| Species assignment | A gene node has no species assigned |
+| Extant genes at species-tree tips | An extant gene sits at an internal species-tree node |
+| Branching-out arrivals | A branching-out node has no transfer arrival in its departing subtree |
+| Transfer arrival parent | A transfer arrival has no parent node |
+| Transfer arrival donor | A transfer arrival's parent is not a branching-out or bifurcation-out node |
+| Bifurcation-out arrivals | A bifurcation-out node has no transfer arrival in its subtree |
+| Terminal events | A loss or extant-gene event has child nodes |
+| Speciation / duplication node arity | A speciation/duplication node does not have exactly two children |
+| Transfer time direction | A transfer arrives into an ancestor species (backwards in time) — flagged as an error; when time slices are present on both sides they are compared directly |
+| Same-species transfer | A transfer arrives in the same species it left — possible within-species gene transfer; reported separately because it is a model question, not a time-direction error |
+| Transfer direction | No time slice on the donor event or the arrival event and the two species are not in an ancestor–descendant relation, so the time direction cannot be determined (topology depth is not time) |
+| Event confidence range | An event confidence value is above 1 and at most 100, while the confidence filter expects 0–1 |
+| Negative / non-finite values | A branch length or time slice is negative or not finite; it is clamped to 0 for drawing |
+| Gene edge between unrelated species | A non-transfer gene edge connects two species that are not in an ancestor–descendant relation — impossible without a transfer; check the species recorded on each event |
 
-When everything passes the panel reports **"All data checks passed"** at the top; otherwise it reads "N of M checks flagged" and lists the failures first.
+When everything passes the panel reports **"All data checks passed"** at the top; otherwise it reads "N of M checks raised an issue" and lists the failures first.
 
 ### 7.5 Annotations
 
 Central management for the current document's annotations: each entry lists its node and text, with jump / edit / remove actions. When empty: "No annotations yet. Shift-click a gene node (or use annotation mode) to add one."
 
-### 7.6 Diff (compare mode)
+### 7.6 Differences (compare mode)
 
 Only visible in compare view (4.7):
 
-- Lists the **nodes that differ between the two files** — on any compared dimension (event type, species mapping, or transfer donor/recipient) or present in only one file — as one clickable table whose event and species columns come in **A / B** pairs; clicking a row locates the node on the primary canvas.
+- Lists the **nodes that differ between the two files** — on any compared dimension (event type, species mapping, or transfer donor/recipient) or present in only one file — as one clickable table whose event and species columns come in **Primary / Comparison** pairs; clicking a row locates the node on the primary canvas.
 - The compare **status bar** (4.7) carries the headline numbers: agreement %, species-mapping agreement %, and the matched / only-in-A / only-in-B counts; the eye button there hides or restores the diff highlighting.
 - Read together with the status bar's "Nodes differing between files" chip.
 
@@ -482,21 +482,21 @@ Only visible in compare view (4.7):
 
 The legend overlays the bottom-left of the canvas (toggle **Layout parameters → Show legend**) and is included in exported images:
 
-**Evolutionary events** (glyph — event):
+**Events and symbols** (glyph — item):
 
 | Glyph | Event |
 |-------|-------|
-| Filled dot (family color) | Speciation |
+| Filled dot (gene-family color) | Speciation |
 | Filled square | Duplication |
 | Cross ✕ | Loss |
 | Dashed arc arrow (donor → recipient) | Transfer |
 | Short arrowhead plus dot | Transfer arrival |
-| Filled diamond ◆ | Bifurcation donor |
-| Open ring | Transfer donor |
+| Filled diamond ◆ | Bifurcation out |
+| Open ring | Branching out |
 | Filled wedge | Collapsed clade |
-| Filled dot (family color) | Extant gene |
+| Filled dot (gene-family color) | Extant gene |
 
-The on-screen legend carries one extra row, `Located node` — the ring left behind by a search hit or a data-check locate; it is drawn only on the interactive canvas and not in exported images.
+The on-screen legend carries one extra row, `Located node marker` — the ring left behind by a search hit or a data-check locate; it is drawn only on the interactive canvas and not in exported images.
 
 **Gene families**: one color swatch + name per gene tree. Each swatch is a color picker — click to **change that family's color** (undoable).
 
@@ -512,7 +512,7 @@ The **Export** menu (disabled while empty; `⌘E` / `Ctrl+E` exports PNG directl
 
 | Format | Notes |
 |--------|-------|
-| **PNG** | Raster; resolution selectable in the menu: **Screen 2× (192 DPI) / 300 / 600 / 1200 / 2400 / 4800 DPI**, good for slides and documents. Oversized drawings are clamped to whichever platform canvas limit bites first — 16,384 px on the longest edge **and** 16,384²/4 ≈ 6.7×10⁷ px in total (for a near-square drawing the area limit binds first, at roughly 8,192 px per side). A toast reports the effective DPI actually used |
+| **PNG** | Raster; resolution selectable in the menu: **2× screen size (192 DPI) / 300 / 600 / 1200 / 2400 / 4800 DPI**, good for slides and documents. Oversized drawings are clamped to whichever platform canvas limit bites first — 16,384 px on the longest edge **and** 16,384²/4 ≈ 6.7×10⁷ px in total (for a near-square drawing the area limit binds first, at roughly 8,192 px per side). A toast reports the effective DPI actually used |
 | **SVG** | Vector, infinitely scalable; good for further editing |
 | **PDF** | Vector page; good for paper figures |
 | **HTML** | Interactive HTML (keeps zoom / pan / tooltips); shareable offline |
@@ -523,8 +523,8 @@ The **Export** menu (disabled while empty; `⌘E` / `Ctrl+E` exports PNG directl
 
 ### 9.2 Data
 
-- **NHX (extended dialect)…**: this item in the Export menu's Data section writes the current reconciliation as NHX-annotated gene trees (NHX is Newick carrying `[&&NHX]` event annotations — the menu has no separate Newick item), saved as `<filename>.nhx`. NHX is an **extended dialect** of this app, not a universal exchange format: the export writes **all transfer arrivals** (`TB=`, further arrivals on the same node as `TB2=`, `TB3=` and so on, with no upper limit), `timeSlice` (`TS=`), event confidence (`CN=`), node support (`B=`), and the branch length both as the standard Newick `:length` and a redundant `BL=` tag; where a node has no species of its own, its `S=` tag is taken from the nearest ancestor that has one. It still loses the **species tree itself** (NHX rebuilds it from `S=` tags), **species branch lengths**, **gene-tree names**, and **species never sampled by any gene tree**.
-- **recPhyloXML (lossless round-trip)**: the headless CLI writes the reconciliation back as recPhyloXML with the species tree (including branch lengths), every event, multiple `transferBack` arrivals, `timeSlice` and confidence intact (`npm run cli -- export --session <file>.rpvsession.json --out <file>.recphyloxml`; the CLI also exports SVG / HTML / NHX and writes stats / checks reports — see [Section 18](#18-known-limitations) for what it does not export).
+- **NHX (extended dialect)…**: this item in the Export menu's Data section writes the current reconciliation as NHX-annotated gene trees (NHX is Newick carrying `[&&NHX]` event annotations — the menu has no separate Newick item), saved as `<filename>.nhx`. NHX is an **extended event format** of this app, not a universal exchange format: the export writes **all transfer arrivals** (`TB=`, further arrivals on the same node as `TB2=`, `TB3=` and so on, with no upper limit), `timeSlice` (`TS=`), event confidence (`CN=`), node support (`B=`), and the branch length both as the standard Newick `:length` and a redundant `BL=` tag; where a node has no species of its own, its `S=` tag is taken from the nearest ancestor that has one. It still loses the **species tree itself** (NHX rebuilds it from `S=` tags), **species branch lengths**, **gene-tree names**, and **species never sampled by any gene tree**.
+- **recPhyloXML (full export, re-readable)**: the headless CLI writes the reconciliation back as recPhyloXML with the species tree (including branch lengths), every event, multiple `transferBack` arrivals, `timeSlice` and confidence intact (`npm run cli -- export --session <file>.rpvsession.json --out <file>.recphyloxml`; the CLI also exports SVG / HTML / NHX and writes stats / checks reports — see [Section 18](#18-known-limitations) for what it does not export).
 
 > Desktop builds use the native save dialog; the browser build downloads to the default downloads folder.
 
@@ -581,18 +581,18 @@ Undoable actions: species mirroring, collapse/expand, gene-family color changes,
 | | + Compare / Compare: <filename> | Add / remove the comparison |
 | **Export** | Export PNG / Export SVG / Export PDF / Export HTML | The menu's **Export image** section |
 | | Copy SVG / Copy PNG | Copy the current figure to the clipboard |
-| | recPhyloXML (lossless round-trip) | Native export: species tree, branch lengths, all events (incl. multiple arrivals), time slice, confidence |
+| | recPhyloXML (full export, re-readable) | Native export: species tree, branch lengths, all events (incl. multiple arrivals), time slice, confidence |
 | | NHX (extended dialect)… | Shows the "This NHX file will not include:" list first; switch to recPhyloXML or choose "Export NHX anyway" |
-| | PNG resolution (DPI) | Screen 2× (192 DPI) / 300 / 600 / 1200 / 2400 / 4800, plus a custom DPI field with an output pixel estimate |
+| | PNG output density (DPI) | 2× screen size (192 DPI) / 300 / 600 / 1200 / 2400 / 4800, plus a custom DPI field with an output pixel estimate |
 | | Background | Theme background / White background / Transparent background |
 | **View** | Language: 中文 / English | Switch UI language |
 | | Theme: Light theme / Dark theme / System theme | Three theme modes |
 | **Preferences** (menu-bar button) | Preferences | Open the preferences dialog — it sits to the right of View, it is not an item inside View |
 | **Help** | Shortcuts & help `?` | Open the shortcuts & interactions card |
-| | Tutorial | Replay the five-step onboarding tour |
+| | Tour | Replay the five-step onboarding tour |
 | | About PhyloRecViewer | Shows the version, license and citation, and copies the diagnostics text to the clipboard |
 
-The menu bar also shows a **warnings badge** (e.g. `3 warnings`) — it is a button, and clicking it opens the Checks panel with the full list. The empty area of the menu bar drags the window (desktop build).
+The menu bar also shows a **warnings badge** (e.g. `3 warnings`) — it is a button, and clicking it opens the Data checks panel with the full list. The empty area of the menu bar drags the window (desktop build).
 
 ---
 
@@ -602,8 +602,8 @@ The **Preferences** button in the menu bar opens the preferences dialog:
 
 - **Theme**: Light theme / Dark theme / **System theme** (follows the OS dark/light setting live). Default: system theme.
 - **Language**: 中文 / English. Default: **English**, unless the operating-system locale starts with `zh` (in which case Chinese); switching applies instantly; data (gene and species names) is never translated.
-- **PNG resolution (DPI)**: the six fixed choices Screen 2× (192 DPI) / 300 / 600 / 1200 / 2400 / 4800, linked with the Export menu; this dialog has no custom choice — a custom DPI is offered only in the Export menu's numeric field.
-- **Tutorial**: replay the five-step onboarding tour.
+- **PNG output density (DPI)**: the six fixed choices 2× screen size (192 DPI) / 300 / 600 / 1200 / 2400 / 4800, linked with the Export menu; this dialog has no custom choice — a custom DPI is offered only in the Export menu's numeric field.
+- **Tour**: replay the five-step onboarding tour.
 - **Default view**: **Set as default view** — store the current layout / style as the initial state for every new document; **Clear default view** restores the built-in defaults.
 - **Reset preferences**: factory reset (theme = system, PNG DPI = 300, default layout / style; the UI language is kept unchanged) and clears the default view.
 
@@ -696,12 +696,12 @@ The format is auto-detected; no manual selection needed:
 - Use **Reduce crossings** in the left panel (also optimises the nested canvas).
 - Manually **click species branches** to mirror them one by one.
 - Enable **Compact layout** for tighter packing.
-- Increase **Transfer curve** to make arc endpoints easier to trace.
+- Increase **Transfer arc curvature** to make arc endpoints easier to trace.
 
 ### Q4 Exported image is blurry / too low resolution
 
 - For publication figures prefer vector formats (**SVG / PDF**).
-- For **PNG**, pick 300 / 600 / 1200 / 2400 / 4800 DPI in **Export menu → PNG resolution (DPI)** or in **Preferences**; a custom DPI is offered only in the Export menu's numeric field, never in **Preferences**.
+- For **PNG**, pick 300 / 600 / 1200 / 2400 / 4800 DPI in **Export menu → PNG output density (DPI)** or in **Preferences**; a custom DPI is offered only in the Export menu's numeric field, never in **Preferences**.
 
 ### Q5 Session file won't open
 
@@ -736,7 +736,7 @@ Closing a tab with unsaved annotations / mirroring / colors asks for confirmatio
 - **Zoom / pan camera is not saved**: neither sessions nor the autosave store each canvas's zoom/pan state; restored views re-fit to the content.
 - **PDF font embedding depends on the environment**: the PDF is vector, with text embedded using the fonts available to the converter; the full-page raster fallback kicks in only when the converter errors.
 - **The headless CLI (`npm run cli`) exports SVG / HTML / recPhyloXML / NHX and JSON stats + checks, but no PNG** (rasterization needs a browser canvas).
-- **Compare "in agreement" covers event type + species mapping + transfer donor/recipient — not topology or support values**: nodes are matched by gene/family name (unnamed clades by their leaf set), so renamed clades count as mismatches, and differing clade support is not compared.
+- **Compare agreement covers event type + species mapping + transfer donor/recipient — not topology or support values**: nodes are matched by gene/family name (unnamed clades by their leaf set), so renamed clades count as mismatches, and differing clade support is not compared.
 
 ---
 
@@ -760,9 +760,9 @@ The Glyph column is the mark the interactive canvas draws for that event type, n
 | speciation | 物种形成 | Speciation | Filled dot |
 | duplication | 基因重复 | Duplication | Filled square |
 | loss | 基因丢失 | Loss | Cross ✕ |
-| branchingOut | 转移供体 | Transfer donor | Open ring |
+| branchingOut | 出枝转移 | Branching out | Open ring |
 | transferBack | 转移到达 | Transfer arrival | Filled dot (the arrowhead is on the incoming transfer arc) |
-| bifurcationOut | 二叉输出 | Bifurcation donor | Filled diamond |
+| bifurcationOut | 树外分叉 | Bifurcation out | Filled diamond |
 | leaf | 现存基因 | Extant gene | Filled dot |
 
 ### C. Session file fields

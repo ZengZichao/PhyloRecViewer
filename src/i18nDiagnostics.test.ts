@@ -79,6 +79,8 @@ describe("diagnostic localisation", () => {
     expect(localizeExample("x: time slice 2 < 3", "zh")).toBe("x：时间片 2 < 3");
     expect(localizeExample("g1 (into ancestor R)", "zh")).toBe("g1（进入祖先 R）");
     expect(localizeExample("x: time slice 2", "en")).toBe("x: time slice 2");
+    // The @depth token is internal notation in either language.
+    expect(localizeExample("Rabbit @depth 3", "en")).toBe("Rabbit (at depth 3");
     for (const cell of [
       "\u2014 @depth 3",
       "Rabbit @depth 3",
@@ -97,24 +99,28 @@ describe("diagnostic localisation", () => {
   it("covers a representative message from every producer", () => {
     const cases: [string, string][] = [
       ["No reconciled gene trees (<recGeneTree>) were found.", "未找到"],
-      ['Species "Homo" declares a negative branch length (-1); it is clamped to 0 for drawing.', "负枝长"],
+      ['Species "Homo" declares a negative branch length (-1); it is clamped to 0 for drawing.', "负的枝长"],
       [
         'The document declares the XML namespace "urn:x" instead of the recPhyloXML namespace "http://www.recg.org"; parsing proceeded, but this may not be a recPhyloXML file.',
         "命名空间",
       ],
       ["No species (S=) annotations found in the NHX file.", "未找到物种"],
       [
+        "This file has no NHX species (S=) annotations, so it was opened without a species tree: each node's label was used as a species name, and no duplication, loss or transfer events are available. Export the reconciliation as recPhyloXML (or add [&&NHX:S=…] tags) to see events.",
+        "不带物种树",
+      ],
+      [
         'Species "A" is annotated under conflicting parents ("B" and "C"); kept "B". The NHX format cannot tell.',
         "冲突的父节点",
       ],
-      ["Too many trees in one file (> 100); aborting rather than silently dropping the rest.", "单文件树过多"],
+      ["Too many trees in one file (> 100); aborting rather than silently dropping the rest.", "文件中的树过多"],
       [
         "This file does not appear to be UTF-8 text (it contains NUL bytes, as UTF-16 files do when decoded as UTF-8). Re-export it as UTF-8 and try again.",
         "UTF-8",
       ],
       ["Session file is not valid JSON", "有效的 JSON"],
-      ["Failed to rasterize SVG", "栅格化"],
-      ["3 nodes carry multiple transfer arrivals; only the first can be written to NHX", "多个转移到达"],
+      ["Could not convert the drawing to a bitmap for PNG export.", "PNG 位图"],
+      ["2 time slice values on transfer arrivals are not written to NHX", "时间片"],
       ["Gene tree is nested too deep (possible malformed input).", "嵌套过深"],
       [rawOf("(", "i"), "分组括号未闭合"],
       // The messages whose rule this round had to retarget, rebuild or repair.
@@ -152,14 +158,14 @@ describe("diagnostic localisation", () => {
         "基因重复",
       ],
       [
-        "This NHX file uses 2 tag keys this reader does not interpret and has dropped: XX, YY. Species, duplication, loss, donor and arrival state comes only from S=/SP=, D=, L=, BO=, BC= and TB=.",
+        "This NHX file uses 2 tag keys this reader does not interpret and has dropped: XX, YY. Species, duplication, loss, transfer-donor and transfer-arrival state come only from S=/SP=, D=, L=, BO=, BC= and TB=.",
         "XX, YY",
       ],
       [
         "fam2.xml: its species tree is missing 2 branches present in the first file's species tree (e.g. A, B); the merged view is drawn on the first file's species tree only.",
         "（如 A, B）",
       ],
-      ["3 time slice values are not representable in NHX", "时间片"],
+      ["3 species-tree taxa are not sampled by any gene tree and would disappear from the NHX species reconstruction", "分类单元"],
       // A Newick head that only `localizeNewick` owns: its rule used to demand
       // a space before the ")" the parser never writes, so it matched nothing.
       ['Unterminated node comment (missing "]") (at offset 4, near "[&NHX:S=").', "节点注释未闭合"],
@@ -174,7 +180,7 @@ describe("diagnostic localisation", () => {
     }
     // No banned alias, and no English event identifier, survives a translation.
     for (const [en] of cases) {
-      expect(localizeDiagnostic(en, "zh"), en).not.toMatch(/标注|未命名|\(unnamed\)|timeSlice|到达事件|本读取器|基因叶|叶节点/);
+      expect(localizeDiagnostic(en, "zh"), en).not.toMatch(/未命名|\(unnamed\)|timeSlice|到达事件|本读取器|基因叶|叶节点/);
     }
     // Two rules for one message make the later one dead code.
     const winners = cases.map(([en]) => routeOf(en));
@@ -196,24 +202,20 @@ describe("diagnostic localisation", () => {
    */
   it("declines every count-bearing message for one and for many", () => {
     const NHX_TAIL =
-      "this reader does not interpret and has dropped: {LIST}. Species, duplication, loss, donor and arrival state comes only from S=/SP=, D=, L=, BO=, BC= and TB=.";
+      "this reader does not interpret and has dropped: {LIST}. Species, duplication, loss, transfer-donor and transfer-arrival state come only from S=/SP=, D=, L=, BO=, BC= and TB=.";
     const MERGED_TAIL = " the merged view is drawn on the first file's species tree only.";
     const pairs: [string, string][] = [
       [
-        "1 node carries multiple transfer arrivals; only the first can be written to NHX",
-        "2 nodes carry multiple transfer arrivals; only the first can be written to NHX",
+        "1 time slice value on a transfer arrival is not written to NHX",
+        "2 time slice values on transfer arrivals are not written to NHX",
       ],
       [
-        "1 time slice value is not representable in NHX",
-        "2 time slice values are not representable in NHX",
+        "1 event confidence value on a transfer arrival is not written to NHX",
+        "2 event confidence values on transfer arrivals are not written to NHX",
       ],
       [
-        "1 event confidence value is not representable in NHX",
-        "2 event confidence values are not representable in NHX",
-      ],
-      [
-        "1 species tree taxon is not sampled by any gene tree and would disappear from the NHX species reconstruction",
-        "2 species tree taxa are not sampled by any gene tree and would disappear from the NHX species reconstruction",
+        "1 species-tree taxon is not sampled by any gene tree and would disappear from the NHX species reconstruction",
+        "2 species-tree taxa are not sampled by any gene tree and would disappear from the NHX species reconstruction",
       ],
       [
         "1 species branch length is not carried by the NHX species tree",

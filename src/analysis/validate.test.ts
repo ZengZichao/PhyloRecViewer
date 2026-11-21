@@ -92,6 +92,22 @@ describe("checkConsistency", () => {
       </clade></phylogeny></recGeneTree></recPhylo>`);
   });
 
+  it("accepts an arrival that sits under a bifurcation-out child", () => {
+    // recPhyloXML's own ALE sample routes the returning lineage through a
+    // bifurcationOut before it transfers back; this must not be flagged as an
+    // unpaired departure.
+    const issues = checkConsistency(parseRecPhyloXML(`<recPhylo>${SP}<recGeneTree><phylogeny>
+      <clade><eventsRec><branchingOut speciesLocation="A"/></eventsRec>
+        <clade><eventsRec><leaf speciesLocation="A" geneName="keep"/></eventsRec></clade>
+        <clade><eventsRec><bifurcationOut/></eventsRec>
+          <clade><eventsRec><transferBack destinationSpecies="B"/><leaf speciesLocation="B" geneName="t1"/></eventsRec></clade>
+          <clade><eventsRec><leaf speciesLocation="B" geneName="t2"/></eventsRec></clade>
+        </clade>
+      </clade></phylogeny></recGeneTree></recPhylo>`));
+    expect(issues.some((i) => i.code === "donorNoTransferBack")).toBe(false);
+    expect(issues.some((i) => i.code === "bifurcationNoTransferBack")).toBe(false);
+  });
+
   it("flags a transferBack arrival sitting at the gene-tree root", () => {
     has("transferBackNoParent", `<recPhylo>${SP}<recGeneTree><phylogeny>
       <clade><eventsRec><transferBack destinationSpecies="A"/><leaf speciesLocation="A" geneName="r"/></eventsRec></clade>

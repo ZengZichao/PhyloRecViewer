@@ -2039,6 +2039,15 @@ h1 {
 .right-panel-tabs::-webkit-scrollbar {
   display: none;
 }
+
+/* The five base panel tabs fit one row; compare mode adds the sixth
+   ("Differences") and the row would otherwise clip it behind a hidden
+   scrollbar. Wrapping only in that state keeps the bar discoverable while
+   leaving the normal layout unchanged. */
+.right-panel-tabs:has(#rp-tab-diff) {
+  flex-wrap: wrap;
+  overflow: visible;
+}
 .right-panel-tabs button {
   appearance: none;
   border: none;

@@ -90,6 +90,16 @@ describe("scale and branch length checks", () => {
     expect(codes(xml).get("confidenceScaleSuspect")?.level).toBe("info");
   });
 
+  it("does not flag clade support on a 0–100 bootstrap scale", () => {
+    // Event confidence is a 0-1 probability in this app, but clade support is a
+    // different value domain: a bootstrap of 95 is correct, not suspicious.
+    const xml = doc(`<clade>
+      <confidence type="bootstrap">95</confidence>
+      <eventsRec><leaf speciesLocation="A" geneName="g"/></eventsRec>
+    </clade>`);
+    expect(codes(xml).has("confidenceScaleSuspect")).toBe(false);
+  });
+
   it("flags negative branch lengths", () => {
     const xml = doc(`<clade branch_length="-1"><eventsRec><leaf speciesLocation="A" geneName="g"/></eventsRec></clade>`);
     expect(codes(xml).has("negativeBranchLength")).toBe(true);

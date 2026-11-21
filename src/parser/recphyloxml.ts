@@ -473,7 +473,7 @@ function buildSpeciesTree(rootRaw: RawClade, seq: number, warnings: string[]): S
       node.support = support;
       if (support.value > 1 && support.value <= 100 && support.type !== "bootstrap") {
         warnings.push(
-          `Species "${name}" carries support ${support.value}, which looks like a 0–100 percentage rather than a 0–1 probability.`,
+          `Species "${name}" carries support ${support.value} without a declared type; bootstrap support is normally 0–100, posterior and aLRT supports 0–1.`,
         );
       }
     }
@@ -653,7 +653,7 @@ function buildGeneNode(
   if (support) node.support = support;
   if (node.support && node.support.value > 1 && node.support.value <= 100 && node.support.type !== "bootstrap") {
     warnings.push(
-      `Gene node "${label}" carries support ${node.support.value}, which looks like a 0–100 percentage rather than a 0–1 probability.`,
+      `Gene node "${label}" carries support ${node.support.value} without a declared type; bootstrap support is normally 0–100, posterior and aLRT supports 0–1.`,
     );
   }
   if (node.branchLength != null && node.branchLength < 0) {
